@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html lang="en">
+	<head>
+		<title>Gif Grave</title>
+		<meta charset="utf-8">
+		<meta name="viewport" content="width=device-width, user-scalable=no, minimum-scale=1.0, maximum-scale=1.0">
+
+		<link rel="stylesheet" href="main.bundle.css" type="text/css" media="all">
+
+	</head>
+	<body class="noselect">
+
+		<div class="left cg-video">
+			<div id="camera"></div>
+			<form>
+				<input id="takeSnapshot" type=button value="Take Snapshot">
+			</form>
+		</div>
+		<div class="right cg-video" id="right">
+			<div id="results"></div>
+			<form>
+				<input id="createGif" type=button value="Create gif">
+			</form>
+		</div>
+		<div class="bottom" id="bottom">
+			<div id="thumbnails">
+				
+			</div>
+			<form>
+				<input id="createViewer" type=button value="Create viewer">
+			</form>
+		</div>
+
+		<script src="node_modules/jquery/dist/jquery.min.js"></script>
+
+		<script src="lib/webcam.min.js"></script>
+
+		<script src="bundle.js"></script>
+	</body>
+</html>

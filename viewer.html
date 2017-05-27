@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html lang="en">
+	<head>
+		<title>Gif Grave</title>
+		<meta charset="utf-8">
+		<meta name="viewport" content="width=device-width, user-scalable=no, minimum-scale=1.0, maximum-scale=1.0">
+
+
+		<style>
+			body {
+				background-color: #f0f0f0;
+				overflow: hidden;
+				margin: 0;
+			}
+			.noselect {
+			  -webkit-touch-callout: none; /* iOS Safari */
+			    -webkit-user-select: none; /* Safari */
+			     -khtml-user-select: none; /* Konqueror HTML */
+			       -moz-user-select: none; /* Firefox */
+			        -ms-user-select: none; /* Internet Explorer/Edge */
+			            user-select: none; /* Non-prefixed version, currently
+			                                  supported by Chrome and Opera */
+			}
+		</style>
+
+
+	</head>
+	<body class="noselect">
+
+		<div class="cg-video" id="results"></div>
+
+		<script src="node_modules/jquery/dist/jquery.min.js"></script>
+
+		<script>
+			var imageIndex = 0;
+
+			var nextImage = function () {
+			    var imagesJ = $('#results').children();
+			    imageIndex++;
+			    if (imageIndex >= imagesJ.length) {
+			        imageIndex = 0;
+			    }
+			    console.log(imageIndex);
+			    imagesJ.each(function (index) {
+			        if (index == imageIndex) {
+			            $(this).show();
+			        }
+			        else {
+			            $(this).hide();
+			        }
+			    });
+			};
+
+			var addImage = function (imageJ) {
+				$("#results").append(imageJ)
+				nextImage()
+			}
+
+			document.addEventListener("DOMContentLoaded", function (event) {
+			    setInterval(nextImage, 300);
+			    $("#results").append($(self.opener.document.body).find("#results").children())
+			});
+
+		</script>
+
+	</body>
+</html>

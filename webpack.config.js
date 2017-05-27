@@ -1,0 +1,33 @@
+var ExtractTextPlugin = require('extract-text-webpack-plugin');
+
+module.exports = {
+  entry: ['./ts/Main.ts', './scss/main.scss'],
+  output: {
+    filename: 'bundle.js',
+    path: __dirname
+  },
+  target: "web",
+  module: {
+    rules: [
+      {
+        test: /\.tsx?$/,
+        loader: 'ts-loader',
+        exclude: /node_modules/,
+      },
+      {
+        test: /\.(sass|scss)$/,
+        loader: ExtractTextPlugin.extract(['css-loader', 'sass-loader'])
+      }
+    ]
+  },
+  plugins: [
+    new ExtractTextPlugin({ // define where to save the file
+      filename: '[name].bundle.css',
+      allChunks: true,
+    }),
+  ],
+  resolve: {
+    extensions: [".tsx", ".ts", ".js", ".scss"]
+  },
+  watch: true
+};
