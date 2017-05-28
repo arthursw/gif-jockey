@@ -2,24 +2,27 @@
 <html lang="en">
 	<head>
 		<title>Gif Grave</title>
+
+		<link rel="icon" type="image/png" href="favicon-32x32.png" sizes="32x32">
+		<link rel="icon" type="image/png" href="favicon-96x96.png" sizes="96x96">
+
 		<meta charset="utf-8">
 		<meta name="viewport" content="width=device-width, user-scalable=no, minimum-scale=1.0, maximum-scale=1.0">
 
-		<link rel="stylesheet" href="node_modules/bootstrap/dist/css/bootstrap.min.css" type="text/css" media="all">
+		<!-- <link rel="stylesheet" href="node_modules/bootstrap/dist/css/bootstrap.min.css" type="text/css" media="all"> -->
+		<!-- <link rel="stylesheet" href="node_modules/bootstrap-slider/dist/css/bootstrap-slider.min.css" type="text/css" media="all"> -->
+
 		<link rel="stylesheet" href="main.bundle.css" type="text/css" media="all">
+
+  		<link rel="stylesheet" href="lib/jquery-ui-1.12.1.custom/jquery-ui.min.css">
 
 	</head>
 	<body class="noselect">
 
-		<div id="thumbnails">
-		</div>
-
-		<div class="webcam cg-video">
+		<div id="visualizer" class="cg-video">
 			<div id="camera"></div>
-
-
-
-			<form>
+			<div id="gui"></div>
+<!-- 			<form class="gg-column">
 				<button id="takeSnapshot" type="button" class="btn btn-default">Take Snapshot</button>
 				<button id="createViewer" type="button" class="btn btn-default">Create viewer</button>
 				
@@ -29,21 +32,55 @@
 				</div>
 
 				<button id="tap" type="button" class="btn btn-default">Tap</button>
-			</form>
+
+				<a class="btn btn-primary" role="button" data-toggle="collapse" href="#autoBPMsettings" aria-expanded="false" aria-controls="autoBPMsettings">
+				  BPM detection settings 
+				</a>
+
+				<div class="collapse" id="autoBPMsettings">
+					<div class="well gg-column gg-padding">
+
+						<div>
+							<span>Sensitivity:</span>
+							<input id="BPM-sensitivity" class="gg-slider" data-slider-id='BPM-sensitivity-slider' type="text" data-slider-min="1" data-slider-max="16" data-slider-step="1" data-slider-value="5"/>
+						</div>
+						<div>
+							<span>Analyser FFT size:</span>
+							<input id="BPM-analyserFFTSize" class="gg-slider" data-slider-id='BPM-sensitivity-slider' type="text" data-slider-min="5" data-slider-max="15" data-slider-step="1" data-slider-value="13"/>
+						</div>
+						<div>
+							<span>Bandpass filter frequency:</span>
+							<input id="BPM-passFreq" class="gg-slider" data-slider-id='BPM-sensitivity-slider' type="text" data-slider-min="1" data-slider-max="1000" data-slider-step="1" data-slider-value="5"/>
+						</div>
+						<div>
+							<span>Visualizer FFT size:</span>
+							<input id="BPM-visualizerFFTSize" class="gg-slider" data-slider-id='BPM-sensitivity-slider' type="text" data-slider-min="5" data-slider-max="15" data-slider-step="1" data-slider-value="13"/>
+						</div>
+
+					</div>
+				</div>
+			</form> -->
+
+
 		</div>
+
+		<ul id="thumbnails">
+
+		</ul>
 
 		<div class="preview cg-video" id="right">
 			<div id="results"></div>
-			<form>
-				<button id="createGif" type="button" class="btn btn-default">Create gif</button>
-			</form>
 		</div>
 
 		<script src="node_modules/jquery/dist/jquery.min.js"></script>
+
+		<!-- <script src="node_modules/bootstrap/dist/js/bootstrap.min.js"></script> -->
+		<!-- <script src="node_modules/bootstrap-slider/dist/bootstrap-slider.min.js"></script> -->
 		
 		<!-- <script src="https://cdn.WebRTC-Experiment.com/MediaStreamRecorder.js"></script> -->
-		<!-- <script src="node_modules/bootstrap/dist/js/bootstrap.min.js"></script> -->
 
+		<script src="lib/dat.gui.min.js"></script>
+		<script src="lib/jquery-ui-1.12.1.custom/jquery-ui.min.js"></script>
 		<script src="lib/webcam.min.js"></script>
 		<script src="lib/beatdetector.js"></script>
 

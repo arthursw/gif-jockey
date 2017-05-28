@@ -15,6 +15,7 @@
   "dependencies": {
     "@types/jquery": "^2.0.45",
     "bootstrap": "^3.3.7",
+    "bootstrap-slider": "^9.8.0",
     "css-loader": "^0.28.3",
     "jquery": "^3.2.1",
     "style-loader": "^0.18.1"

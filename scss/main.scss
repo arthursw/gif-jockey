@@ -4,12 +4,20 @@ body {
 	flex-direction: row;
 	overflow: hidden;
     height: 100vh;
+    margin: 0;
 }
 
 #thumbnails {
 	width: 20%;
+	max-width: 200px;
     height: 100%;
+    padding: 0;
+    margin: 0;
     overflow-y: auto;
+    li {
+    	list-style-type: none;
+    	border: 0;
+    }
 }
 
 #results {
@@ -21,13 +29,23 @@ body {
 	}
 }
 
-.webcam {
+#visualizer {
 	width: 40%;
+    overflow-y: auto;
+}
+
+#camera {
+	margin: auto;
 }
 
 .preview {
 	width: 40%;
 }
+
+.gg-padding {
+	padding: 55px;
+}
+
 
 .gg-thumbnail {
 	width: 100%;
@@ -38,10 +56,28 @@ body {
     margin-bottom: 0;
 }
 
+.gg-column {
+	display: flex;
+	flex-direction: column;
+}
+
+.gg-slider, .slider.slider-horizontal {
+	width: 100%;
+}
+
+.dg.main .close-button.close-bottom {
+	width: 150px;
+}
+
 .close-btn {
     top: 0;
     right: 0;
     position: absolute;
+    border: none;
+    border-radius: 0;
+    height: 15px;
+    width: 15px;
+    background-color: white;
 }
 
 .cg-video {
