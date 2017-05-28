@@ -1,0 +1,21 @@
+body {
+  background-color: #f0f0f0;
+  overflow: hidden;
+  margin: 0; }
+
+.noselect {
+  -webkit-user-select: none;
+  -khtml-user-select: none;
+  -moz-user-select: none;
+  -ms-user-select: none;
+  -o-user-select: none;
+  user-select: none;
+  -webkit-touch-callout: none;
+  /* iOS Safari */ }
+
+#results {
+  position: relative; }
+  #results img {
+    position: absolute;
+    top: 0;
+    left: 0; }

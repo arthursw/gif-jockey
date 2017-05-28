@@ -1,9 +1,12 @@
 var ExtractTextPlugin = require('extract-text-webpack-plugin');
 
 module.exports = {
-  entry: ['./ts/Main.ts', './scss/main.scss'],
+  entry: {
+    main: ['./ts/Main.ts', './scss/main.scss'],
+    viewer: ['./ts/Viewer.ts', './scss/viewer.scss']
+  },
   output: {
-    filename: 'bundle.js',
+    filename: '[name].js',
     path: __dirname
   },
   target: "web",

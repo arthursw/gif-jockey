@@ -5,6 +5,7 @@
 		<meta charset="utf-8">
 		<meta name="viewport" content="width=device-width, user-scalable=no, minimum-scale=1.0, maximum-scale=1.0">
 
+		<link rel="stylesheet" href="viewer.bundle.css" type="text/css" media="all">
 
 		<style>
 			body {
@@ -31,37 +32,7 @@
 
 		<script src="node_modules/jquery/dist/jquery.min.js"></script>
 
-		<script>
-			var imageIndex = 0;
-
-			var nextImage = function () {
-			    var imagesJ = $('#results').children();
-			    imageIndex++;
-			    if (imageIndex >= imagesJ.length) {
-			        imageIndex = 0;
-			    }
-			    console.log(imageIndex);
-			    imagesJ.each(function (index) {
-			        if (index == imageIndex) {
-			            $(this).show();
-			        }
-			        else {
-			            $(this).hide();
-			        }
-			    });
-			};
-
-			var addImage = function (imageJ) {
-				$("#results").append(imageJ)
-				nextImage()
-			}
-
-			document.addEventListener("DOMContentLoaded", function (event) {
-			    setInterval(nextImage, 300);
-			    $("#results").append($(self.opener.document.body).find("#results").children())
-			});
-
-		</script>
+		<script src="viewer.js"></script>
 
 	</body>
 </html>

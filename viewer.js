@@ -63,77 +63,59 @@
 /******/ 	__webpack_require__.p = "";
 /******/
 /******/ 	// Load entry module and return exports
-/******/ 	return __webpack_require__(__webpack_require__.s = 2);
+/******/ 	return __webpack_require__(__webpack_require__.s = 5);
 /******/ })
 /************************************************************************/
 /******/ ([
-/* 0 */
+/* 0 */,
+/* 1 */
 /***/ (function(module, exports) {
 
 // removed by extract-text-webpack-plugin
 
 /***/ }),
-/* 1 */
+/* 2 */,
+/* 3 */
 /***/ (function(module, exports) {
 
 /// <reference path="../node_modules/@types/jquery/index.d.ts"/>
-var imageIndex = 0;
-var viewer = null;
-var take_snapshot = function () {
-    // take snapshot and get image data
-    Webcam.snap(function (data_uri) {
-        // display results in page
-        var imgJ = $('<img src="' + data_uri + '">');
-        $('#results').append(imgJ);
+var Viewer;
+(function (Viewer) {
+    var imageIndex = 0;
+    var nextImage = function () {
+        var imagesJ = $('#results').children();
+        imageIndex++;
+        if (imageIndex >= imagesJ.length) {
+            imageIndex = 0;
+        }
+        // avoid to use hide() / show() because it affects the size of dom element in chrome which is a problem with the thumbnail scrollbar
+        imagesJ.css({ opacity: 0 });
+        $(imagesJ[imageIndex]).css({ opacity: 1 });
+    };
+    var addImage = function (imageJ) {
+        $("#results").append(imageJ);
         nextImage();
-        viewer.addImage(imgJ);
+    };
+    window.addImage = addImage;
+    var removeImage = function (imageAlt) {
+        $('#results').children("[alt='" + imageAlt + "']").remove();
+        nextImage();
+    };
+    window.removeImage = removeImage;
+    document.addEventListener("DOMContentLoaded", function (event) {
+        setInterval(nextImage, 300);
+        $("#results").append($(self.opener.document.body).find("#results").children().clone());
     });
-};
-var nextImage = function () {
-    var imagesJ = $('#results').children();
-    imageIndex++;
-    if (imageIndex >= imagesJ.length) {
-        imageIndex = 0;
-    }
-    console.log(imageIndex);
-    imagesJ.each(function (index) {
-        if (index == imageIndex) {
-            $(this).show();
-        }
-        else {
-            $(this).hide();
-        }
-    });
-};
-var createViewer = function () {
-    var windowFeatures = "menubar=yes,location=yes,resizable=yes,scrollbars=yes,status=yes";
-    viewer = window.open("viewer.html", "Gif Grave Viewer", windowFeatures);
-};
-document.addEventListener("DOMContentLoaded", function (event) {
-    Webcam.set({
-        width: 320,
-        height: 240,
-        image_format: 'jpeg',
-        jpeg_quality: 90
-    });
-    Webcam.attach('#camera');
-    $(document).keydown(function (event) {
-        if (event.keyCode == 32) {
-            take_snapshot();
-        }
-    });
-    $("#takeSnapshot").click(take_snapshot);
-    $("#createViewer").click(createViewer);
-    setInterval(nextImage, 300);
-});
+})(Viewer || (Viewer = {}));
 
 
 /***/ }),
-/* 2 */
+/* 4 */,
+/* 5 */
 /***/ (function(module, exports, __webpack_require__) {
 
-__webpack_require__(1);
-module.exports = __webpack_require__(0);
+__webpack_require__(3);
+module.exports = __webpack_require__(1);
 
 
 /***/ })

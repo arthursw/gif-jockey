@@ -5,36 +5,48 @@
 		<meta charset="utf-8">
 		<meta name="viewport" content="width=device-width, user-scalable=no, minimum-scale=1.0, maximum-scale=1.0">
 
+		<link rel="stylesheet" href="node_modules/bootstrap/dist/css/bootstrap.min.css" type="text/css" media="all">
 		<link rel="stylesheet" href="main.bundle.css" type="text/css" media="all">
 
 	</head>
 	<body class="noselect">
 
-		<div class="left cg-video">
+		<div id="thumbnails">
+		</div>
+
+		<div class="webcam cg-video">
 			<div id="camera"></div>
+
+
+
 			<form>
-				<input id="takeSnapshot" type=button value="Take Snapshot">
+				<button id="takeSnapshot" type="button" class="btn btn-default">Take Snapshot</button>
+				<button id="createViewer" type="button" class="btn btn-default">Create viewer</button>
+				
+				<div class="btn-group" role="group" aria-label="button group">
+					<button type="button" class="btn btn-default btn-primary">Manual</button>
+					<button type="button" class="btn btn-default">Auto</button>
+				</div>
+
+				<button id="tap" type="button" class="btn btn-default">Tap</button>
 			</form>
 		</div>
-		<div class="right cg-video" id="right">
+
+		<div class="preview cg-video" id="right">
 			<div id="results"></div>
 			<form>
-				<input id="createGif" type=button value="Create gif">
-			</form>
-		</div>
-		<div class="bottom" id="bottom">
-			<div id="thumbnails">
-				
-			</div>
-			<form>
-				<input id="createViewer" type=button value="Create viewer">
+				<button id="createGif" type="button" class="btn btn-default">Create gif</button>
 			</form>
 		</div>
 
 		<script src="node_modules/jquery/dist/jquery.min.js"></script>
+		
+		<!-- <script src="https://cdn.WebRTC-Experiment.com/MediaStreamRecorder.js"></script> -->
+		<!-- <script src="node_modules/bootstrap/dist/js/bootstrap.min.js"></script> -->
 
 		<script src="lib/webcam.min.js"></script>
+		<script src="lib/beatdetector.js"></script>
 
-		<script src="bundle.js"></script>
+		<script src="main.js"></script>
 	</body>
 </html>

@@ -1,43 +1,42 @@
 body {
-  font-family: Helvetica, sans-serif; }
+  font-family: Helvetica, sans-serif;
+  display: flex;
+  flex-direction: row;
+  overflow: hidden;
+  height: 100vh; }
 
-h2, h3 {
-  margin-top: 0; }
+#thumbnails {
+  width: 20%;
+  height: 100%;
+  overflow-y: auto; }
 
-form {
-  margin-top: 15px; }
+#results {
+  position: relative; }
+  #results img {
+    position: absolute;
+    top: 0;
+    left: 0; }
 
-form > input {
-  margin-right: 15px; }
+.webcam {
+  width: 40%; }
 
-.left {
-  position: absolute;
+.preview {
+  width: 40%; }
+
+.gg-thumbnail {
+  width: 100%;
+  position: relative;
+  margin-bottom: 0; }
+  .gg-thumbnail img {
+    width: 100%; }
+
+.close-btn {
   top: 0;
-  left: 0;
-  right: 50%;
-  bottom: 20%;
-  width: 50% !important; }
-
-.right {
-  position: absolute;
-  top: 0;
-  left: 50%;
   right: 0;
-  bottom: 20%;
-  width: 50% !important; }
+  position: absolute; }
 
-.bottom {
-  position: absolute;
-  top: 80%;
-  left: 0;
-  right: 0;
-  bottom: 0; }
-
-.cg-video {
-  background: #ccc;
-  border: 1px solid; }
-  .cg-video video {
-    width: 100% !important; }
+.cg-video video {
+  width: 100% !important; }
 
 .noselect {
   -webkit-user-select: none;
