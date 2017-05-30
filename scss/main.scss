@@ -1,3 +1,24 @@
+@mixin vendor-prefix($name, $value) {
+	@each $vendor in ('-webkit-', '-khtml-', '-moz-', '-ms-', '-o-', '') {
+		#{$vendor}#{$name}: #{$value};
+	}
+}
+
+@mixin vendor-nameprefix($name, $value) {
+	@each $vendor in ('-webkit-', '-khtml-', '-moz-', '-ms-', '-o-', '') {
+		#{$name}: #{$vendor}#{$value};
+	}
+}
+
+@mixin no-margins() {
+	@include vendor-prefix('margin-before', 0);
+	@include vendor-prefix('margin-after', 0);
+	@include vendor-prefix('margin-start', 0);
+	@include vendor-prefix('margin-end', 0);
+	@include vendor-prefix('padding-start', 0);
+}
+
+
 body {
 	font-family: Helvetica, sans-serif;
 	display: flex;
@@ -7,21 +28,45 @@ body {
     margin: 0;
 }
 
-#thumbnails {
-	width: 20%;
+ul.gg-list {
 	max-width: 200px;
     height: 100%;
     padding: 0;
     margin: 0;
     overflow-y: auto;
-    li {
+    font-size: 0;
+
+    li.gg-thumbnail {
     	list-style-type: none;
     	border: 0;
+		width: 100%;
+		position: relative;
+	    margin-bottom: 0;
+	    @include vendor-nameprefix('cursor', 'grab');
+
+		.gg-thumbnail-container {
+			img {
+				width: 100%;
+			}
+		}
+
     }
 }
 
-#results {
-	position: relative;
+.gg-selected {
+	.gg-thumbnail-container {
+		padding: 5px;
+		background-color: #64b5f6;
+	}
+}
+
+.gg-hidden {
+	display: none;
+}
+
+#result {
+	width: 320px;
+    position: relative;
 	img {
 		position: absolute;
 		top: 0;
@@ -29,31 +74,30 @@ body {
 	}
 }
 
-#visualizer {
-	width: 40%;
-    overflow-y: auto;
+#outputs {
+	width: 200px;
+	li.gg-thumbnail {
+		height: 150px;
+		width: 200px;
+    	position: relative;
+		img {
+			position: absolute;
+			top: 0;
+			left: 0;
+		}
+	}
 }
 
-#camera {
-	margin: auto;
+.gg-inline{
+	// display: inline-block;
 }
 
-.preview {
-	width: 40%;
+#effect {
 }
+
 
 .gg-padding {
 	padding: 55px;
-}
-
-
-.gg-thumbnail {
-	width: 100%;
-	img {
-		width: 100%;
-	}
-	position: relative;
-    margin-bottom: 0;
 }
 
 .gg-column {
@@ -61,8 +105,17 @@ body {
 	flex-direction: column;
 }
 
+.gg-row {
+	display: flex;
+	flex-direction: row;
+}
+
 .gg-slider, .slider.slider-horizontal {
 	width: 100%;
+}
+
+.dg.main {
+	margin-bottom: 20px;
 }
 
 .dg.main .close-button.close-bottom {
@@ -78,20 +131,20 @@ body {
     height: 15px;
     width: 15px;
     background-color: white;
+    cursor: pointer;
+    span {
+	    position: absolute;
+	    top: 2px;
+	    left: -1px;
+    }
 }
 
-.cg-video {
-
-	video {
-		width: 100% !important;
-		// height: 100% !important;
-	}
-}
-
-@mixin vendor-prefix($name, $value) {
-	@each $vendor in ('-webkit-', '-khtml-', '-moz-', '-ms-', '-o-', '') {
-		#{$vendor}#{$name}: #{$value};
-	}
+.nub {
+	width: 10px;
+	height: 10px;
+	border: white 2px solid;
+	border-radius: 5px;
+	background-color: blue;
 }
 
 .noselect {

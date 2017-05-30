@@ -1,51 +1,86 @@
 /// <reference path="../node_modules/@types/jquery/index.d.ts"/>
 
 import { GUI, Controller } from "./GUI"
+import { GifViewer } from "./GifViewer"
+import { FilterManager } from "./Filters"
 
 declare var Webcam: any
 declare var stasilo: any
 
 let gui: GUI
+let filterManager: FilterManager
 
 let imageID = 0
+let gifID = 0
 let imageIndex = 0
 let viewer: Window = null
 let thumbnailsJ: any = null
 let bpmDetectionFolder: GUI = null
 
+let gifViewer: GifViewer = null
+
+let setFilteredImage = (imageJ:any, resultJ:any)=> {
+	let imageName = imageJ.attr('data-name')
+	resultJ.insertBefore(imageJ)
+
+	gifViewer.replaceImage(imageName, resultJ.clone())
+	currentGif.replaceImage(imageName, resultJ.clone())
+	// if(viewer != null) {
+	// 	(<any>viewer).setFilteredImage(imageJ, resultJ)
+	// }
+}
+
 let removeImage = (imageAlt: string)=> {
-	$('#results').children("[data-name='"+imageAlt+"']").remove()
+	gifViewer.removeImage(imageAlt)
+	currentGif.removeImage(imageAlt)
+
 	$('#thumbnails').children("[data-name='"+imageAlt+"']").remove()
 
-	if(viewer != null) {
-		(<any>viewer).removeImage(imageAlt)
-	}
+	// if(viewer != null) {
+	// 	(<any>viewer).removeImage(imageAlt)
+	// }
 	nextImage()
 }
 
-let addImage = (data_uri: string)=> {
+let selectImage = (imageName: string) => {
+	$('#thumbnails').children().removeClass('gg-selected')
+	$('#thumbnails').children("[data-name='"+imageName+"']").addClass('gg-selected')
+
+	let imgJ = $('#thumbnails').children("[data-name='"+imageName+"']").find('img.original-image')
+	
+	filterManager.setImage(imgJ)
+}
+
+let addImage = (data_uri: string, canvas: HTMLCanvasElement=null, context: CanvasRenderingContext2D=null)=> {
 	// display results in page
-	let imgJ = $('<img src="' + data_uri + '" data-name="img-' + imageID + '" alt="img-' + imageID + '">')
+	let imageName = 'img-' + imageID
+	let imgJ = $('<img src="' + data_uri + '" data-name="' + imageName + '" alt="img-' + imageID + '">')
 	imageID++
-	$('#results').append(imgJ)
+	gifViewer.addImage(imgJ.clone())
+	currentGif.addImage(imgJ.clone())
+
 	createThumbnail(imgJ.clone())
+	selectImage(imageName)
 	nextImage()
-	if(viewer != null) {
-		(<any>viewer).addImage(imgJ.clone())
-	}
+	// if(viewer != null) {
+	// 	(<any>viewer).addImage(imgJ.clone())
+	// }
 }
 
 let createThumbnail = (imgJ: any)=> {
-	let imageAlt = imgJ.attr('data-name')
-	let liJ = $('<li class="ui-state-default gg-thumbnail" data-name="'+imageAlt+'">')
-	let buttonJ = $('<button type="button" class="btn btn-default btn-xs close-btn">')
-	let spanJ = $('<span class="glyphicon glyphicon-remove" aria-hidden="true">')
+	let imageName = imgJ.attr('data-name')
+	let liJ = $('<li class="ui-state-default gg-thumbnail" data-name="'+imageName+'">')
+	let buttonJ = $('<button type="button" class="close-btn">')
+	let spanJ = $('<span class="ui-icon ui-icon-closethick">')
+	let divJ = $('<div class="gg-thumbnail-container">')
 	buttonJ.append(spanJ)
-	liJ.append(imgJ)
+	divJ.append(imgJ.addClass('gg-hidden original-image'))
+	liJ.append(divJ)
 	liJ.append(buttonJ)
 	buttonJ.click(()=>{
-		removeImage(imageAlt)
+		removeImage(imageName)
 	})
+	liJ.mousedown(()=>setTimeout(()=>{selectImage(imageName)}, 0)) // add timeout to not to disturbe draggable
 	$('#thumbnails').append(liJ)
 }
 
@@ -55,28 +90,25 @@ let takeSnapshot = ()=> {
 }
 
 let nextImage = ()=> {
-	let imagesJ = $('#results').children()
-	imageIndex++
-
-	if(imageIndex >= imagesJ.length) {
-		imageIndex = 0
+	gifViewer.nextImage()
+	for(let [gifName, gif] of gifs) {
+		gif.nextImage()
 	}
-	// avoid to use hide() / show() because it affects the size of dom element in chrome which is a problem with the thumbnail scrollbar
-	imagesJ.css({opacity: 0})
-	$(imagesJ[imageIndex]).css({opacity: 1})
 }
 
-let sortImages = ()=> {
+// let sortImagesStart = (event: Event, ui: any)=> {
+// 	let imageName = $(ui.item).attr('data-name')
+// 	selectImage(imageName)
+// }
+
+let sortImagesStop = ()=> {
 	let thumbnailsJ = $('#thumbnails').children()
 	let imageNames: Array<string> = []
 	thumbnailsJ.each(function(index: number, element: Element) {
 		imageNames.push($(element).attr('data-name'))
 	})
-	let resultsJ = $('#results')
-	let imagesJ = resultsJ.children()
-	for(let imageName of imageNames) {
-		resultsJ.append(resultsJ.find("[data-name='"+imageName+"']"))
-	}
+	gifViewer.sortImages(imageNames)
+	currentGif.sortImages(imageNames)
 }
 
 let createViewer = ()=> {
@@ -168,10 +200,11 @@ let tap = ()=> {
 
 let createGUI = ()=> {
 
-	gui = new GUI(null, { autoPlace: false, width: '100%' })
+	gui = new GUI({ autoPlace: false, width: '100%' })
 	document.getElementById('gui').appendChild(gui.getDomElement())
 
 	gui.addButton('Take snapshot', takeSnapshot)
+	gui.addButton('Add gif', addGif)
 	gui.addButton('Create viewer', createViewer)
 	bpmDetectionButton = gui.addButton('Manual BPM', toggleBPMdetection)
 
@@ -199,10 +232,60 @@ let createGUI = ()=> {
 	sliders.passFreq = bpmDetectionFolder.addSlider('Bandpass Filter Frequency', 600, 1, 10000, 1)
 	sliders.visualizerFFTSize = bpmDetectionFolder.addSlider('Visualizer FFT Size', 7, 5, 15, 1)
 
-	onSliderChange()
+	// onSliderChange()
 
 	// $(gui.getDomElement()).css({ width: '100%' })
 }
+
+let emptyThumbnails = ()=> {
+	$('#thumbnails').empty()
+}
+
+let gifs: Map<number, GifViewer> = new Map()
+let currentGif: GifViewer = null
+
+let getGifContainer = ()=> {
+	return currentGif.containerJ.parentUntil('li.gg-thumbnail')
+}
+
+let addGif = ()=> {
+	emptyThumbnails()
+
+	let currentGifJ = $('<li class="gg-thumbnail" data-name="'+gifID+'">')
+	let buttonJ = $('<button type="button" class="close-btn">')
+	let spanJ = $('<span class="ui-icon ui-icon-closethick">')
+	let divJ = $('<div class="gg-thumbnail-container">')
+	buttonJ.append(spanJ)
+	currentGifJ.append(divJ)
+	currentGifJ.append(buttonJ)
+	buttonJ.click(()=>{
+		removeGif(gifID)
+	})
+	currentGifJ.mousedown(() => selectGif(gifID) )
+	
+	gifID++
+	$('#outputs').append(currentGifJ)
+
+	currentGif = new GifViewer(divJ)
+	gifs.set(gifID, currentGif)
+}
+
+let removeGif = (gifID: number)=> {
+	$('#outputs').find('[data-name="' + gifID + '"]').remove()
+}
+
+let selectGif = (gifID: number)=> {
+
+	$('#outputs').children().removeClass('gg-selected')	
+	$('#outputs').children("[data-name='"+gifID+"']").addClass('gg-selected')
+
+	currentGif = gifs.get(gifID)
+
+	if(viewer != null) {
+		(<any>viewer).setCurrentGif(currentGif.getChildren())
+	}
+}
+
 
 document.addEventListener("DOMContentLoaded", function(event) { 
 
@@ -213,7 +296,7 @@ document.addEventListener("DOMContentLoaded", function(event) {
 		jpeg_quality: 90
 	});
 	Webcam.attach( '#camera' );
-
+	// $('#camera').css({margin: 'auto'})
 	$( document ).keydown(function(event) {
 		if(event.keyCode == 32) {			// space bar
 			takeSnapshot()
@@ -227,13 +310,18 @@ document.addEventListener("DOMContentLoaded", function(event) {
 	$("#takeSnapshot").click(takeSnapshot)
 	$("#createViewer").click(createViewer)
 
+	gifViewer = new GifViewer($('#result'))
+
+	addGif()
 
 	animate()
 
 	thumbnailsJ = $("#thumbnails")
-	thumbnailsJ.sortable(({ stop: sortImages }))
+	thumbnailsJ.sortable(({ stop: sortImagesStop }))
     thumbnailsJ.disableSelection()
 
     createGUI()
+
+    filterManager = new FilterManager(setFilteredImage)
 });
 

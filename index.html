@@ -19,60 +19,24 @@
 	</head>
 	<body class="noselect">
 
-		<div id="visualizer" class="cg-video">
-			<div id="camera"></div>
-			<div id="gui"></div>
-<!-- 			<form class="gg-column">
-				<button id="takeSnapshot" type="button" class="btn btn-default">Take Snapshot</button>
-				<button id="createViewer" type="button" class="btn btn-default">Create viewer</button>
+		<div class="gg-row">
 				
-				<div class="btn-group" role="group" aria-label="button group">
-					<button type="button" class="btn btn-default btn-primary">Manual</button>
-					<button type="button" class="btn btn-default">Auto</button>
-				</div>
+			<div id="gui"></div>
 
-				<button id="tap" type="button" class="btn btn-default">Tap</button>
+			<ul id="thumbnails" class="gg-list"></ul>
 
-				<a class="btn btn-primary" role="button" data-toggle="collapse" href="#autoBPMsettings" aria-expanded="false" aria-controls="autoBPMsettings">
-				  BPM detection settings 
-				</a>
+			<div id="camera" class=""></div>
+			
+			<div id="effect" class=""></div>
 
-				<div class="collapse" id="autoBPMsettings">
-					<div class="well gg-column gg-padding">
+			<div id="result" class=""></div>
 
-						<div>
-							<span>Sensitivity:</span>
-							<input id="BPM-sensitivity" class="gg-slider" data-slider-id='BPM-sensitivity-slider' type="text" data-slider-min="1" data-slider-max="16" data-slider-step="1" data-slider-value="5"/>
-						</div>
-						<div>
-							<span>Analyser FFT size:</span>
-							<input id="BPM-analyserFFTSize" class="gg-slider" data-slider-id='BPM-sensitivity-slider' type="text" data-slider-min="5" data-slider-max="15" data-slider-step="1" data-slider-value="13"/>
-						</div>
-						<div>
-							<span>Bandpass filter frequency:</span>
-							<input id="BPM-passFreq" class="gg-slider" data-slider-id='BPM-sensitivity-slider' type="text" data-slider-min="1" data-slider-max="1000" data-slider-step="1" data-slider-value="5"/>
-						</div>
-						<div>
-							<span>Visualizer FFT size:</span>
-							<input id="BPM-visualizerFFTSize" class="gg-slider" data-slider-id='BPM-sensitivity-slider' type="text" data-slider-min="5" data-slider-max="15" data-slider-step="1" data-slider-value="13"/>
-						</div>
+			<ul id="outputs" class="gg-list"></ul>
 
-					</div>
-				</div>
-			</form> -->
-
-
-		</div>
-
-		<ul id="thumbnails">
-
-		</ul>
-
-		<div class="preview cg-video" id="right">
-			<div id="results"></div>
 		</div>
 
 		<script src="node_modules/jquery/dist/jquery.min.js"></script>
+		<script src="node_modules/glfx/glfx.js"></script>
 
 		<!-- <script src="node_modules/bootstrap/dist/js/bootstrap.min.js"></script> -->
 		<!-- <script src="node_modules/bootstrap-slider/dist/bootstrap-slider.min.js"></script> -->

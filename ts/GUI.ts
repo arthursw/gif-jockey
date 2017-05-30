@@ -6,11 +6,12 @@ declare type DatController = {
 	object: any
 	onChange: (value: any) => any
 	onFinishChange: (value: any) => any
-	setValue: (value: number) => any
+	setValue: (value: number | string) => any
 	max: (value: number) => any
 	min: (value: number) => any
 	step: (value: number) => any
 	updateDisplay(): () => any
+	remove(): () => void
 	options: (options: string[]) => any
 }
 
@@ -49,6 +50,10 @@ export class Controller {
 		}
 	}
 
+	remove() {
+		this.controller.remove()
+	}
+
 	contains(element: HTMLElement): boolean {
 		return $.contains(this.getParentDomElement(), element)
 	}
@@ -75,11 +80,11 @@ export class Controller {
 		return this
 	}
 
-	setValue(value: number) {
+	setValue(value: number | string) {
 		this.controller.setValue(value)
 	}
 
-	setValueNoCallback(value: number) {
+	setValueNoCallback(value: number | string) {
 		this.controller.object[this.controller.property] = value
 		this.controller.updateDisplay()
 	}
@@ -112,7 +117,7 @@ export class Controller {
 export class GUI {
 	gui: any
 
-	constructor(folder: DatFolder = null, options: any = null) {
+	constructor(options: any = null, folder: DatFolder = null) {
 		this.gui = folder != null ? folder : new dat.GUI(options)
 	}
 
@@ -136,8 +141,8 @@ export class GUI {
 		}
 	}
 
-	add(object: any, propertyName: string, min: number = null, max: number = null): Controller {
-		return new Controller( this.gui.add(object, propertyName, min, max) )
+	add(object: any, propertyName: string, minOrArray: number | Array<string> = null, max: number = null): Controller {
+		return new Controller( this.gui.add(object, propertyName, minOrArray, max) )
 	}
 
 	addButton(name: string, callback: (value?: any)=>any): Controller {
@@ -177,8 +182,19 @@ export class GUI {
 		return slider
 	}
 
+	addSelect(name: string, choices: Array<string>, defaultChoice: string): Controller {
+		let object:any = {}
+		let nameNoSpaces = name.replace(/\s+/g, '')
+		object[nameNoSpaces] = defaultChoice
+		let controller:any = this.add(object, nameNoSpaces, choices)
+		if(name != nameNoSpaces) {
+			controller.setName(name)
+		}
+		return controller
+	}
+
 	addFolder(name: string): GUI {
-		return new GUI(this.gui.addFolder(name))
+		return new GUI(null, this.gui.addFolder(name))
 	}
 
 	getControllers(): Controller[] {

@@ -33,6 +33,22 @@ namespace Viewer {
 
 	(<any>window).removeImage = removeImage
 
+
+	let setFilteredImage = (imageJ:any, resultJ:any)=> {
+		let imageName = imageJ.attr('data-name')
+		let originalImage = $('#results').find('img[data-name="'+imageName+'"]')
+		originalImage.replaceWith(resultJ.clone())
+		nextImage()
+	}
+
+	(<any>window).setFilteredImage = setFilteredImage
+
+	let setCurrentGif = (gifJ:any)=> {
+		$('#results').empty().append(gifJ)
+	}
+
+	(<any>window).setCurrentGif = setCurrentGif
+
 	document.addEventListener("DOMContentLoaded", function (event) {
 	    setInterval(nextImage, 300)
 	    $("#results").append($(self.opener.document.body).find("#results").children().clone())

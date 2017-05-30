@@ -63,27 +63,28 @@
 /******/ 	__webpack_require__.p = "";
 /******/
 /******/ 	// Load entry module and return exports
-/******/ 	return __webpack_require__(__webpack_require__.s = 5);
+/******/ 	return __webpack_require__(__webpack_require__.s = 7);
 /******/ })
 /************************************************************************/
 /******/ ([
 /* 0 */,
-/* 1 */
+/* 1 */,
+/* 2 */
 /***/ (function(module, exports) {
 
 // removed by extract-text-webpack-plugin
 
 /***/ }),
-/* 2 */,
-/* 3 */
+/* 3 */,
+/* 4 */
 /***/ (function(module, exports) {
 
 /// <reference path="../node_modules/@types/jquery/index.d.ts"/>
 var Viewer;
 (function (Viewer) {
-    var imageIndex = 0;
-    var nextImage = function () {
-        var imagesJ = $('#results').children();
+    let imageIndex = 0;
+    let nextImage = () => {
+        let imagesJ = $('#results').children();
         imageIndex++;
         if (imageIndex >= imagesJ.length) {
             imageIndex = 0;
@@ -92,16 +93,27 @@ var Viewer;
         imagesJ.css({ opacity: 0 });
         $(imagesJ[imageIndex]).css({ opacity: 1 });
     };
-    var addImage = function (imageJ) {
+    let addImage = (imageJ) => {
         $("#results").append(imageJ);
         nextImage();
     };
     window.addImage = addImage;
-    var removeImage = function (imageAlt) {
+    let removeImage = (imageAlt) => {
         $('#results').children("[alt='" + imageAlt + "']").remove();
         nextImage();
     };
     window.removeImage = removeImage;
+    let setFilteredImage = (imageJ, resultJ) => {
+        let imageName = imageJ.attr('data-name');
+        let originalImage = $('#results').find('img[data-name="' + imageName + '"]');
+        originalImage.replaceWith(resultJ.clone());
+        nextImage();
+    };
+    window.setFilteredImage = setFilteredImage;
+    let setCurrentGif = (gifJ) => {
+        $('#results').empty().append(gifJ);
+    };
+    window.setCurrentGif = setCurrentGif;
     document.addEventListener("DOMContentLoaded", function (event) {
         setInterval(nextImage, 300);
         $("#results").append($(self.opener.document.body).find("#results").children().clone());
@@ -110,12 +122,13 @@ var Viewer;
 
 
 /***/ }),
-/* 4 */,
-/* 5 */
+/* 5 */,
+/* 6 */,
+/* 7 */
 /***/ (function(module, exports, __webpack_require__) {
 
-__webpack_require__(3);
-module.exports = __webpack_require__(1);
+__webpack_require__(4);
+module.exports = __webpack_require__(2);
 
 
 /***/ })
