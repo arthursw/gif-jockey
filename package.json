@@ -8,7 +8,10 @@
   "description": "gif-o-maton for parties",
   "main": "bundle.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "build": "webpack --config webpack.config.js",
+    "start-simple": "serve",
+    "start": "webpack-dev-server" 
   },
   "author": "",
   "license": "ISC",
@@ -28,9 +31,16 @@
     "node-sass": "^4.5.3",
     "resolve-url-loader": "^2.0.2",
     "sass-loader": "^6.0.5",
+    "serve": "^5.1.5",
     "style-loader": "^0.18.1",
     "ts-loader": "^2.1.0",
     "typescript": "^2.3.3",
-    "webpack": "^2.6.1"
-  }
+    "webpack": "^2.6.1",
+    "webpack-dev-server": "^2.4.5"
+  },
+  "bugs": {
+    "url": "https://github.com/arthursw/gif-grave/issues"
+  },
+  "homepage": "https://github.com/arthursw/gif-grave#readme",
+  "keywords": []
 }

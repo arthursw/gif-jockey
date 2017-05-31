@@ -63,20 +63,19 @@
 /******/ 	__webpack_require__.p = "";
 /******/
 /******/ 	// Load entry module and return exports
-/******/ 	return __webpack_require__(__webpack_require__.s = 7);
+/******/ 	return __webpack_require__(__webpack_require__.s = 8);
 /******/ })
 /************************************************************************/
-/******/ ([
-/* 0 */,
-/* 1 */,
-/* 2 */
+/******/ ({
+
+/***/ 2:
 /***/ (function(module, exports) {
 
 // removed by extract-text-webpack-plugin
 
 /***/ }),
-/* 3 */,
-/* 4 */
+
+/***/ 4:
 /***/ (function(module, exports) {
 
 /// <reference path="../node_modules/@types/jquery/index.d.ts"/>
@@ -90,8 +89,10 @@ var Viewer;
             imageIndex = 0;
         }
         // avoid to use hide() / show() because it affects the size of dom element in chrome which is a problem with the thumbnail scrollbar
-        imagesJ.css({ opacity: 0 });
-        $(imagesJ[imageIndex]).css({ opacity: 1 });
+        // imagesJ.css({opacity: 0})
+        // $(imagesJ[imageIndex]).css({opacity: 1})
+        imagesJ.hide();
+        $(imagesJ[imageIndex]).show();
     };
     let addImage = (imageJ) => {
         $("#results").append(imageJ);
@@ -110,10 +111,10 @@ var Viewer;
         nextImage();
     };
     window.setFilteredImage = setFilteredImage;
-    let setCurrentGif = (gifJ) => {
+    let setGif = (gifJ) => {
         $('#results').empty().append(gifJ);
     };
-    window.setCurrentGif = setCurrentGif;
+    window.setGif = setGif;
     document.addEventListener("DOMContentLoaded", function (event) {
         setInterval(nextImage, 300);
         $("#results").append($(self.opener.document.body).find("#results").children().clone());
@@ -122,9 +123,8 @@ var Viewer;
 
 
 /***/ }),
-/* 5 */,
-/* 6 */,
-/* 7 */
+
+/***/ 8:
 /***/ (function(module, exports, __webpack_require__) {
 
 __webpack_require__(4);
@@ -132,4 +132,5 @@ module.exports = __webpack_require__(2);
 
 
 /***/ })
-/******/ ]);
+
+/******/ });

@@ -36,23 +36,11 @@ ul.gg-list {
   display: none; }
 
 #result {
-  width: 320px;
-  position: relative; }
-  #result img {
-    position: absolute;
-    top: 0;
-    left: 0; }
+  width: 320px; }
 
-#outputs {
+#outputs li.gg-thumbnail .gg-thumbnail-container {
+  height: 150px;
   width: 200px; }
-  #outputs li.gg-thumbnail {
-    height: 150px;
-    width: 200px;
-    position: relative; }
-    #outputs li.gg-thumbnail img {
-      position: absolute;
-      top: 0;
-      left: 0; }
 
 .gg-padding {
   padding: 55px; }
@@ -105,3 +93,6 @@ ul.gg-list {
   user-select: none;
   -webkit-touch-callout: none;
   /* iOS Safari */ }
+
+.cr.function .property-name {
+  width: 100%; }

@@ -2,6 +2,10 @@ import { GUI, Controller } from "./GUI"
 
 declare var fx: any
 
+declare type GifGrave = {
+	setFilteredImage: (imageJ: any, resultJ:any)=>void
+}
+
 class Nub {
 	position: {x: number, y: number}
 	divJ: any
@@ -117,14 +121,14 @@ class Filter {
 		let result = new Image()
 		result.src = canvas.toDataURL()
 		result.className = 'filtered'
-		imageJ.siblings('.filtered').remove()
 		let resultJ = $(result)
 		let imageName = imageJ.attr('data-name')
 		resultJ.attr('data-name', imageName)
 
 		let filterJSON = { name: this.name, args: args }
-		imageJ.attr('data-filter', JSON.stringify(filterJSON))
-		Filter.filterManager.setFilteredImage(imageJ, resultJ)
+		resultJ.attr('data-filter', JSON.stringify(filterJSON))
+
+		Filter.filterManager.gifGrave.setFilteredImage(imageJ, resultJ)
 	}
 
 	activate(args:any[]=null) {
@@ -313,14 +317,13 @@ export class FilterManager {
 	currentImageJ: any
 	nameToFilter: Map<string, Filter>
 	filterSelect: Controller
+	gifGrave: GifGrave
 
-	setFilteredImage: (imageJ: any, resultJ:any)=>void
-
-	constructor(setFilteredImage: (imageJ: any, resultJ:any)=>void) {
+	constructor(gifGrave: GifGrave) {
+		this.gifGrave = gifGrave
 		Filter.filterManager = this
 		this.nameToFilter = new Map()
 		this.initialize()
-		this.setFilteredImage = setFilteredImage
 	}
 
 	activateFilter(name: string, updateSelect:boolean=true, args: any[]=null) {
@@ -365,7 +368,7 @@ export class FilterManager {
 	filterImage(fromImageData: boolean = false) {
 		let args:any[] = null
 		if(fromImageData) {
-			let imageFilterData = this.currentImageJ.attr('data-filter')
+			let imageFilterData = this.currentImageJ.siblings('.filtered').attr('data-filter')
 			if(imageFilterData != null && imageFilterData.length > 0) {
 				let filter = JSON.parse(imageFilterData)
 				args = filter.args
@@ -383,13 +386,6 @@ export class FilterManager {
 
 	setImage(imgJ: any) {
 		this.currentImageJ = imgJ
-		if(!imgJ.attr('gg-loaded')) {
-			imgJ.on('load', ()=> { 
-				imgJ.attr('gg-loaded', 'true')
-				this.filterImage()
-			})
-		} else {
-			this.filterImage(true)
-		}
+		this.filterImage(true)
 	}
 }

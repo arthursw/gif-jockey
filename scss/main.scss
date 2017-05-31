@@ -66,24 +66,15 @@ ul.gg-list {
 
 #result {
 	width: 320px;
-    position: relative;
-	img {
-		position: absolute;
-		top: 0;
-		left: 0;
-	}
 }
 
 #outputs {
-	width: 200px;
+	// width: 200px;
+	// max-width: 200px;
 	li.gg-thumbnail {
-		height: 150px;
-		width: 200px;
-    	position: relative;
-		img {
-			position: absolute;
-			top: 0;
-			left: 0;
+		.gg-thumbnail-container {
+			height: 150px;
+			width: 200px;
 		}
 	}
 }
@@ -150,4 +141,12 @@ ul.gg-list {
 .noselect {
 	@include vendor-prefix('user-select', 'none');
 	-webkit-touch-callout: none; /* iOS Safari */
+}
+
+// .dat.gui fix:
+
+.cr.function {
+	.property-name {
+		width: 100%;
+	}
 }

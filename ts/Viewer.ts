@@ -15,8 +15,11 @@ namespace Viewer {
 		}
 
 		// avoid to use hide() / show() because it affects the size of dom element in chrome which is a problem with the thumbnail scrollbar
-		imagesJ.css({opacity: 0})
-		$(imagesJ[imageIndex]).css({opacity: 1})
+		// imagesJ.css({opacity: 0})
+		// $(imagesJ[imageIndex]).css({opacity: 1})
+
+		imagesJ.hide()
+		$(imagesJ[imageIndex]).show()
 	}
 
 	let addImage = (imageJ: any)=> {
@@ -43,11 +46,11 @@ namespace Viewer {
 
 	(<any>window).setFilteredImage = setFilteredImage
 
-	let setCurrentGif = (gifJ:any)=> {
+	let setGif = (gifJ:any)=> {
 		$('#results').empty().append(gifJ)
 	}
 
-	(<any>window).setCurrentGif = setCurrentGif
+	(<any>window).setGif = setGif
 
 	document.addEventListener("DOMContentLoaded", function (event) {
 	    setInterval(nextImage, 300)

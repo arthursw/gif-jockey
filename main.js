@@ -63,7 +63,7 @@
 /******/ 	__webpack_require__.p = "";
 /******/
 /******/ 	// Load entry module and return exports
-/******/ 	return __webpack_require__(__webpack_require__.s = 6);
+/******/ 	return __webpack_require__(__webpack_require__.s = 7);
 /******/ })
 /************************************************************************/
 /******/ ([
@@ -238,258 +238,164 @@ exports.GUI = GUI;
 /// <reference path="../node_modules/@types/jquery/index.d.ts"/>
 Object.defineProperty(exports, "__esModule", { value: true });
 const GUI_1 = __webpack_require__(0);
-const GifViewer_1 = __webpack_require__(8);
+const Gif_1 = __webpack_require__(9);
+const BPM_1 = __webpack_require__(10);
 const Filters_1 = __webpack_require__(5);
-let gui;
-let filterManager;
-let imageID = 0;
-let gifID = 0;
-let imageIndex = 0;
-let viewer = null;
-let thumbnailsJ = null;
-let bpmDetectionFolder = null;
-let gifViewer = null;
-let setFilteredImage = (imageJ, resultJ) => {
-    let imageName = imageJ.attr('data-name');
-    resultJ.insertBefore(imageJ);
-    gifViewer.replaceImage(imageName, resultJ.clone());
-    currentGif.replaceImage(imageName, resultJ.clone());
-    // if(viewer != null) {
-    // 	(<any>viewer).setFilteredImage(imageJ, resultJ)
+class GifGrave {
+    constructor() {
+        this.imageID = 0;
+        this.viewer = null;
+        this.filterManager = new Filters_1.FilterManager(this);
+        this.bpm = new BPM_1.BPM(this);
+        this.gifManager = new Gif_1.GifManager(this);
+        this.previousIsOnBeat = false;
+        Webcam.set({
+            width: 320,
+            height: 240,
+            image_format: 'jpeg',
+            jpeg_quality: 90
+        });
+        Webcam.attach('#camera');
+        // $('#camera').css({margin: 'auto'})
+        $(document).keydown((event) => {
+            if (event.keyCode == 32) {
+                this.takeSnapshot();
+            }
+            else if (event.keyCode == 13) {
+                this.bpm.tap();
+            }
+            else if (event.keyCode == 27) {
+                this.bpm.stopTap();
+            }
+        });
+        $("#takeSnapshot").click(this.takeSnapshot);
+        $("#createViewer").click(this.createViewer);
+        let thumbnailsJ = $("#thumbnails");
+        thumbnailsJ.sortable(({ stop: () => this.sortImagesStop() }));
+        thumbnailsJ.disableSelection();
+        let outputsJ = $("#outputs");
+        outputsJ.sortable(({ stop: () => this.gifManager.sortGifsStop() }));
+        outputsJ.disableSelection();
+        this.createGUI();
+        this.gifManager.addGif();
+    }
+    initialize() {
+        this.animate();
+    }
+    createGUI() {
+        this.gui = new GUI_1.GUI({ autoPlace: false, width: '100%' });
+        document.getElementById('gui').appendChild(this.gui.getDomElement());
+        this.gui.addButton('Take snapshot', () => this.takeSnapshot());
+        this.gui.addButton('Create viewer', () => this.createViewer());
+        this.bpm.createGUI(this.gui);
+        this.gifManager.createGUI(this.gui);
+        // onSliderChange()
+        // $(gui.getDomElement()).css({ width: '100%' })
+    }
+    setFilteredImage(imageJ, resultJ) {
+        imageJ.siblings('.filtered').remove();
+        let imageName = imageJ.attr('data-name');
+        resultJ.insertBefore(imageJ);
+        this.gifManager.setFilteredImage(imageName, resultJ.clone());
+        // if(viewer != null) {
+        // 	(<any>viewer).setFilteredImage(imageJ, resultJ)
+        // }
+    }
+    removeImage(imageAlt) {
+        this.gifManager.removeImage(imageAlt);
+        $('#thumbnails').children("[data-name='" + imageAlt + "']").remove();
+        // if(viewer != null) {
+        // 	(<any>viewer).removeImage(imageAlt)
+        // }
+        this.nextImage();
+    }
+    selectImage(imageName) {
+        $('#thumbnails').children().removeClass('gg-selected');
+        $('#thumbnails').children("[data-name='" + imageName + "']").addClass('gg-selected');
+        let imgJ = $('#thumbnails').children("[data-name='" + imageName + "']").find('img.original');
+        this.filterManager.setImage(imgJ);
+    }
+    addImage(data_uri, canvas = null, context = null) {
+        // display results in page
+        let imageName = 'img-' + this.imageID;
+        let imgJ = $('<img src="' + data_uri + '" data-name="' + imageName + '" alt="img-' + this.imageID + '">');
+        this.imageID++;
+        this.gifManager.addImage(imgJ.clone());
+        this.createThumbnail(imgJ.clone());
+        imgJ.on('load', () => {
+            this.selectImage(imageName);
+            this.nextImage();
+        });
+        // if(viewer != null) {
+        // 	(<any>viewer).addImage(imgJ.clone())
+        // }
+    }
+    createThumbnail(imgJ, filteredImageJ = null) {
+        let imageName = imgJ.attr('data-name');
+        let liJ = $('<li class="ui-state-default gg-thumbnail" data-name="' + imageName + '">');
+        let buttonJ = $('<button type="button" class="close-btn">');
+        let spanJ = $('<span class="ui-icon ui-icon-closethick">');
+        let divJ = $('<div class="gg-thumbnail-container">');
+        buttonJ.append(spanJ);
+        divJ.append(imgJ.addClass('gg-hidden original'));
+        divJ.append(filteredImageJ);
+        liJ.append(divJ);
+        liJ.append(buttonJ);
+        buttonJ.click(() => this.removeImage(imageName));
+        liJ.mousedown(() => setTimeout(() => { this.selectImage(imageName); }, 0)); // add timeout to not to disturbe draggable
+        $('#thumbnails').append(liJ);
+    }
+    takeSnapshot() {
+        Webcam.snap((data_uri, canvas, context) => this.addImage(data_uri, canvas, context));
+    }
+    nextImage() {
+        this.gifManager.nextImage();
+    }
+    // let sortImagesStart = (event: Event, ui: any)=> {
+    // 	let imageName = $(ui.item).attr('data-name')
+    // 	selectImage(imageName)
     // }
-};
-let removeImage = (imageAlt) => {
-    gifViewer.removeImage(imageAlt);
-    currentGif.removeImage(imageAlt);
-    $('#thumbnails').children("[data-name='" + imageAlt + "']").remove();
-    // if(viewer != null) {
-    // 	(<any>viewer).removeImage(imageAlt)
-    // }
-    nextImage();
-};
-let selectImage = (imageName) => {
-    $('#thumbnails').children().removeClass('gg-selected');
-    $('#thumbnails').children("[data-name='" + imageName + "']").addClass('gg-selected');
-    let imgJ = $('#thumbnails').children("[data-name='" + imageName + "']").find('img.original-image');
-    filterManager.setImage(imgJ);
-};
-let addImage = (data_uri, canvas = null, context = null) => {
-    // display results in page
-    let imageName = 'img-' + imageID;
-    let imgJ = $('<img src="' + data_uri + '" data-name="' + imageName + '" alt="img-' + imageID + '">');
-    imageID++;
-    gifViewer.addImage(imgJ.clone());
-    currentGif.addImage(imgJ.clone());
-    createThumbnail(imgJ.clone());
-    selectImage(imageName);
-    nextImage();
-    // if(viewer != null) {
-    // 	(<any>viewer).addImage(imgJ.clone())
-    // }
-};
-let createThumbnail = (imgJ) => {
-    let imageName = imgJ.attr('data-name');
-    let liJ = $('<li class="ui-state-default gg-thumbnail" data-name="' + imageName + '">');
-    let buttonJ = $('<button type="button" class="close-btn">');
-    let spanJ = $('<span class="ui-icon ui-icon-closethick">');
-    let divJ = $('<div class="gg-thumbnail-container">');
-    buttonJ.append(spanJ);
-    divJ.append(imgJ.addClass('gg-hidden original-image'));
-    liJ.append(divJ);
-    liJ.append(buttonJ);
-    buttonJ.click(() => {
-        removeImage(imageName);
-    });
-    liJ.mousedown(() => setTimeout(() => { selectImage(imageName); }, 0)); // add timeout to not to disturbe draggable
-    $('#thumbnails').append(liJ);
-};
-let takeSnapshot = () => {
-    // take snapshot and get image data
-    Webcam.snap(addImage);
-};
-let nextImage = () => {
-    gifViewer.nextImage();
-    for (let [gifName, gif] of gifs) {
-        gif.nextImage();
+    sortImagesStop() {
+        let thumbnailsJ = $('#thumbnails').children();
+        let imageNames = [];
+        thumbnailsJ.each(function (index, element) {
+            imageNames.push($(element).attr('data-name'));
+        });
+        this.gifManager.sortImages(imageNames);
     }
-};
-// let sortImagesStart = (event: Event, ui: any)=> {
-// 	let imageName = $(ui.item).attr('data-name')
-// 	selectImage(imageName)
-// }
-let sortImagesStop = () => {
-    let thumbnailsJ = $('#thumbnails').children();
-    let imageNames = [];
-    thumbnailsJ.each(function (index, element) {
-        imageNames.push($(element).attr('data-name'));
-    });
-    gifViewer.sortImages(imageNames);
-    currentGif.sortImages(imageNames);
-};
-let createViewer = () => {
-    let windowFeatures = "menubar=yes,location=yes,resizable=yes,scrollbars=yes,status=yes";
-    viewer = window.open("viewer.html", "Gif Grave Viewer", windowFeatures);
-};
-let song = null;
-let previousIsOnBeat = false;
-let animate = () => {
-    requestAnimationFrame(animate);
-    if (song == null || !autoBPM) {
-        return;
+    createViewer() {
+        let windowFeatures = "menubar=yes,location=yes,resizable=yes,scrollbars=yes,status=yes";
+        this.viewer = window.open("viewer.html", "Gif Grave Viewer", windowFeatures);
     }
-    let isOnBeat = song.isOnBeat();
-    if (isOnBeat && !previousIsOnBeat) {
-        nextImage();
+    animate() {
+        requestAnimationFrame(() => this.animate());
+        if (!this.bpm.isAutoBPM()) {
+            return;
+        }
+        let isOnBeat = this.bpm.isOnBeat();
+        if (isOnBeat && !this.previousIsOnBeat) {
+            this.nextImage();
+        }
+        this.previousIsOnBeat = isOnBeat;
     }
-    previousIsOnBeat = isOnBeat;
-};
-let bpmDetectionButton = null;
-let tapButton = null;
-let autoBPM = true;
-let toggleBPMdetection = () => {
-    autoBPM = !autoBPM;
-    bpmDetectionButton.setName(autoBPM ? 'Manual BPM' : 'Auto BPM');
-    tapButton.setVisibility(!autoBPM);
-    bpmDetectionFolder.setVisibility(autoBPM);
-    if (autoBPM) {
-        stopBPMinterval();
+    emptyThumbnails() {
+        $('#thumbnails').empty();
     }
-};
-let bpm = 0;
-let lastTap = Date.now();
-let nTaps = 0;
-const MaxTapTime = 3000;
-let averageBPM = 0;
-let tapIntervalID = null;
-let tapTimeoutID = null;
-let stopBPMinterval = () => {
-    if (tapIntervalID != null) {
-        clearInterval(tapIntervalID);
-        tapIntervalID = null;
+    setGif(gif) {
+        this.emptyThumbnails();
+        for (let imagePairJ of gif.getImagePairsJ()) {
+            this.createThumbnail(imagePairJ.filter('.original'), imagePairJ.filter('.filtered'));
+        }
+        this.selectImage(gif.getFirstImageJ().attr('data-name'));
+        if (this.viewer != null) {
+            this.viewer.setGif(gif.containerJ.children());
+        }
     }
-};
-let setBPMinterval = (bpm, newBPM = null) => {
-    stopBPMinterval();
-    let delay = 1 / (bpm / 60 / 1000);
-    tapIntervalID = setInterval(nextImage, delay);
-    tapButton.setName('Tapping - BPM: ' + bpm.toFixed(2) + (newBPM != null ? ' | ' + newBPM.toFixed(2) : ''));
-};
-let stopTap = () => {
-    nTaps = 0;
-    tapButton.setName('Tap - BPM: ' + averageBPM.toFixed(2));
-};
-let tap = () => {
-    nTaps++;
-    let now = Date.now();
-    if (nTaps == 1) {
-        lastTap = now;
-        tapButton.setName('Tapping');
-        return;
-    }
-    let newBPM = 60 / ((now - lastTap) / 1000);
-    averageBPM = (averageBPM * (nTaps - 1) + newBPM) / nTaps;
-    setBPMinterval(averageBPM, newBPM);
-    if (tapTimeoutID != null) {
-        clearTimeout(tapTimeoutID);
-    }
-    tapTimeoutID = setTimeout(stopTap, MaxTapTime);
-    lastTap = now;
-};
-let createGUI = () => {
-    gui = new GUI_1.GUI({ autoPlace: false, width: '100%' });
-    document.getElementById('gui').appendChild(gui.getDomElement());
-    gui.addButton('Take snapshot', takeSnapshot);
-    gui.addButton('Add gif', addGif);
-    gui.addButton('Create viewer', createViewer);
-    bpmDetectionButton = gui.addButton('Manual BPM', toggleBPMdetection);
-    tapButton = gui.addButton('Tap', tap);
-    tapButton.setVisibility(!autoBPM);
-    bpmDetectionFolder = gui.addFolder('BPM detection settings');
-    let sliders = { sensitivity: null, analyserFFTSize: null, passFreq: null, visualizerFFTSize: null };
-    let onSliderChange = () => {
-        let sens = sliders.sensitivity.getValue();
-        let analyserFFTSize = Math.pow(2, sliders.analyserFFTSize.getValue());
-        let visualizerFFTSize = Math.pow(2, sliders.visualizerFFTSize.getValue());
-        let passFreq = sliders.passFreq.getValue();
-        song = new stasilo.BeatDetector({ sens: sens,
-            visualizerFFTSize: visualizerFFTSize,
-            analyserFFTSize: analyserFFTSize,
-            passFreq: passFreq });
-    };
-    sliders.sensitivity = bpmDetectionFolder.addSlider('Sensitivity', 5, 1, 16, 1).onChange(onSliderChange);
-    sliders.analyserFFTSize = bpmDetectionFolder.addSlider('Analyser FFT Size', 7, 5, 15, 1);
-    sliders.passFreq = bpmDetectionFolder.addSlider('Bandpass Filter Frequency', 600, 1, 10000, 1);
-    sliders.visualizerFFTSize = bpmDetectionFolder.addSlider('Visualizer FFT Size', 7, 5, 15, 1);
-    // onSliderChange()
-    // $(gui.getDomElement()).css({ width: '100%' })
-};
-let emptyThumbnails = () => {
-    $('#thumbnails').empty();
-};
-let gifs = new Map();
-let currentGif = null;
-let getGifContainer = () => {
-    return currentGif.containerJ.parentUntil('li.gg-thumbnail');
-};
-let addGif = () => {
-    emptyThumbnails();
-    let currentGifJ = $('<li class="gg-thumbnail" data-name="' + gifID + '">');
-    let buttonJ = $('<button type="button" class="close-btn">');
-    let spanJ = $('<span class="ui-icon ui-icon-closethick">');
-    let divJ = $('<div class="gg-thumbnail-container">');
-    buttonJ.append(spanJ);
-    currentGifJ.append(divJ);
-    currentGifJ.append(buttonJ);
-    buttonJ.click(() => {
-        removeGif(gifID);
-    });
-    currentGifJ.mousedown(() => selectGif(gifID));
-    gifID++;
-    $('#outputs').append(currentGifJ);
-    currentGif = new GifViewer_1.GifViewer(divJ);
-    gifs.set(gifID, currentGif);
-};
-let removeGif = (gifID) => {
-    $('#outputs').find('[data-name="' + gifID + '"]').remove();
-};
-let selectGif = (gifID) => {
-    $('#outputs').children().removeClass('gg-selected');
-    $('#outputs').children("[data-name='" + gifID + "']").addClass('gg-selected');
-    currentGif = gifs.get(gifID);
-    if (viewer != null) {
-        viewer.setCurrentGif(currentGif.getChildren());
-    }
-};
+}
+let gifGrave = null;
 document.addEventListener("DOMContentLoaded", function (event) {
-    Webcam.set({
-        width: 320,
-        height: 240,
-        image_format: 'jpeg',
-        jpeg_quality: 90
-    });
-    Webcam.attach('#camera');
-    // $('#camera').css({margin: 'auto'})
-    $(document).keydown(function (event) {
-        if (event.keyCode == 32) {
-            takeSnapshot();
-        }
-        else if (event.keyCode == 13) {
-            tap();
-        }
-        else if (event.keyCode == 27) {
-            stopTap();
-        }
-    });
-    $("#takeSnapshot").click(takeSnapshot);
-    $("#createViewer").click(createViewer);
-    gifViewer = new GifViewer_1.GifViewer($('#result'));
-    addGif();
-    animate();
-    thumbnailsJ = $("#thumbnails");
-    thumbnailsJ.sortable(({ stop: sortImagesStop }));
-    thumbnailsJ.disableSelection();
-    createGUI();
-    filterManager = new Filters_1.FilterManager(setFilteredImage);
+    gifGrave = new GifGrave();
+    gifGrave.initialize();
 });
 
 
@@ -580,13 +486,12 @@ class Filter {
         let result = new Image();
         result.src = canvas.toDataURL();
         result.className = 'filtered';
-        imageJ.siblings('.filtered').remove();
         let resultJ = $(result);
         let imageName = imageJ.attr('data-name');
         resultJ.attr('data-name', imageName);
         let filterJSON = { name: this.name, args: args };
-        imageJ.attr('data-filter', JSON.stringify(filterJSON));
-        Filter.filterManager.setFilteredImage(imageJ, resultJ);
+        resultJ.attr('data-filter', JSON.stringify(filterJSON));
+        Filter.filterManager.gifGrave.setFilteredImage(imageJ, resultJ);
     }
     activate(args = null) {
         Filter.filterManager.currentFilter = this;
@@ -759,11 +664,11 @@ let filters = {
     ]
 };
 class FilterManager {
-    constructor(setFilteredImage) {
+    constructor(gifGrave) {
+        this.gifGrave = gifGrave;
         Filter.filterManager = this;
         this.nameToFilter = new Map();
         this.initialize();
-        this.setFilteredImage = setFilteredImage;
     }
     activateFilter(name, updateSelect = true, args = null) {
         if (updateSelect) {
@@ -803,7 +708,7 @@ class FilterManager {
     filterImage(fromImageData = false) {
         let args = null;
         if (fromImageData) {
-            let imageFilterData = this.currentImageJ.attr('data-filter');
+            let imageFilterData = this.currentImageJ.siblings('.filtered').attr('data-filter');
             if (imageFilterData != null && imageFilterData.length > 0) {
                 let filter = JSON.parse(imageFilterData);
                 args = filter.args;
@@ -818,22 +723,15 @@ class FilterManager {
     }
     setImage(imgJ) {
         this.currentImageJ = imgJ;
-        if (!imgJ.attr('gg-loaded')) {
-            imgJ.on('load', () => {
-                imgJ.attr('gg-loaded', 'true');
-                this.filterImage();
-            });
-        }
-        else {
-            this.filterImage(true);
-        }
+        this.filterImage(true);
     }
 }
 exports.FilterManager = FilterManager;
 
 
 /***/ }),
-/* 6 */
+/* 6 */,
+/* 7 */
 /***/ (function(module, exports, __webpack_require__) {
 
 __webpack_require__(3);
@@ -841,14 +739,14 @@ module.exports = __webpack_require__(1);
 
 
 /***/ }),
-/* 7 */,
-/* 8 */
+/* 8 */,
+/* 9 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
 
 Object.defineProperty(exports, "__esModule", { value: true });
-class GifViewer {
+class Gif {
     constructor(containerJ) {
         this.containerJ = containerJ;
         this.imageIndex = 0;
@@ -857,25 +755,34 @@ class GifViewer {
     // 	this.containerJ.width(imgJ[0].naturalWidth)
     // 	this.containerJ.height(imgJ[0].naturalHeight)
     // }
+    getImageContainerJ(name) {
+        return this.containerJ.find('div[data-name="' + name + '"]');
+    }
     getImageJ(name) {
         return this.containerJ.find('img[data-name="' + name + '"]');
     }
-    addImage(imgJ) {
-        // if(!imgJ.attr('gg-loaded')) {
-        // 	imgJ.on('load', ()=> { 
-        // 		imgJ.attr('gg-loaded', 'true')
-        // 		this.setSize(imgJ)
-        // 	})
-        // } else {
-        // 	this.setSize(imgJ)
-        // }
-        this.containerJ.append(imgJ);
+    getFirstImageJ() {
+        return this.containerJ.find('img.original').first();
+    }
+    addImage(imgJ, filteredImageJ = null) {
+        let divJ = $('<div class="gg-image-container">');
+        divJ.attr('data-name', imgJ.attr('data-name'));
+        divJ.append(imgJ.addClass('gg-hidden original'));
+        if (filteredImageJ != null) {
+            divJ.append(filteredImageJ);
+        }
+        this.containerJ.append(divJ);
+    }
+    setFilteredImage(imageName, resultJ) {
+        let originalImageJ = this.getImageJ(imageName);
+        originalImageJ.siblings('.filtered').remove();
+        resultJ.insertBefore(originalImageJ);
     }
     replaceImage(oldImageName, newImageJ) {
         this.getImageJ(oldImageName).replaceWith(newImageJ);
     }
     removeImage(imageName) {
-        this.getImageJ(imageName).remove();
+        this.getImageContainerJ(imageName).remove();
     }
     nextImage() {
         let imagesJ = this.containerJ.children();
@@ -884,25 +791,202 @@ class GifViewer {
             this.imageIndex = 0;
         }
         // avoid to use hide() / show() because it affects the size of dom element in chrome which is a problem with the thumbnail scrollbar
-        imagesJ.css({ opacity: 0 });
-        $(imagesJ[this.imageIndex]).css({ opacity: 1 });
+        // imagesJ.css({opacity: 0})
+        // $(imagesJ[this.imageIndex]).css({opacity: 1})
+        imagesJ.hide();
+        $(imagesJ[this.imageIndex]).show();
     }
     sortImages(imageNames) {
-        let imagesJ = this.containerJ.children();
+        let imageContainersJ = this.containerJ.children();
         for (let imageName of imageNames) {
-            this.containerJ.append(this.getImageJ(imageName));
+            let imageContainerJ = this.containerJ.children('div[data-name="' + imageName + '"]');
+            this.containerJ.append(imageContainerJ);
         }
     }
-    setChildren(imgJs) {
-        for (let img of imgJs) {
-            this.addImage($(img));
+    getImagePairsJ() {
+        let imagePairsJ = [];
+        for (let child of this.containerJ.children()) {
+            imagePairsJ.push($(child).find('img').clone());
+        }
+        return imagePairsJ;
+    }
+    setGif(gif) {
+        this.empty();
+        let imagePairsJ = gif.getImagePairsJ();
+        for (let imagePairJ of imagePairsJ) {
+            this.addImage(imagePairJ.filter('.original'), imagePairJ.filter('.filtered'));
         }
     }
-    getChildren() {
-        return this.containerJ.children().clone();
+    empty() {
+        this.containerJ.empty();
     }
 }
-exports.GifViewer = GifViewer;
+exports.Gif = Gif;
+class GifManager {
+    constructor(gifGrave) {
+        this.gifID = 0;
+        this.gifs = new Map();
+        this.currentGif = null;
+        this.getGifContainer = () => {
+            return this.currentGif.containerJ.parentUntil('li.gg-thumbnail');
+        };
+        this.sortGifsStop = () => {
+        };
+        this.gifGrave = gifGrave;
+    }
+    createGUI(gui) {
+        gui.addButton('Add gif', () => this.addGif());
+        this.gif = new Gif($('#result'));
+    }
+    removeImage(imageName) {
+        this.gif.removeImage(imageName);
+        this.currentGif.removeImage(imageName);
+    }
+    addImage(imgJ) {
+        this.gif.addImage(imgJ.clone());
+        this.currentGif.addImage(imgJ.clone());
+    }
+    setFilteredImage(imageName, resultJ) {
+        this.gif.setFilteredImage(imageName, resultJ.clone());
+        this.currentGif.setFilteredImage(imageName, resultJ.clone());
+    }
+    nextImage() {
+        this.gif.nextImage();
+        for (let [gifName, gif] of this.gifs) {
+            gif.nextImage();
+        }
+    }
+    sortImages(imageNames) {
+        this.gif.sortImages(imageNames);
+        this.currentGif.sortImages(imageNames);
+    }
+    addGif() {
+        this.gifGrave.emptyThumbnails();
+        this.gif.empty();
+        let currentGifJ = $('<li class="gg-thumbnail" data-name="gif-' + this.gifID + '">');
+        let buttonJ = $('<button type="button" class="close-btn">');
+        let spanJ = $('<span class="ui-icon ui-icon-closethick">');
+        let divJ = $('<div class="gg-thumbnail-container">');
+        buttonJ.append(spanJ);
+        currentGifJ.append(divJ);
+        currentGifJ.append(buttonJ);
+        let currentGifID = this.gifID;
+        buttonJ.click(() => this.removeGif(currentGifID));
+        currentGifJ.mousedown(() => this.selectGif(currentGifID));
+        $('#outputs').append(currentGifJ);
+        this.currentGif = new Gif(divJ);
+        this.gifs.set(this.gifID, this.currentGif);
+        this.gifID++;
+    }
+    removeGif(gifID) {
+        $('#outputs').find('[data-name="gif-' + gifID + '"]').remove();
+    }
+    selectGif(gifID) {
+        $('#outputs').children().removeClass('gg-selected');
+        $('#outputs').children("[data-name='gif-" + gifID + "']").addClass('gg-selected');
+        this.currentGif = this.gifs.get(gifID);
+        this.gif.setGif(this.currentGif);
+        this.gifGrave.setGif(this.currentGif);
+    }
+}
+exports.GifManager = GifManager;
+
+
+/***/ }),
+/* 10 */
+/***/ (function(module, exports, __webpack_require__) {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", { value: true });
+class BPM {
+    constructor(gifGrave) {
+        this.tapButton = null;
+        this.bpm = 0;
+        this.lastTap = Date.now();
+        this.nTaps = 0;
+        this.MaxTapTime = 3000;
+        this.averageBPM = 0;
+        this.tapIntervalID = null;
+        this.tapTimeoutID = null;
+        this.song = null;
+        this.bpmDetectionFolder = null;
+        this.bpmDetectionButton = null;
+        this.autoBPM = true;
+        this.gifGrave = gifGrave;
+    }
+    isAutoBPM() {
+        return this.song != null && this.autoBPM;
+    }
+    isOnBeat() {
+        return this.isAutoBPM() && this.song.isOnBeat();
+    }
+    createGUI(gui) {
+        this.bpmDetectionButton = gui.addButton('Manual BPM', () => this.toggleBPMdetection());
+        this.tapButton = gui.addButton('Tap', () => this.tap());
+        this.tapButton.setVisibility(!this.autoBPM);
+        this.bpmDetectionFolder = gui.addFolder('BPM detection settings');
+        let sliders = { sensitivity: null, analyserFFTSize: null, passFreq: null, visualizerFFTSize: null };
+        let onSliderChange = () => {
+            let sens = sliders.sensitivity.getValue();
+            let analyserFFTSize = Math.pow(2, sliders.analyserFFTSize.getValue());
+            let visualizerFFTSize = Math.pow(2, sliders.visualizerFFTSize.getValue());
+            let passFreq = sliders.passFreq.getValue();
+            this.song = new stasilo.BeatDetector({ sens: sens,
+                visualizerFFTSize: visualizerFFTSize,
+                analyserFFTSize: analyserFFTSize,
+                passFreq: passFreq });
+        };
+        sliders.sensitivity = this.bpmDetectionFolder.addSlider('Sensitivity', 5, 1, 16, 1).onChange(onSliderChange);
+        sliders.analyserFFTSize = this.bpmDetectionFolder.addSlider('Analyser FFT Size', 7, 5, 15, 1).onChange(onSliderChange);
+        sliders.passFreq = this.bpmDetectionFolder.addSlider('Bandpass Filter Frequency', 600, 1, 10000, 1).onChange(onSliderChange);
+        sliders.visualizerFFTSize = this.bpmDetectionFolder.addSlider('Visualizer FFT Size', 7, 5, 15, 1).onChange(onSliderChange);
+        onSliderChange();
+    }
+    toggleBPMdetection() {
+        this.autoBPM = !this.autoBPM;
+        this.bpmDetectionButton.setName(this.autoBPM ? 'Manual BPM' : 'Auto BPM');
+        this.tapButton.setVisibility(!this.autoBPM);
+        this.bpmDetectionFolder.setVisibility(this.autoBPM);
+        if (this.autoBPM) {
+            this.stopBPMinterval();
+        }
+    }
+    stopBPMinterval() {
+        if (this.tapIntervalID != null) {
+            clearInterval(this.tapIntervalID);
+            this.tapIntervalID = null;
+        }
+    }
+    setBPMinterval(bpm, newBPM = null) {
+        this.stopBPMinterval();
+        let delay = 1 / (bpm / 60 / 1000);
+        this.tapIntervalID = setInterval(() => this.gifGrave.nextImage(), delay);
+        this.tapButton.setName('Tapping - BPM: ' + bpm.toFixed(2) + (newBPM != null ? ' | ' + newBPM.toFixed(2) : ''));
+    }
+    stopTap() {
+        this.nTaps = 0;
+        this.tapButton.setName('Tap - BPM: ' + this.averageBPM.toFixed(2));
+    }
+    tap() {
+        this.nTaps++;
+        let now = Date.now();
+        if (this.nTaps == 1) {
+            this.lastTap = now;
+            this.tapButton.setName('Tapping');
+            return;
+        }
+        let newBPM = 60 / ((now - this.lastTap) / 1000);
+        this.averageBPM = (this.averageBPM * (this.nTaps - 1) + newBPM) / this.nTaps;
+        this.setBPMinterval(this.averageBPM, newBPM);
+        if (this.tapTimeoutID != null) {
+            clearTimeout(this.tapTimeoutID);
+        }
+        this.tapTimeoutID = setTimeout(() => this.stopTap(), this.MaxTapTime);
+        this.lastTap = now;
+    }
+}
+exports.BPM = BPM;
 
 
 /***/ })
