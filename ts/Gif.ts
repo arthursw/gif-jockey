@@ -4,6 +4,7 @@ declare type GifGrave = {
 	viewer: Window
 	emptyThumbnails: ()=> void
 	setGif: (gif: Gif)=> void
+	playGif: (gif: Gif)=> void
 }
 
 export class Gif {
@@ -149,20 +150,28 @@ export class GifManager {
 	getGifContainer = ()=> {
 		return this.currentGif.containerJ.parentUntil('li.gg-thumbnail')
 	}
-
 	addGif() {
 		this.gifGrave.emptyThumbnails()
 		this.gif.empty()
 
 		let currentGifJ = $('<li class="gg-thumbnail" data-name="gif-'+this.gifID+'">')
-		let buttonJ = $('<button type="button" class="close-btn">')
-		let spanJ = $('<span class="ui-icon ui-icon-closethick">')
+		let closeButtonJ = $('<button type="button" class="gg-small-btn close-btn">')
+		let closeSpanJ = $('<span class="ui-icon ui-icon-closethick">')
+		let playButtonJ = $('<button type="button" class="gg-small-btn play-btn">')
+		let playSpanJ = $('<span class="ui-icon ui-icon-play">')
 		let divJ = $('<div class="gg-thumbnail-container">')
-		buttonJ.append(spanJ)
+		closeButtonJ.append(closeSpanJ)
+		playButtonJ.append(playSpanJ)
 		currentGifJ.append(divJ)
-		currentGifJ.append(buttonJ)
+		currentGifJ.append(closeButtonJ)
+		currentGifJ.append(playButtonJ)
 		let currentGifID = this.gifID
-		buttonJ.click( ()=> this.removeGif(currentGifID) )
+		closeButtonJ.click( ()=> this.removeGif(currentGifID) )
+		playButtonJ.click( ()=> {
+			$('#outputs').find('.gg-small-btn.play-btn').show()
+			playButtonJ.hide()
+			this.playGif(currentGifID)
+		})
 		currentGifJ.mousedown( ()=> this.selectGif(currentGifID) )
 		
 		$('#outputs').append(currentGifJ)
@@ -186,6 +195,11 @@ export class GifManager {
 
 		this.gif.setGif(this.currentGif)
 		this.gifGrave.setGif(this.currentGif)
+	}
+
+	playGif(gifID: number) {
+		let gif = this.gifs.get(gifID)
+		this.gifGrave.playGif(gif)
 	}
 
 	sortGifsStop = ()=> {

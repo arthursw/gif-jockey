@@ -9,6 +9,7 @@ export class BPM {
 	gifGrave: GifGrave
 	tapButton: Controller = null
 
+	pause = false
 	bpm = 0
 	lastTap = Date.now()
 	nTaps = 0
@@ -31,7 +32,7 @@ export class BPM {
 	}
 
 	isOnBeat() {
-		return this.isAutoBPM() && this.song.isOnBeat()
+		return this.isAutoBPM() && this.song.isOnBeat() && !this.pause
 	}
 
 	createGUI(gui: GUI) {
@@ -62,10 +63,13 @@ export class BPM {
 		sliders.visualizerFFTSize = this.bpmDetectionFolder.addSlider('Visualizer FFT Size', 7, 5, 15, 1).onChange(onSliderChange)
 
 		onSliderChange()
+
+		gui.addToggleButton('Pause', 'Resume', this, 'pause')
 	}
 
 	toggleBPMdetection() {
 		this.autoBPM = !this.autoBPM
+
 		this.bpmDetectionButton.setName(this.autoBPM ? 'Manual BPM' : 'Auto BPM')
 		this.tapButton.setVisibility(!this.autoBPM)
 		this.bpmDetectionFolder.setVisibility(this.autoBPM)
@@ -80,19 +84,35 @@ export class BPM {
 		}
 	} 
 
+	onInterval() {
+		if(this.pause) {
+			return
+		}
+		this.gifGrave.nextImage()
+	}
+
 	setBPMinterval(bpm: number, newBPM:number=null) {
 		this.stopBPMinterval()
 		let delay = 1 / (bpm / 60 / 1000)
-		this.tapIntervalID = setInterval(()=>this.gifGrave.nextImage(), delay)
+		this.gifGrave.nextImage()
+		this.tapIntervalID = setInterval(()=>this.onInterval(), delay)
 		this.tapButton.setName('Tapping - BPM: ' + bpm.toFixed(2) + (newBPM != null ? ' | ' + newBPM.toFixed(2) : ''))
 	}
 
 	stopTap() {
+		if(this.isAutoBPM()) {
+			return
+		}
 		this.nTaps = 0
 		this.tapButton.setName('Tap - BPM: ' + this.averageBPM.toFixed(2))
 	}
 
 	tap() {
+
+		if(this.isAutoBPM()) {
+			return
+		}
+
 		this.nTaps++
 
 		let now = Date.now()
@@ -105,6 +125,7 @@ export class BPM {
 		let newBPM = 60 / ( (now - this.lastTap) / 1000 )
 		this.averageBPM = ( this.averageBPM * (this.nTaps - 1) + newBPM ) / this.nTaps
 
+		console.log(this.averageBPM + ', ' + newBPM)
 		this.setBPMinterval(this.averageBPM, newBPM)
 
 		if(this.tapTimeoutID != null) {

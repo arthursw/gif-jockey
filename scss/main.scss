@@ -23,9 +23,10 @@ body {
 	font-family: Helvetica, sans-serif;
 	display: flex;
 	flex-direction: row;
-	overflow: hidden;
     height: 100vh;
     margin: 0;
+	overflow-y: hidden;
+    overflow-x: auto;
 }
 
 ul.gg-list {
@@ -39,7 +40,7 @@ ul.gg-list {
     li.gg-thumbnail {
     	list-style-type: none;
     	border: 0;
-		width: 100%;
+		width: auto;
 		position: relative;
 	    margin-bottom: 0;
 	    @include vendor-nameprefix('cursor', 'grab');
@@ -65,7 +66,6 @@ ul.gg-list {
 }
 
 #result {
-	width: 320px;
 }
 
 #outputs {
@@ -73,8 +73,12 @@ ul.gg-list {
 	// max-width: 200px;
 	li.gg-thumbnail {
 		.gg-thumbnail-container {
-			height: 150px;
-			width: 200px;
+		}
+	}
+
+	.gg-selected {
+		.gg-thumbnail-container {
+			background-color: #cddc39;
 		}
 	}
 }
@@ -101,6 +105,15 @@ ul.gg-list {
 	flex-direction: row;
 }
 
+.gg-wrap {
+	flex-flow: row wrap;
+    overflow-y: auto;
+    width: 40%;
+    #camera, #effect, #results {
+    	height: 240px;
+    }
+}
+
 .gg-slider, .slider.slider-horizontal {
 	width: 100%;
 }
@@ -113,7 +126,7 @@ ul.gg-list {
 	width: 150px;
 }
 
-.close-btn {
+.gg-small-btn {
     top: 0;
     right: 0;
     position: absolute;
@@ -127,6 +140,15 @@ ul.gg-list {
 	    position: absolute;
 	    top: 2px;
 	    left: -1px;
+    }
+    &.play-btn {
+    	right: 15px;
+    }
+    &:focus {
+		outline: none;
+    }
+    &:active {
+		outline: none;
     }
 }
 

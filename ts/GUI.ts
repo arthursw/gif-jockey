@@ -145,14 +145,27 @@ export class GUI {
 		return new Controller( this.gui.add(object, propertyName, minOrArray, max) )
 	}
 
-	addButton(name: string, callback: (value?: any)=>any): Controller {
-		let object:any = {}
+	addButton(name: string, callback: ()=>any, object: any = {}): Controller {
 		let nameNoSpaces = name.replace(/\s+/g, '')
 		object[nameNoSpaces] = callback
 		let controller = new Controller(this.gui.add(object, nameNoSpaces))
 		if(name != nameNoSpaces) {
 			controller.setName(name)
 		}
+		return controller
+	}
+
+	addToggleButton(name: string, toggledName: string, object: any = {}, propertyName: string = '_toggled', callback: ()=>any=null): Controller {
+		let defaultValue: any = object[propertyName]
+		let controller:Controller = null
+		let newCallback = () => {
+			object[propertyName] = !object[propertyName]
+			controller.setName(object[propertyName] == defaultValue ? name : toggledName)
+			if(callback != null) {
+				callback.apply(object)
+			}
+		}
+		controller = this.addButton(name, newCallback, object)
 		return controller
 	}
 

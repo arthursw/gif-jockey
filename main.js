@@ -388,7 +388,7 @@ class GifGrave {
         }
         this.selectImage(gif.getFirstImageJ().attr('data-name'));
         if (this.viewer != null) {
-            this.viewer.setGif(gif.containerJ.children());
+            this.viewer.setGif(gif.containerJ.children('img.filtered').clone());
         }
     }
 }
@@ -961,14 +961,21 @@ class BPM {
     setBPMinterval(bpm, newBPM = null) {
         this.stopBPMinterval();
         let delay = 1 / (bpm / 60 / 1000);
+        this.gifGrave.nextImage();
         this.tapIntervalID = setInterval(() => this.gifGrave.nextImage(), delay);
         this.tapButton.setName('Tapping - BPM: ' + bpm.toFixed(2) + (newBPM != null ? ' | ' + newBPM.toFixed(2) : ''));
     }
     stopTap() {
+        if (this.isAutoBPM()) {
+            return;
+        }
         this.nTaps = 0;
         this.tapButton.setName('Tap - BPM: ' + this.averageBPM.toFixed(2));
     }
     tap() {
+        if (this.isAutoBPM()) {
+            return;
+        }
         this.nTaps++;
         let now = Date.now();
         if (this.nTaps == 1) {
@@ -978,6 +985,7 @@ class BPM {
         }
         let newBPM = 60 / ((now - this.lastTap) / 1000);
         this.averageBPM = (this.averageBPM * (this.nTaps - 1) + newBPM) / this.nTaps;
+        console.log(this.averageBPM + ', ' + newBPM);
         this.setBPMinterval(this.averageBPM, newBPM);
         if (this.tapTimeoutID != null) {
             clearTimeout(this.tapTimeoutID);

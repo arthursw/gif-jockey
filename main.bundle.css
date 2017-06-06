@@ -2,9 +2,10 @@ body {
   font-family: Helvetica, sans-serif;
   display: flex;
   flex-direction: row;
-  overflow: hidden;
   height: 100vh;
-  margin: 0; }
+  margin: 0;
+  overflow-y: hidden;
+  overflow-x: auto; }
 
 ul.gg-list {
   max-width: 200px;

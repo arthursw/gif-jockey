@@ -365,6 +365,20 @@ export class FilterManager {
 		this.activateFilter(defaultFilter)
 	}
 
+	filterLoadedImage(args: any[]) {
+		let image = this.currentImageJ[0]
+		let texture = this.canvas.texture(image)
+		if(texture._.width == null || texture._.width == 0 && texture._.height == null || texture._.height == 0) {
+			console.log("texture not loaded");
+			return
+		}
+		this.canvas.draw(texture)
+
+		if(this.currentFilter != null) {
+			this.currentFilter.apply(args)
+		}
+	}
+
 	filterImage(fromImageData: boolean = false) {
 		let args:any[] = null
 		if(fromImageData) {
@@ -375,13 +389,17 @@ export class FilterManager {
 				this.activateFilter(filter.name, true, args)
 			}
 		}
-
-		let texture = this.canvas.texture(this.currentImageJ[0])
-		this.canvas.draw(texture)
-
-		if(this.currentFilter != null) {
-			this.currentFilter.apply(args)
+		let image = this.currentImageJ[0]
+		if(	image.naturalWidth != null && image.naturalHeight != null && 
+			image.naturalWidth != 0 && image.naturalHeight != 0 ) {
+			this.filterLoadedImage(args)
+		} else {
+			image.onload = () => {
+				console.log("Image loaded")
+				this.filterLoadedImage(args)
+			}
 		}
+		
 	}
 
 	setImage(imgJ: any) {

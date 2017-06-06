@@ -21,6 +21,9 @@ namespace Viewer {
 		imagesJ.hide()
 		$(imagesJ[imageIndex]).show()
 	}
+	
+	(<any>window).nextImage = nextImage
+
 
 	let addImage = (imageJ: any)=> {
 		$("#results").append(imageJ)
@@ -53,7 +56,7 @@ namespace Viewer {
 	(<any>window).setGif = setGif
 
 	document.addEventListener("DOMContentLoaded", function (event) {
-	    setInterval(nextImage, 300)
+	    // setInterval(nextImage, 300)
 	    $("#results").append($(self.opener.document.body).find("#results").children().clone())
 	});
 

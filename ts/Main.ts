@@ -31,6 +31,7 @@ class GifGrave {
 		$( document ).keydown((event) => {
 			if(event.keyCode == 32) {			// space bar
 				this.takeSnapshot()
+				event.preventDefault()
 			} else if(event.keyCode == 13) {	// enter
 				this.bpm.tap()
 			} else if(event.keyCode == 27) {	// escape
@@ -130,7 +131,7 @@ class GifGrave {
 	createThumbnail(imgJ: any, filteredImageJ: any = null) {
 		let imageName = imgJ.attr('data-name')
 		let liJ = $('<li class="ui-state-default gg-thumbnail" data-name="'+imageName+'">')
-		let buttonJ = $('<button type="button" class="close-btn">')
+		let buttonJ = $('<button type="button" class="gg-small-btn close-btn">')
 		let spanJ = $('<span class="ui-icon ui-icon-closethick">')
 		let divJ = $('<div class="gg-thumbnail-container">')
 		buttonJ.append(spanJ)
@@ -149,6 +150,10 @@ class GifGrave {
 
 	nextImage() {
 		this.gifManager.nextImage()
+
+		if(this.viewer != null) {
+			(<any>this.viewer).nextImage()
+		}
 	}
 
 	// let sortImagesStart = (event: Event, ui: any)=> {
@@ -198,9 +203,11 @@ class GifGrave {
 			this.createThumbnail(imagePairJ.filter('.original'), imagePairJ.filter('.filtered'))
 		}
 		this.selectImage(gif.getFirstImageJ().attr('data-name'))
+	}
 
+	playGif(gif: Gif) {
 		if(this.viewer != null) {
-			(<any>this.viewer).setGif(gif.containerJ.children())
+			(<any>this.viewer).setGif(gif.containerJ.find('img.filtered').clone())
 		}
 	}
 }
