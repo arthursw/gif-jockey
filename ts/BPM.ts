@@ -8,13 +8,13 @@ declare type GifGrave = {
 export class BPM {
 	gifGrave: GifGrave
 	tapButton: Controller = null
+	bpmSlider: Controller
 
 	pause = false
-	bpm = 0
 	lastTap = Date.now()
 	nTaps = 0
 	MaxTapTime = 3000
-	averageBPM = 0
+	averageBPM = 120
 	tapIntervalID:number = null
 	tapTimeoutID:number = null
 	song: any = null
@@ -39,8 +39,10 @@ export class BPM {
 		this.bpmDetectionButton = gui.addButton('Manual BPM', ()=> this.toggleBPMdetection())
 
 		this.tapButton = gui.addButton('Tap', ()=> this.tap())
+		this.bpmSlider = gui.addSlider('BPM', 120, 40, 250, 1).onChange((value)=>this.setBPMinterval(value, undefined, false))
 
 		this.tapButton.setVisibility(!this.autoBPM)
+		this.bpmSlider.setVisibility(!this.autoBPM)
 		this.bpmDetectionFolder = gui.addFolder('BPM detection settings')
 
 		let sliders:any = { sensitivity: null, analyserFFTSize: null, passFreq: null, visualizerFFTSize: null }
@@ -58,7 +60,7 @@ export class BPM {
 		}
 
 		sliders.sensitivity = this.bpmDetectionFolder.addSlider('Sensitivity', 5, 1, 16, 1).onChange(onSliderChange)
-		sliders.analyserFFTSize = this.bpmDetectionFolder.addSlider('Analyser FFT Size', 7, 5, 15, 1).onChange(onSliderChange)
+		sliders.analyserFFTSize = this.bpmDetectionFolder.addSlider('Analyser FFT Size', 13, 5, 15, 1).onChange(onSliderChange)
 		sliders.passFreq = this.bpmDetectionFolder.addSlider('Bandpass Filter Frequency', 600, 1, 10000, 1).onChange(onSliderChange)
 		sliders.visualizerFFTSize = this.bpmDetectionFolder.addSlider('Visualizer FFT Size', 7, 5, 15, 1).onChange(onSliderChange)
 
@@ -72,11 +74,15 @@ export class BPM {
 
 		this.bpmDetectionButton.setName(this.autoBPM ? 'Manual BPM' : 'Auto BPM')
 		this.tapButton.setVisibility(!this.autoBPM)
+		this.bpmSlider.setVisibility(!this.autoBPM)
 		this.bpmDetectionFolder.setVisibility(this.autoBPM)
 		if(this.autoBPM) {
 			this.stopBPMinterval()
+		} else if(this.tapIntervalID == null) {
+			this.tapIntervalID = setInterval(()=>this.onInterval(), this.getInterval())
 		}
 	}
+
 	stopBPMinterval() {
 		if(this.tapIntervalID != null) {
 			clearInterval(this.tapIntervalID)
@@ -91,12 +97,20 @@ export class BPM {
 		this.gifGrave.nextImage()
 	}
 
-	setBPMinterval(bpm: number, newBPM:number=null) {
+	getInterval(bpm: number = this.averageBPM) {
+		return 1 / (bpm / 60 / 1000)
+	}
+
+	setBPMinterval(bpm: number, newBPM:number=null, updateBpmSlider = true) {
+		this.averageBPM = bpm
 		this.stopBPMinterval()
-		let delay = 1 / (bpm / 60 / 1000)
+		let delay = this.getInterval(bpm)
 		this.gifGrave.nextImage()
 		this.tapIntervalID = setInterval(()=>this.onInterval(), delay)
-		this.tapButton.setName('Tapping - BPM: ' + bpm.toFixed(2) + (newBPM != null ? ' | ' + newBPM.toFixed(2) : ''))
+		if(updateBpmSlider) {
+			this.tapButton.setName('Tapping' + (newBPM != null ? ' - Instant BPM: ' + newBPM.toFixed(2) : ''))
+			this.bpmSlider.setValueNoCallback(bpm)
+		}
 	}
 
 	stopTap() {
@@ -104,7 +118,7 @@ export class BPM {
 			return
 		}
 		this.nTaps = 0
-		this.tapButton.setName('Tap - BPM: ' + this.averageBPM.toFixed(2))
+		this.tapButton.setName('Tap')
 	}
 
 	tap() {

@@ -1,13 +1,18 @@
 import { GUI, Controller } from "./GUI"
+import { BPM } from "./BPM"
+
+declare var gifshot: any
 
 declare type GifGrave = {
 	viewer: Window
+	bpm: BPM
 	emptyThumbnails: ()=> void
 	setGif: (gif: Gif)=> void
 	playGif: (gif: Gif)=> void
 }
 
 export class Gif {
+	static gifManager: GifManager
 	containerJ: any
 	imageIndex: number
 
@@ -27,6 +32,10 @@ export class Gif {
 
 	getImageJ(name: string): any {
 		return this.containerJ.find('img[data-name="'+name+'"]')
+	}
+
+	getFilteredImagesJ(): any {
+		return this.containerJ.find('img.filtered')
 	}
 
 	getFirstImageJ(): any {
@@ -102,6 +111,32 @@ export class Gif {
 	empty() {
 		this.containerJ.empty()
 	}
+
+	preview() {
+		let imagesJ = this.getFilteredImagesJ().toArray()
+		if(imagesJ.length == 0) {
+			return
+		}
+		let width = imagesJ[0].naturalWidth
+		let height = imagesJ[0].naturalHeight
+		let interval = Gif.gifManager.gifGrave.bpm.getInterval() / 1000
+		gifshot.createGIF({
+		    gifWidth: width,
+		    gifHeight: height,
+    		interval: interval,
+			images: imagesJ,
+			sampleInterval: Gif.gifManager.gifQuality
+			}, function (obj:any) {
+				if (!obj.error) {
+					var image = obj.image, animatedImage = document.createElement('img')
+					animatedImage.src = image
+					let aJ = $('<a download="gif.gif" href="' + image + '">')
+					aJ.append(animatedImage)
+					$('#gif-result').empty().append(aJ)
+				}
+			}
+		);
+	}
 }
 
 export class GifManager {
@@ -110,13 +145,18 @@ export class GifManager {
 	gifs: Map<number, Gif> = new Map()
 	currentGif: Gif = null
 	gifGrave: GifGrave
+	gifQuality: number = 10
 
 	constructor(gifGrave: GifGrave) {
 		this.gifGrave = gifGrave
+		Gif.gifManager = this
 	}
 
 	createGUI(gui: GUI) {
 		gui.addButton('Add gif', ()=> this.addGif())
+		gui.addSlider('Gif degradation', this.gifQuality, 1, 5000, 1).onChange((value: number)=>{ this.gifQuality = value })
+		gui.addButton('Preview gif', ()=> this.currentGif.preview())
+		gui.addButton('Save gif', ()=> $('#gif-result').find('a')[0].click())
 		this.gif = new Gif($('#result'))
 	}
 
@@ -168,8 +208,8 @@ export class GifManager {
 		let currentGifID = this.gifID
 		closeButtonJ.click( ()=> this.removeGif(currentGifID) )
 		playButtonJ.click( ()=> {
-			$('#outputs').find('.gg-small-btn.play-btn').show()
-			playButtonJ.hide()
+			$('#outputs').find('.gg-small-btn.play-btn').removeClass('playing')
+			playButtonJ.addClass('playing')
 			this.playGif(currentGifID)
 		})
 		currentGifJ.mousedown( ()=> this.selectGif(currentGifID) )

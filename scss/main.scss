@@ -1,3 +1,9 @@
+html {
+	background-color: black;
+	// overflow-y: auto;
+    overflow-x: auto;
+}
+
 @mixin vendor-prefix($name, $value) {
 	@each $vendor in ('-webkit-', '-khtml-', '-moz-', '-ms-', '-o-', '') {
 		#{$vendor}#{$name}: #{$value};
@@ -25,7 +31,7 @@ body {
 	flex-direction: row;
     height: 100vh;
     margin: 0;
-	overflow-y: hidden;
+	overflow-y: auto;
     overflow-x: auto;
 }
 
@@ -35,9 +41,10 @@ ul.gg-list {
     padding: 0;
     margin: 0;
     overflow-y: auto;
+    overflow-x: hidden;
     font-size: 0;
 
-    li.gg-thumbnail {
+    li.gg-thumbnail, li.placeholder {
     	list-style-type: none;
     	border: 0;
 		width: auto;
@@ -50,7 +57,10 @@ ul.gg-list {
 				width: 100%;
 			}
 		}
-
+    }
+    li.placeholder {
+    	background-color: #cddc39;
+    	width: 320px;
     }
 }
 
@@ -66,6 +76,11 @@ ul.gg-list {
 }
 
 #result {
+}
+
+#gui {
+	width: 250px;
+    min-width: 250px;
 }
 
 #outputs {
@@ -88,6 +103,7 @@ ul.gg-list {
 }
 
 #effect {
+	position: relative;
 }
 
 
@@ -108,7 +124,8 @@ ul.gg-list {
 .gg-wrap {
 	flex-flow: row wrap;
     overflow-y: auto;
-    width: 40%;
+    align-content: flex-start;
+    // width: 40%;
     #camera, #effect, #results {
     	height: 240px;
     }
@@ -122,8 +139,11 @@ ul.gg-list {
 	margin-bottom: 20px;
 }
 
-.dg.main .close-button.close-bottom {
-	width: 150px;
+#gui {
+	.dg.main .close-button.close-bottom {
+		// width: 150px;
+		position: static;
+	}
 }
 
 .gg-small-btn {
@@ -143,6 +163,9 @@ ul.gg-list {
     }
     &.play-btn {
     	right: 15px;
+    	&.playing {
+    		background-color: #cddc39;
+    	}
     }
     &:focus {
 		outline: none;
@@ -156,8 +179,8 @@ ul.gg-list {
 	width: 10px;
 	height: 10px;
 	border: white 2px solid;
-	border-radius: 5px;
-	background-color: blue;
+	border-radius: 10px;
+	background-color: #64b5f6;
 }
 
 .noselect {

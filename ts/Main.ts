@@ -15,7 +15,7 @@ class GifGrave {
 	viewer: Window = null
 
 	filterManager = new FilterManager(this)
-	bpm = new BPM(this)
+	bpm: BPM = new BPM(this)
 	gifManager = new GifManager(this)
 
 	constructor() {
@@ -151,7 +151,7 @@ class GifGrave {
 	nextImage() {
 		this.gifManager.nextImage()
 
-		if(this.viewer != null) {
+		if(this.viewer != null && this.viewer.hasOwnProperty('nextImage')) {
 			(<any>this.viewer).nextImage()
 		}
 	}
@@ -194,6 +194,7 @@ class GifGrave {
 
 	emptyThumbnails() {
 		$('#thumbnails').empty()
+		$('#thumbnails').append($('<li>').addClass('placeholder'))
 	}
 
 	setGif(gif: Gif) {
@@ -203,6 +204,7 @@ class GifGrave {
 			this.createThumbnail(imagePairJ.filter('.original'), imagePairJ.filter('.filtered'))
 		}
 		this.selectImage(gif.getFirstImageJ().attr('data-name'))
+		this.nextImage()
 	}
 
 	playGif(gif: Gif) {

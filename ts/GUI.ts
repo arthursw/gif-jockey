@@ -155,14 +155,14 @@ export class GUI {
 		return controller
 	}
 
-	addToggleButton(name: string, toggledName: string, object: any = {}, propertyName: string = '_toggled', callback: ()=>any=null): Controller {
+	addToggleButton(name: string, toggledName: string, object: any = {}, propertyName: string = '_toggled', callback: (enabled?:boolean)=>any=null): Controller {
 		let defaultValue: any = object[propertyName]
 		let controller:Controller = null
 		let newCallback = () => {
 			object[propertyName] = !object[propertyName]
 			controller.setName(object[propertyName] == defaultValue ? name : toggledName)
 			if(callback != null) {
-				callback.apply(object)
+				callback.apply(object, [object[propertyName]])
 			}
 		}
 		controller = this.addButton(name, newCallback, object)

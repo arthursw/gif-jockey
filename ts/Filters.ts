@@ -7,26 +7,31 @@ declare type GifGrave = {
 }
 
 class Nub {
+	size: number = 10
 	position: {x: number, y: number}
 	divJ: any
 
-	constructor(name: string, x: number, y: number, onChange: ()=>void) {
-		let parent = $('#effect')[0]
+	constructor(name: string, x: number, y: number, relative: boolean, onChange: ()=>void) {
+		let parentJ = $('#effect')
+		let parent = parentJ[0]
 
-		this.position = {x: 0, y: 0}
+		parentJ.css({width: parentJ.innerWidth(), height: parentJ.innerHeight()})
+		this.position = { x: relative ? x * parentJ.innerWidth() : x, y: relative ? y * parentJ.innerHeight() : y }
 		let divJ: any = $('<div class="nub">')
 		
-		divJ.css({top: y, left: x, position:'absolute'})
+		divJ.css({top: this.position.y - this.size / 2, left: this.position.x - this.size / 2, position:'absolute'})
 
+		$(parent).append(divJ)
 		divJ.draggable({
 			containement: parent,
 			drag: ( event: Event, ui: any )=> {
-				this.position.x = ui.position.x
-				this.position.y = ui.position.y
+				ui.position.left = Math.max(-this.size / 2, Math.min(parentJ.innerWidth() - this.size / 2, ui.position.left ));
+				ui.position.top = Math.max(-this.size / 2, Math.min(parentJ.innerHeight() - this.size / 2, ui.position.top ));
+				this.position.x = ui.position.left + this.size / 2
+				this.position.y = ui.position.top + this.size / 2
 				onChange()
 			}
 		})
-		$(parent).append(divJ)
 		this.divJ = divJ
 	}
 
@@ -116,6 +121,7 @@ class Filter {
 			}
 		}
 		canvas.draw(texture)
+
 		canvas[this.functionName].apply(canvas, args)
 		canvas.update()
 		let result = new Image()
@@ -156,7 +162,8 @@ class Filter {
 
 		for(let [nubName, nub] of this.nubs) {
 			let position = args != null ? argNameToValue.get(nubName) : nub
-			this.nubControllers.set(nubName, new Nub(nub.name, position.x, position.y, ()=>this.apply()))
+			let relative = args == null
+			this.nubControllers.set(nubName, new Nub(nub.name, position.x, position.y, relative, ()=>this.apply()))
 		}
 		
 	}
@@ -252,29 +259,30 @@ let filters: any = {
     'Warp': [
         new Filter('Swirl', 'swirl', function() {
             this.addNub('center', 0.5, 0.5);
-            this.addSlider('angle', 'Angle', -25, 25, 3, 0.1);
             this.addSlider('radius', 'Radius', 0, 600, 200, 1);
+            this.addSlider('angle', 'Angle', -25, 25, 3, 0.1);
         }, function() {
             this.setCode('canvas.draw(texture).swirl(' + this.center.x + ', ' + this.center.y + ', ' + this.radius + ', ' + this.angle + ').update();');
         }),
         new Filter('Bulge / Pinch', 'bulgePinch', function() {
             this.addNub('center', 0.5, 0.5);
-            this.addSlider('strength', 'Strength', -1, 1, 0.5, 0.01);
             this.addSlider('radius', 'Radius', 0, 600, 200, 1);
+            this.addSlider('strength', 'Strength', -1, 1, 0.5, 0.01);
         }, function() {
             this.setCode('canvas.draw(texture).bulgePinch(' + this.center.x + ', ' + this.center.y + ', ' + this.radius + ', ' + this.strength + ').update();');
-        }),
-        new Filter('Perspective', 'perspective', function() {
-            var w = 640, h = 425;
-            this.addNub('a', perspectiveNubs[0] / w, perspectiveNubs[1] / h);
-            this.addNub('b', perspectiveNubs[2] / w, perspectiveNubs[3] / h);
-            this.addNub('c', perspectiveNubs[4] / w, perspectiveNubs[5] / h);
-            this.addNub('d', perspectiveNubs[6] / w, perspectiveNubs[7] / h);
-        }, function() {
-            var before = perspectiveNubs;
-            var after = [this.a.x, this.a.y, this.b.x, this.b.y, this.c.x, this.c.y, this.d.x, this.d.y];
-            this.setCode('canvas.draw(texture).perspective([' + before + '], [' + after + ']).update();');
-        }, 'perspective.jpg')
+        })
+        // ,
+        // new Filter('Perspective', 'perspective', function() {
+        //     var w = 640, h = 425;
+        //     this.addNub('a', perspectiveNubs[0] / w, perspectiveNubs[1] / h);
+        //     this.addNub('b', perspectiveNubs[2] / w, perspectiveNubs[3] / h);
+        //     this.addNub('c', perspectiveNubs[4] / w, perspectiveNubs[5] / h);
+        //     this.addNub('d', perspectiveNubs[6] / w, perspectiveNubs[7] / h);
+        // }, function() {
+        //     var before = perspectiveNubs;
+        //     var after = [this.a.x, this.a.y, this.b.x, this.b.y, this.c.x, this.c.y, this.d.x, this.d.y];
+        //     this.setCode('canvas.draw(texture).perspective([' + before + '], [' + after + ']).update();');
+        // }, 'perspective.jpg')
     ],
     'Fun': [
         new Filter('Ink', 'ink', function() {
