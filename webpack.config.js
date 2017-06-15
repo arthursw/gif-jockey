@@ -32,5 +32,8 @@ module.exports = {
   resolve: {
     extensions: [".tsx", ".ts", ".js", ".scss"]
   },
+  externals: {
+    'three': 'three'
+  },
   watch: true
 };

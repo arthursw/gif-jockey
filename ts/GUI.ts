@@ -9,14 +9,17 @@ declare type DatController = {
 	setValue: (value: number | string) => any
 	max: (value: number) => any
 	min: (value: number) => any
-	step: (value: number) => any
+	step: (value: number) => DatController
 	updateDisplay(): () => any
 	remove(): () => void
 	options: (options: string[]) => any
+	listen: ()=> DatController
+	name: (n: string)=> DatController
 }
 
 declare type DatFolder = {
 	__controllers: Controller[]
+	open: ()=> void
 }
 
 export class Controller {
@@ -82,35 +85,52 @@ export class Controller {
 
 	setValue(value: number | string) {
 		this.controller.setValue(value)
+		return this
 	}
 
 	setValueNoCallback(value: number | string) {
 		this.controller.object[this.controller.property] = value
 		this.controller.updateDisplay()
+		return this
 	}
 
 	max(value: number) {
 		this.controller.max(value)
+		return this
 	}
 
 	min(value: number) {
 		this.controller.min(value)
+		return this
 	}
 
 	step(value: number) {
 		this.controller.step(value)
+		return this
 	}
 
 	updateDisplay() {
 		this.controller.updateDisplay()
+		return this
 	}
 
 	options(options: string[]): any {
 		return this.controller.options(options)
 	}
 
+	listen(): Controller {
+		this.controller.listen()
+		return this
+	}
+
 	setName(name: string) {
 		$(this.controller.domElement.parentElement).find('span.property-name').html(name)
+		return this
+	}
+
+	name(name: string) {
+		this.controller.name(name)
+		return this
 	}
 }
 
@@ -212,5 +232,10 @@ export class GUI {
 
 	getControllers(): Controller[] {
 		return this.gui.__controllers
+	}
+
+	open() {
+		this.gui.open()
+		return this
 	}
 }

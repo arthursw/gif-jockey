@@ -1,13 +1,13 @@
 /// <reference path="../node_modules/@types/jquery/index.d.ts"/>
 
 import { GUI, Controller } from "./GUI"
+import { Webcam } from "./Webcam"
+import { Renderer } from "./Renderer"
 import { Gif, GifManager } from "./Gif"
 import { BPM } from "./BPM"
 import { FilterManager } from "./Filters"
 
-declare var Webcam: any
-
-class GifGrave {
+class GifJokey {
 	
 	imageID = 0
 
@@ -17,27 +17,31 @@ class GifGrave {
 	filterManager = new FilterManager(this)
 	bpm: BPM = new BPM(this)
 	gifManager = new GifManager(this)
+	webcam: Webcam = null
+	renderer: Renderer = null
 
 	constructor() {
 		console.log("Gif Grave")
-		Webcam.set({
-			width: 320,
-			height: 240,
-			image_format: 'jpeg',
-			jpeg_quality: 90
-		});
-		Webcam.attach( '#camera' );
-		// $('#camera').css({margin: 'auto'})
-		$( document ).keydown((event) => {
-			if(event.keyCode == 32) {			// space bar
-				this.takeSnapshot()
-				event.preventDefault()
-			} else if(event.keyCode == 13) {	// enter
-				this.bpm.tap()
-			} else if(event.keyCode == 27) {	// escape
-				this.bpm.stopTap()
-			}
-		});
+		
+		// Webcam.set({
+		// 	width: 320,
+		// 	height: 240,
+		// 	image_format: 'jpeg',
+		// 	jpeg_quality: 90,
+		// 	swfURL: './lib/webcam.swf'
+		// });
+		// Webcam.attach( '#camera' );
+		// // $('#camera').css({margin: 'auto'})
+		// $( document ).keydown((event) => {
+		// 	if(event.keyCode == 32) {			// space bar
+		// 		this.takeSnapshot()
+		// 		event.preventDefault()
+		// 	} else if(event.keyCode == 13) {	// enter
+		// 		this.bpm.tap()
+		// 	} else if(event.keyCode == 27) {	// escape
+		// 		this.bpm.stopTap()
+		// 	}
+		// });
 
 		$("#takeSnapshot").click(this.takeSnapshot)
 		$("#createViewer").click(this.createViewer)
@@ -51,8 +55,14 @@ class GifGrave {
 	    outputsJ.disableSelection()
 
 	    this.createGUI()
+	    this.webcam = new Webcam(()=>this.webcamLoaded())
 
 	    this.gifManager.addGif()
+
+	}
+	
+	webcamLoaded() {
+		this.renderer = new Renderer(this.webcam, this.gui)
 	}
 
 	initialize() {
@@ -145,7 +155,7 @@ class GifGrave {
 	}
 
 	takeSnapshot() {
-		Webcam.snap((data_uri: string, canvas: HTMLCanvasElement, context: CanvasRenderingContext2D)=>this.addImage(data_uri, canvas, context))
+		// Webcam.snap((data_uri: string, canvas: HTMLCanvasElement, context: CanvasRenderingContext2D)=>this.addImage(data_uri, canvas, context))
 	}
 
 	nextImage() {
@@ -214,9 +224,9 @@ class GifGrave {
 	}
 }
 
-let gifGrave: GifGrave = null
+let gifJokey: GifJokey = null
 document.addEventListener("DOMContentLoaded", function(event) { 
-	gifGrave = new GifGrave()
-	gifGrave.initialize()
+	gifJokey = new GifJokey()
+	gifJokey.initialize()
 });
 
