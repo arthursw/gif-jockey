@@ -1,8 +1,8 @@
 {
-  "name": "gif-grave",
+  "name": "gif-jokey",
   "repository": {
     "type": "git",
-    "url": "git://github.com/arthursw/gif-grave.git"
+    "url": "git://github.com/arthursw/gif-jokey.git"
   },
   "version": "1.0.0",
   "description": "gif-o-maton for parties",
@@ -40,8 +40,8 @@
     "webpack-dev-server": "^2.4.5"
   },
   "bugs": {
-    "url": "https://github.com/arthursw/gif-grave/issues"
+    "url": "https://github.com/arthursw/gif-jokey/issues"
   },
-  "homepage": "https://github.com/arthursw/gif-grave#readme",
+  "homepage": "https://github.com/arthursw/gif-jokey#readme",
   "keywords": []
 }

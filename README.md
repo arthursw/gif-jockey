@@ -1,3 +1,3 @@
-# Gif grave
+# Gif Jokey
 
-[Gif-o-maton](https://arthursw.github.io/gif-grave/) to party!
+[Gif-Jokey](https://arthursw.github.io/gif-jokey/) to party!

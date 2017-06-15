@@ -19,7 +19,7 @@ class GifGrave {
 	gifManager = new GifManager(this)
 
 	constructor() {
-
+		console.log("Gif Grave")
 		Webcam.set({
 			width: 320,
 			height: 240,
