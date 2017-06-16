@@ -15,6 +15,7 @@ export class Gif {
 	static gifManager: GifManager
 	containerJ: any
 	imageIndex: number
+	hasPreview = false
 
 	constructor(containerJ: any) {
 		this.containerJ = containerJ
@@ -115,7 +116,7 @@ export class Gif {
 		this.containerJ.empty()
 	}
 
-	preview() {
+	preview(save = false) {
 		let imagesJ = this.getFilteredImagesJ().toArray()
 		if(imagesJ.length == 0) {
 			return
@@ -129,13 +130,17 @@ export class Gif {
     		interval: interval,
 			images: imagesJ,
 			sampleInterval: Gif.gifManager.gifQuality
-			}, function (obj:any) {
+			}, (obj:any)=> {
 				if (!obj.error) {
 					var image = obj.image, animatedImage = document.createElement('img')
 					animatedImage.src = image
 					let aJ = $('<a download="gif.gif" href="' + image + '">')
 					aJ.append(animatedImage)
 					$('#gif-result').empty().append(aJ)
+					this.hasPreview = true
+					if(save) {
+						aJ[0].click()
+					}
 				}
 			}
 		);
@@ -159,8 +164,15 @@ export class GifManager {
 	createGUI(gui: GUI) {
 		gui.addButton('Add gif', ()=> this.addGif())
 		gui.addSlider('Gif degradation', this.gifQuality, 1, 5000, 1).onChange((value: number)=>{ this.gifQuality = value })
-		gui.addButton('Preview gif', ()=> this.currentGif.preview())
-		gui.addButton('Save gif', ()=> $('#gif-result').find('a')[0].click())
+		gui.addButton('Save gif', ()=> this.currentGif.preview(true))
+		// gui.addButton('Save gif', ()=> {
+		// 	if(!this.currentGif.hasPreview) {
+		// 		this.currentGif.preview(true)
+		// 	} else {
+		// 		let linkJ = $('#result').find('a')
+		// 		linkJ[0].click()
+		// 	}
+		// })
 		this.gif = new Gif($('#result'))
 	}
 

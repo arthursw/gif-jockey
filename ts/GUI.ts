@@ -18,7 +18,7 @@ declare type DatController = {
 }
 
 declare type DatFolder = {
-	__controllers: Controller[]
+	__controllers: DatController[]
 	open: ()=> void
 }
 
@@ -234,7 +234,7 @@ export class GUI {
 		return new GUI(null, this.gui.addFolder(name))
 	}
 
-	getControllers(): Controller[] {
+	getControllers(): any[] {
 		return this.gui.__controllers
 	}
 

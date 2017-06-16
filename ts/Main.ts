@@ -55,7 +55,9 @@ class GifJokey {
 
 		$( document ).keydown((event:KeyboardEvent) => this.onKeyDown(event))
 		$( '#gui' ).keydown((event:KeyboardEvent) => {
+			console.log(event.keyCode)
 			if(event.keyCode == 13 || event.keyCode == 27) {
+				console.log('prevent key down')
 				event.preventDefault()
 				event.stopPropagation()
 				return -1

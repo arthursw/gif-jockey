@@ -7,6 +7,7 @@ import { PixelateShader } from "./Shaders/Pixelate"
 import { BadTVShader } from "./Shaders/BadTV"
 import { StaticShader } from "./Shaders/Static"
 import { FilmShader } from "./Shaders/Film"
+import { DotMatrix } from "./Shaders/DotMatrix"
 
 export class ShaderManager {
 
@@ -219,6 +220,38 @@ export class ShaderManager {
 				}
 			}
 		},
+		dotMatrix: {
+			name: 'Dot Matrix',
+			shader: DotMatrix,
+			on: false,
+			parameters: {
+				sharpness: {
+					name: 'Sharpness',
+					value: 0.7,
+					min: 0,
+					max: 1,
+					step: 0.01
+				},
+				gridSize: {
+					name: 'Grid Size',
+					value: 10,
+					min: 0,
+					max: 200,
+					randomMin: 50,
+					randomMax: 200,
+					step: 1
+				},
+				dotSize: {
+					name: 'Dot Size',
+					value: 0.1,
+					min: 0,
+					max: 1,
+					randomMin: 0,
+					randomMax: 0.5,
+					step: 0.1
+				}
+			}
+		},
 		edgeShader: {
 			name: 'Edge',
 			shader: (<any>THREE).EdgeShader2,
@@ -380,13 +413,13 @@ export class ShaderManager {
 			let folder = gui.addFolder(shaderObject.name)
 			this.shaders.push({pass: new THREE.ShaderPass(shaderObject.shader), object: shaderObject, folder: folder})
 			
-			folder.add(shaderObject, 'on').name('On').listen().onChange(onToggleShaders)
+			folder.add(shaderObject, 'on').name('On').onChange(onToggleShaders)
 			for(let propertyName in shaderObject.parameters) {
 				let propertiesObject = shaderObject.parameters[propertyName]
 				if(propertiesObject.type != null && propertiesObject.type == 'color') {
-					folder.addColor(propertiesObject, 'value').listen().onChange(onParamsChange)
+					folder.addColor(propertiesObject, 'value').onChange(onParamsChange)
 				} else {
-					folder.add(propertiesObject, 'value', propertiesObject.min, propertiesObject.max).step(propertiesObject.step).listen().setName(propertiesObject.name).onChange(onParamsChange)
+					folder.add(propertiesObject, 'value', propertiesObject.min, propertiesObject.max).step(propertiesObject.step).setName(propertiesObject.name).onChange(onParamsChange)
 				}
 			}
 			folder.open()
@@ -473,6 +506,9 @@ export class ShaderManager {
 					this.getRandomOnInterval(propertiesObject.randomMin != null ? Math.max(propertiesObject.randomMin, propertiesObject.min) : propertiesObject.min, 
 											 propertiesObject.randomMax != null ? Math.min(propertiesObject.randomMax, propertiesObject.max) : propertiesObject.max)
 			}
+			for(let controller of shader.folder.getControllers()) {
+				controller.updateDisplay()
+			}
 			i++
 		}
 
@@ -505,6 +541,9 @@ export class ShaderManager {
 			}
 			for(let propertyName in shader.object.parameters) {
 				shader.object.parameters[propertyName].value = parameters[propertyName]
+			}
+			for(let controller of shader.folder.getControllers()) {
+				controller.updateDisplay()
 			}
 		}
 		this.onToggleShaders(false)
