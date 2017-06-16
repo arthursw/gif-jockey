@@ -3,7 +3,7 @@ import { BPM } from "./BPM"
 
 declare var gifshot: any
 
-declare type GifGrave = {
+declare type GifJockey = {
 	viewer: Window
 	bpm: BPM
 	emptyThumbnails: ()=> void
@@ -58,9 +58,11 @@ export class Gif {
 		let originalImageJ = this.getImageJ(imageName)
 		originalImageJ.siblings('.filtered').remove()
 		resultJ.insertBefore(originalImageJ)
+		resultJ.css({width: '100%'})
 	}
 
 	replaceImage(oldImageName: string, newImageJ: any) {
+		newImageJ.css({width: '100%'})
 		this.getImageJ(oldImageName).replaceWith(newImageJ)
 	}
 
@@ -79,6 +81,7 @@ export class Gif {
 		// avoid to use hide() / show() because it affects the size of dom element in chrome which is a problem with the thumbnail scrollbar
 		// imagesJ.css({opacity: 0})
 		// $(imagesJ[this.imageIndex]).css({opacity: 1})
+
 
 		imagesJ.hide()
 		$(imagesJ[this.imageIndex]).show()
@@ -119,7 +122,7 @@ export class Gif {
 		}
 		let width = imagesJ[0].naturalWidth
 		let height = imagesJ[0].naturalHeight
-		let interval = Gif.gifManager.gifGrave.bpm.getInterval() / 1000
+		let interval = Gif.gifManager.gifJockey.bpm.getInterval() / 1000
 		gifshot.createGIF({
 		    gifWidth: width,
 		    gifHeight: height,
@@ -144,12 +147,13 @@ export class GifManager {
 	gif: Gif
 	gifs: Map<number, Gif> = new Map()
 	currentGif: Gif = null
-	gifGrave: GifGrave
+	gifJockey: GifJockey
 	gifQuality: number = 10
 
-	constructor(gifGrave: GifGrave) {
-		this.gifGrave = gifGrave
+	constructor(gifJockey: GifJockey) {
+		this.gifJockey = gifJockey
 		Gif.gifManager = this
+		// this.toggleThumbnails(false)
 	}
 
 	createGUI(gui: GUI) {
@@ -191,7 +195,7 @@ export class GifManager {
 		return this.currentGif.containerJ.parentUntil('li.gg-thumbnail')
 	}
 	addGif() {
-		this.gifGrave.emptyThumbnails()
+		this.gifJockey.emptyThumbnails()
 		this.gif.empty()
 
 		let currentGifJ = $('<li class="gg-thumbnail" data-name="gif-'+this.gifID+'">')
@@ -207,12 +211,19 @@ export class GifManager {
 		currentGifJ.append(playButtonJ)
 		let currentGifID = this.gifID
 		closeButtonJ.click( ()=> this.removeGif(currentGifID) )
-		playButtonJ.click( ()=> {
+		playButtonJ.mousedown( (event: JQueryEventObject)=> {
 			$('#outputs').find('.gg-small-btn.play-btn').removeClass('playing')
 			playButtonJ.addClass('playing')
 			this.playGif(currentGifID)
+			event.stopPropagation()
+			return -1
 		})
-		currentGifJ.mousedown( ()=> this.selectGif(currentGifID) )
+		currentGifJ.mousedown( (event: JQueryMouseEventObject )=> {
+			this.selectGif(currentGifID) 
+			event.stopPropagation()
+			event.preventDefault()
+			return -1
+		})
 		
 		$('#outputs').append(currentGifJ)
 
@@ -226,20 +237,54 @@ export class GifManager {
 		$('#outputs').find('[data-name="gif-' + gifID + '"]').remove()
 	}
 
+	toggleThumbnails(show: boolean) {
+		let thumbnailsJ = $('#thumbnails')
+		let thumbnailsVisible = thumbnailsJ.is(':visible')
+		if(show && !thumbnailsVisible) {
+			thumbnailsJ.show()
+			document.dispatchEvent(new Event('cameraResized'))
+		} else if (!show && thumbnailsVisible) {
+			thumbnailsJ.hide()
+			document.dispatchEvent(new Event('cameraResized'))
+		}
+		// let resultJ = $('#result')
+		// let resultVisible = resultJ.is(':visible')
+		// if(show && !resultVisible) {
+		// 	resultJ.show()
+		// } else if (!show && resultVisible) {
+		// 	resultJ.hide()
+		// }
+	}
+
 	selectGif(gifID: number) {
 
-		$('#outputs').children().removeClass('gg-selected')	
-		$('#outputs').children("[data-name='gif-"+gifID+"']").addClass('gg-selected')
+		let gifsToSelectJ = $('#outputs').children("[data-name='gif-"+gifID+"']")
+		let gifsAlreadySelected = gifsToSelectJ.hasClass('gg-selected')
+		$('#outputs').children().removeClass('gg-selected')
+		
+		if(gifsAlreadySelected || gifsToSelectJ.length == 0) {
+			this.toggleThumbnails(false)
+			return
+		}
+
+		gifsToSelectJ.addClass('gg-selected')
 
 		this.currentGif = this.gifs.get(gifID)
 
 		this.gif.setGif(this.currentGif)
-		this.gifGrave.setGif(this.currentGif)
+		this.gifJockey.setGif(this.currentGif)
+		
+		this.toggleThumbnails(true)
+	}
+
+	deselectGif() {
+		$('#outputs').children().removeClass('gg-selected')
+		this.toggleThumbnails(false)
 	}
 
 	playGif(gifID: number) {
 		let gif = this.gifs.get(gifID)
-		this.gifGrave.playGif(gif)
+		this.gifJockey.playGif(gif)
 	}
 
 	sortGifsStop = ()=> {

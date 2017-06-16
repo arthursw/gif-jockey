@@ -2,7 +2,7 @@ import { GUI, Controller } from "./GUI"
 
 declare var fx: any
 
-declare type GifGrave = {
+declare type GifJockey = {
 	setFilteredImage: (imageJ: any, resultJ:any)=>void
 }
 
@@ -134,7 +134,7 @@ class Filter {
 		let filterJSON = { name: this.name, args: args }
 		resultJ.attr('data-filter', JSON.stringify(filterJSON))
 
-		Filter.filterManager.gifGrave.setFilteredImage(imageJ, resultJ)
+		Filter.filterManager.gifJockey.setFilteredImage(imageJ, resultJ)
 	}
 
 	activate(args:any[]=null) {
@@ -325,10 +325,10 @@ export class FilterManager {
 	currentImageJ: any
 	nameToFilter: Map<string, Filter>
 	filterSelect: Controller
-	gifGrave: GifGrave
+	gifJockey: GifJockey
 
-	constructor(gifGrave: GifGrave) {
-		this.gifGrave = gifGrave
+	constructor(gifJockey: GifJockey) {
+		this.gifJockey = gifJockey
 		Filter.filterManager = this
 		this.nameToFilter = new Map()
 		this.initialize()

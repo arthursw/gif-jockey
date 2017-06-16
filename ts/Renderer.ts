@@ -19,58 +19,126 @@ export class Renderer {
 	webcam: Webcam
 
 	constructor(webcam: Webcam, gui: GUI) {
+		let cameraJ = $('#camera')
+		this.setCameraSize()
+
 		this.webcam = webcam
+
+		
 		let width = webcam.width
 		let height = webcam.height
+
 		this.camera = new THREE.OrthographicCamera( width / - 2, width / 2, height / 2, height / - 2, 1, 1000 )
 		this.scene = new THREE.Scene()
 
-		this.renderer = new THREE.WebGLRenderer( { antialias: true } )
-		this.renderer.setSize( this.webcam.width, this.webcam.height )
+		this.renderer = new THREE.WebGLRenderer( { antialias: true, preserveDrawingBuffer: true } )
+		this.renderer.setSize( width, height )
+
+		let size = this.computeRendererSize(webcam, cameraJ)
+		this.setCanvasSize(size.width, size.height)
 
 		let container = document.getElementById( 'camera' )
 		container.appendChild( this.renderer.domElement )
 
+		this.setContent(webcam.video)
+		
+		this.camera.position.z = 5
 
-		this.texture = new THREE.Texture( webcam.video )
-		// this.material = new THREE.MeshBasicMaterial( (<any>{ map: this.texture, overdraw: true } ))
+		window.addEventListener( 'resize', ()=> this.windowResize(), false )
+		document.addEventListener('cameraResized', ()=> this.windowResize())
+
+		requestAnimationFrame(()=>this.render())
+		this.centerOnRectangle(this.webcam.width, this.webcam.height)
+
+		setTimeout(()=>this.windowResize(), 0)
+	}
+	
+	setCameraSize() {
+		let cameraJ = $('#camera')
+		cameraJ.css({width: 0, height:0})
+		let parentJ = cameraJ.parent()
+		cameraJ.css({
+			width: ''+parentJ.width()+'px',
+			height: ''+parentJ.height()+'px',
+			display: 'flex',
+			'align-items': 'center',
+			'justify-conten': 'center',
+		})
+	}
+
+	setContent(content: HTMLImageElement | HTMLVideoElement) {
+
+		this.texture = new THREE.Texture( content )
 		this.material = new THREE.MeshBasicMaterial( (<any>{ map: this.texture } ))
-		// this.material = new THREE.ShaderMaterial(PixelateShader)
-		// this.material.uniforms.tDiffuse = { value: this.texture }
-
+		
 		this.texture.minFilter = THREE.LinearFilter
 		this.texture.magFilter = THREE.LinearFilter
 
-		let geometry = new THREE.PlaneGeometry(webcam.width, webcam.height)
+		let geometry = new THREE.PlaneGeometry(content.width, content.height)
+		if(this.mesh != null) {
+			this.scene.remove(this.mesh)
+		}
 		this.mesh = new THREE.Mesh(geometry, this.material)
 
 		this.scene.add(this.mesh)
-		
-		this.camera.position.z = 5
-		window.addEventListener( 'resize', ()=> this.windowResize(), false )
-
-		this.shaderManager = new ShaderManager(gui, this.camera, this.scene, this.renderer)
-
-		requestAnimationFrame(()=>this.render())
 	}
-	
-	getDomElement(): any {
+
+	setShaderManager(shaderManager: ShaderManager) {
+		this.shaderManager = shaderManager
+	}
+
+	getDomElement(): HTMLCanvasElement {
 		return this.renderer.domElement
 	}
 
-	windowResize(){
+	getFilteredImage(): {image: HTMLImageElement, shaderParameters: any} {
+		let canvas = this.getDomElement()
+		let result = new Image()
+		result.src = canvas.toDataURL()
 
-		// let width = this.webcam.width
-		// let height = this.webcam.height
-		// this.camera.left = width / -2
-		// this.camera.right = width / 2
-		// this.camera.top = height / -2
-		// this.camera.bottom = height / 2
+		return { image: result, shaderParameters: this.shaderManager.getShaderParameters() }
+	}
+
+	computeRendererSize(webcam: Webcam, cameraJ: any): {width: number, height: number} {
+
+		this.setCameraSize()
+
+		let cameraWidth = cameraJ.width()
+		let cameraHeight = cameraJ.height()
+
+		let cameraRatio = cameraWidth / cameraHeight
+		let webcamRatio = webcam.width / webcam.height
 		
-		// this.camera.updateProjectionMatrix()
-		// this.camera.position.z = 5
+		let width: number = null
+		let height: number = null
 
-		this.renderer.setSize( this.webcam.width, this.webcam.height )
+		if(cameraRatio < webcamRatio) {
+			width = cameraWidth
+			height = cameraWidth / webcamRatio
+		} else {
+			width = cameraHeight * webcamRatio
+			height = cameraHeight
+		}
+
+		return { width: width, height: height }
+	}
+
+	setCanvasSize(width: number, height: number) {
+		$(this.renderer.domElement).css({width: '' + width + 'px', height: '' + height + 'px', margin: 'auto', display: 'block'})
+	}
+
+	centerOnRectangle(width: number, height: number) {
+		let margin = 0
+		let ratio = Math.max((width + margin) / this.renderer.getSize().width, (height + margin) / this.renderer.getSize().height)
+		this.camera.zoom = 1 / ratio
+		this.camera.updateProjectionMatrix()
+	}
+	
+	windowResize(){
+		let cameraJ = $('#camera')
+		this.setCameraSize()
+		let size = this.computeRendererSize(this.webcam, cameraJ)
+		this.setCanvasSize(size.width, size.height)
 	}
 
 	render() {

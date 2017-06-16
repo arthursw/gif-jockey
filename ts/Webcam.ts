@@ -4,13 +4,16 @@ export class Webcam {
 	streaming = false
 	video: HTMLVideoElement = null
 	canvas: HTMLCanvasElement = null
+	context: CanvasRenderingContext2D = null
 	photo: HTMLElement = null
 
 	constructor(callback: ()=>void) {
 
-		// this.canvas = <HTMLCanvasElement>document.getElementById('canvas')
 		// this.photo = document.getElementById('photo')
 		this.video = document.createElement('video')
+		this.canvas = document.createElement('canvas')
+		this.context = this.canvas.getContext('2d')
+
 		let n:any = navigator
 		n.getMedia = ( navigator.getUserMedia ||
 			n.webkitGetUserMedia ||
@@ -45,12 +48,22 @@ export class Webcam {
 				
 				this.video.setAttribute('width', this.width.toString())
 				this.video.setAttribute('height', this.height.toString())
+				this.canvas.width = this.width
+				this.canvas.height = this.height
 				this.streaming = true
 				callback()
 			}
 		}, false)
 
 		// this.clearPhoto()
+	}
+
+	getImage() {
+		if (this.width && this.height) {
+			this.context.drawImage(this.video, 0, 0, this.width, this.height)
+			return this.canvas.toDataURL()
+		}
+		return null
 	}
 
 	// Fill the photo with an indication that none has been

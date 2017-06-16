@@ -10,38 +10,353 @@ import { FilmShader } from "./Shaders/Film"
 
 export class ShaderManager {
 
-	badTVParams = {
-		mute:true,
-		show: true,
-		distortion: 3.0,
-		distortion2: 1.0,
-		speed: 0.3,
-		rollSpeed: 0.1
+	shaderParameters: any = {
+		badTV: {
+			name: 'Bad TV',
+			shader: BadTVShader,
+			on: true,
+			time: true,
+			parameters: {
+				distortion: {
+					name: 'Thick distrotion',
+					value: 3.0,
+					min: 0.1,
+					max: 20,
+					randomMin: 0.1,
+					randomMax: 3,
+					step: 0.1
+				},
+				distortion2: {
+					name: 'Fine distrotion',
+					value: 1.0,
+					min: 0.1,
+					max: 20,
+					randomMin: 0.1,
+					randomMax: 7,
+					step: 0.1
+				},
+				speed: {
+					name: 'Distrotion speed',
+					value: 0.3,
+					min: 0,
+					max: 1,
+					randomMin: 0,
+					randomMax: 4,
+					step: 0.01
+				},
+				rollSpeed: {
+					name: 'Roll speed',
+					value: 0.1,
+					min: 0,
+					max: 1,
+					randomMin: 0,
+					randomMax: 0.2,
+					step: 0.01
+				}
+			}
+		},
+		static: {
+			name: 'Static',
+			shader: StaticShader,
+			on: true,
+			time: true,
+			parameters: {
+				amount: {
+					name: 'Amount',
+					value: 0.5,
+					min: 0,
+					max: 1,
+					randomMin: 0,
+					randomMax: 0.2,
+					step: 0.01
+				},
+				size: {
+					name: 'Size',
+					value: 4,
+					min: 1,
+					max: 100,
+					randomMin: 1,
+					randomMax: 20,
+					step: 1
+				}
+			}
+		},
+		rgbShift: {
+			name: 'RGB Shift',
+			shader: THREE.RGBShiftShader,
+			on: true,
+			parameters: {
+				amount: {
+					name: 'Amount',
+					value: 0.005,
+					min: 0,
+					max: 0.1,
+					randomMin: 0,
+					randomMax: 0.03,
+					step: 0.01
+				},
+				angle: {
+					name: 'Angle',
+					value: 180,
+					min: 0,
+					max: 360,
+					step: 1,
+					getValue: (value: number)=> 2 * Math.PI * value / 360
+				}
+			}
+		},
+		scanLine: {
+			name: 'Scanlines',
+			shader: FilmShader,
+			on: true,
+			time: true,
+			parameters: {
+				sCount: {
+					name: 'Count',
+					value: 800,
+					min: 50,
+					max: 10000,
+					step: 1
+				},
+				sIntensity: {
+					name: 'S intensity',
+					value: 0.9,
+					min: 0,
+					max: 2,
+					step: 0.1
+				},
+				nIntensity: {
+					name: 'N intensity',
+					value: 0.4,
+					min: 0,
+					max: 2,
+					step: 0.1
+				}
+			}
+		},
+		bleach: {
+			name: 'Bleach',
+			shader: (<any>THREE).BleachBypassShader,
+			on: false,
+			parameters: {
+				opacity: {
+					name: 'Opacity',
+					value: 1,
+					min: 0,
+					max: 10,
+					randomMin: 0,
+					randomMax: 1.7,
+					step: 0.1
+				}
+			}
+		},
+		brightnessContrast: {
+			name: 'Brightness & Contrast',
+			shader: (<any>THREE).BrightnessContrastShader,
+			on: false,
+			parameters: {
+				brightness: {
+					name: 'Brightness',
+					value: 0.25,
+					min: 0,
+					max: 1,
+					randomMin: 0,
+					randomMax: 0.2,
+					step: 0.01
+				},
+				contrast: {
+					name: 'Contrast',
+					value: 0.7,
+					min: 0,
+					max: 1,
+					step: 0.01
+				}
+			}
+		},
+		colorify: {
+			name: 'Colorify',
+			shader: (<any>THREE).ColorifyShader,
+			on: false,
+			parameters: {
+				color: {
+					name: 'Color',
+					type: 'color',
+					value: '#FFEE44'
+				}
+			}
+		},
+		dotScreen: {
+			name: 'Dot Screen',
+			shader: (<any>THREE).DotScreenShader,
+			on: false,
+			parameters: {
+				tSize: {
+					name: 'Size',
+					value: 256,
+					min: 2,
+					max: 1024,
+					randomMin: 256,
+					randomMax: 512,
+					step: 1,
+					getValue: (value: number)=> new THREE.Vector2(value, value)
+				},
+				angle: {
+					name: 'Angle',
+					value: 180,
+					min: 0,
+					max: 360,
+					step: 1,
+					getValue: (value: number)=> 2 * Math.PI * value / 360
+				},
+				scale: {
+					name: 'Scale',
+					value: 1,
+					min: 0.1,
+					max: 10,
+					randomMin: 1,
+					randomMax: 1,
+					step: 0.01
+				}
+			}
+		},
+		edgeShader: {
+			name: 'Edge',
+			shader: (<any>THREE).EdgeShader2,
+			on: false,
+			parameters: {
+				aspect: {
+					name: 'Aspect',
+					value: 512,
+					min: 2,
+					max: 1024,
+					randomMin: 300,
+					randomMax: 512,
+					step: 1,
+					getValue: (value: number)=> new THREE.Vector2(value, value)
+				}
+			}
+		},
+		// verticalTiltShift: {
+		// 	name: 'Tilt Shift',
+		// 	shader: (<any>THREE).VerticalTiltShiftShader,
+		// 	on: false,
+		// 	parameters: {
+		// 		v: {
+		// 			name: 'Amount',
+		// 			value: 1 / 512,
+		// 			min: 2,
+		// 			max: 1024,
+		// 			step: 1
+		// 		},
+		// 		r: {
+		// 			name: 'position',
+		// 			value: 0.5,
+		// 			min: 0,
+		// 			max: 1,
+		// 			step: 0.01
+		// 		}
+		// 	}
+		// },
+		hueSaturation: {
+			name: 'Hue & Saturation',
+			shader: (<any>THREE).HueSaturationShader,
+			on: false,
+			parameters: {
+				hue: {
+					name: 'Hue',
+					value: 0,
+					min: -1,
+					max: 1,
+					step: 0.01
+				},
+				saturation: {
+					name: 'Saturation',
+					value: 0,
+					min: -1,
+					max: 1,
+					step: 0.01
+				}
+			}
+		},
+		kaleido: {
+			name: 'Kaleido',
+			shader: (<any>THREE).KaleidoShader,
+			on: false,
+			parameters: {
+				sides: {
+					name: 'Sides',
+					value: 6,
+					min: 1,
+					max: 12,
+					step: 1
+				},
+				angle: {
+					name: 'Angle',
+					value: 180,
+					min: 0,
+					max: 360,
+					step: 1,
+					getValue: (value: number)=> 2 * Math.PI * value / 360
+				}
+			}
+		},
+		mirror: {
+			name: 'Mirror',
+			shader: (<any>THREE).MirrorShader,
+			on: false,
+			parameters: {
+				side: {
+					name: 'Side',
+					value: 1,
+					min: 0,
+					max: 3,
+					step: 1
+				}
+			}
+		},
+		sepiaShader: {
+			name: 'Sepia',
+			shader: (<any>THREE).SepiaShader,
+			on: false,
+			parameters: {
+				amount: {
+					name: 'Amount',
+					value: 1,
+					min: 0,
+					max: 1,
+					step: 0.01
+				}
+			}
+		},
+		vignetteShader: {
+			name: 'Vignette',
+			shader: (<any>THREE).VignetteShader,
+			on: false,
+			parameters: {
+				offset: {
+					name: 'Offset',
+					value: 1,
+					min: 0,
+					max: 1,
+					step: 0.01
+				},
+				darkness: {
+					name: 'Darkness',
+					value: 1,
+					min: 0,
+					max: 2,
+					step: 0.01
+				}
+			}
+		}
 	}
-	staticParams = {
-		show: true,
-		amount:0.5,
-		size:4.0
-	}
-	rgbParams = {
-		show: true,
-		amount: 0.005,
-		angle: 0.0,
-	}
-	filmParams = {
-		show: true,
-		count: 800,
-		sIntensity: 0.9,
-		nIntensity: 0.4
-	}
+	shaderChangedTimeout:number = null
+
+	shaders = new Array<{pass: THREE.ShaderPass, object: any, folder: GUI}>()
 
 	composer: THREE.EffectComposer
 	shaderTime = 0
 	renderPass: THREE.RenderPass
-	badTVPass: THREE.ShaderPass
-	rgbPass: THREE.ShaderPass
-	filmPass: THREE.ShaderPass
-	staticPass: THREE.ShaderPass
 	copyPass: THREE.ShaderPass
 
 	camera: THREE.OrthographicCamera
@@ -55,108 +370,156 @@ export class ShaderManager {
 		this.renderer = renderer
 
 		this.renderPass = new THREE.RenderPass( scene, camera )
-		this.badTVPass = new THREE.ShaderPass( BadTVShader )
-		this.rgbPass = new THREE.ShaderPass( THREE.RGBShiftShader )
-		this.filmPass = new THREE.ShaderPass( FilmShader )
-		this.staticPass = new THREE.ShaderPass( StaticShader )
-		this.copyPass = new THREE.ShaderPass( THREE.CopyShader )
-
-		this.filmPass.uniforms.grayscale.value = 0
 
 		let onParamsChange = ()=> this.onParamsChange()
 		let onToggleShaders = ()=> this.onToggleShaders()
 
-		let f1 = gui.addFolder('Bad TV')
-		f1.add(this.badTVParams, 'show').onChange(onToggleShaders)
-		f1.add(this.badTVParams, 'distortion', 0.1, 20).step(0.1).listen().setName('Thick Distort').onChange(onParamsChange)
-		f1.add(this.badTVParams, 'distortion2', 0.1, 20).step(0.1).listen().setName('Fine Distort').onChange(onParamsChange)
-		f1.add(this.badTVParams, 'speed', 0.0,1.0).step(0.01).listen().setName('Distort Speed').onChange(onParamsChange)
-		f1.add(this.badTVParams, 'rollSpeed', 0.0,1.0).step(0.01).listen().setName('Roll Speed').onChange(onParamsChange)
-		f1.open()
-		let f2 = gui.addFolder('RGB Shift')
-		f2.add(this.rgbParams, 'show').onChange(onToggleShaders)
-		f2.add(this.rgbParams, 'amount', 0.0, 0.1).listen().onChange(onParamsChange)
-		f2.add(this.rgbParams, 'angle', 0.0, 2.0).listen().onChange(onParamsChange)
-		f2.open()
-		let f4 = gui.addFolder('Static')
-		f4.add(this.staticParams, 'show').onChange(onToggleShaders)
-		f4.add(this.staticParams, 'amount', 0.0,1.0).step(0.01).listen().onChange(onParamsChange)
-		f4.add(this.staticParams, 'size', 1.0,100.0).step(1.0).onChange(onParamsChange)
-		f4.open()
-		let f3 = gui.addFolder('Scanlines')
-		f3.add(this.filmParams, 'show').onChange(onToggleShaders)
-		f3.add(this.filmParams, 'count', 50, 1000).onChange(onParamsChange)
-		f3.add(this.filmParams, 'sIntensity', 0.0, 2.0).step(0.1).onChange(onParamsChange)
-		f3.add(this.filmParams, 'nIntensity', 0.0, 2.0).step(0.1).onChange(onParamsChange)
-		f3.open()
+		for(let shaderName in this.shaderParameters) {
+			let shaderObject = this.shaderParameters[shaderName]
+			
+			let folder = gui.addFolder(shaderObject.name)
+			this.shaders.push({pass: new THREE.ShaderPass(shaderObject.shader), object: shaderObject, folder: folder})
+			
+			folder.add(shaderObject, 'on').name('On').listen().onChange(onToggleShaders)
+			for(let propertyName in shaderObject.parameters) {
+				let propertiesObject = shaderObject.parameters[propertyName]
+				if(propertiesObject.type != null && propertiesObject.type == 'color') {
+					folder.addColor(propertiesObject, 'value').listen().onChange(onParamsChange)
+				} else {
+					folder.add(propertiesObject, 'value', propertiesObject.min, propertiesObject.max).step(propertiesObject.step).listen().setName(propertiesObject.name).onChange(onParamsChange)
+				}
+			}
+			folder.open()
+		}
 
-		this.onParamsChange()
+		this.copyPass = new THREE.ShaderPass( THREE.CopyShader )
+
+		this.onParamsChange(false)
 		this.onToggleShaders()
 	}
 
-	onToggleShaders() {
+	onToggleShaders(dispatchEvent: boolean=true) {
 		//Add Shader Passes to Composer
 		//order is important 
 		this.composer = new THREE.EffectComposer(this.renderer)
 		this.composer.addPass( this.renderPass )
 		
-		if (this.filmParams.show){
-			this.composer.addPass( this.filmPass )
+		for(let shader of this.shaders) {
+			if(shader.object.on) {
+				this.composer.addPass(shader.pass)
+			}
 		}
-		if (this.badTVParams.show){
-			this.composer.addPass( this.badTVPass )
-		}
-		if (this.rgbParams.show){
-			this.composer.addPass( this.rgbPass )
-		}
-		if (this.staticParams.show){
-			this.composer.addPass( this.staticPass )
-		}
+
 		this.composer.addPass( this.copyPass )
 		this.copyPass.renderToScreen = true
+		
+		if(dispatchEvent) {
+			this.dispatchChange()
+		}
 	}
 
-	onParamsChange() {
-		this.badTVPass.uniforms[ 'distortion' ].value = this.badTVParams.distortion
-		this.badTVPass.uniforms[ 'distortion2' ].value = this.badTVParams.distortion2
-		this.badTVPass.uniforms[ 'speed' ].value = this.badTVParams.speed
-		this.badTVPass.uniforms[ 'rollSpeed' ].value = this.badTVParams.rollSpeed
-		this.staticPass.uniforms[ 'amount' ].value = this.staticParams.amount
-		this.staticPass.uniforms[ 'size' ].value = this.staticParams.size
-		this.rgbPass.uniforms[ 'angle' ].value = this.rgbParams.angle * Math.PI
-		this.rgbPass.uniforms[ 'amount' ].value = this.rgbParams.amount
-		this.filmPass.uniforms[ 'sCount' ].value = this.filmParams.count
-		this.filmPass.uniforms[ 'sIntensity' ].value = this.filmParams.sIntensity
-		this.filmPass.uniforms[ 'nIntensity' ].value = this.filmParams.nIntensity
+	dispatchChange() {
+		if(this.shaderChangedTimeout != null) {
+			clearTimeout(this.shaderChangedTimeout)
+		}
+		this.shaderChangedTimeout = setTimeout(()=>document.dispatchEvent(new Event('shaderChanged')), 500)	
+	}
+	
+	onParamsChange(dispatchEvent: boolean=true) {
+
+		for(let shader of this.shaders) {
+			for(let propertyName in shader.object.parameters) {
+				let propertiesObject = shader.object.parameters[propertyName]
+				shader.pass.uniforms[propertyName].value = propertiesObject.getValue != null ? 
+					propertiesObject.getValue(propertiesObject.value) : 
+					propertiesObject.type != null && propertiesObject.type == 'color' ?
+						new THREE.Color(propertiesObject.value) : propertiesObject.value
+			}
+		}
+
+		if(dispatchEvent) {
+			this.dispatchChange()
+		}
+	}
+
+	getRandomOnInterval(min: number, max: number) {
+		return min+(max-min)*Math.random()
+	}
+
+	getRandomColor() {
+		return '#'+Math.random().toString(16).substr(2,6)
 	}
 
 	randomizeParams() {
-		if (Math.random() <0.2){
-			//you fixed it!
-			this.badTVParams.distortion = 0.1
-			this.badTVParams.distortion2 =0.1
-			this.badTVParams.speed =0
-			this.badTVParams.rollSpeed =0
-			this.rgbParams.angle = 0
-			this.rgbParams.amount = 0
-			this.staticParams.amount = 0
-		} else {
-			this.badTVParams.distortion = Math.random() * 10 + 0.1
-			this.badTVParams.distortion2 = Math.random() * 10 + 0.1
-			this.badTVParams.speed = Math.random() * 0.4
-			this.badTVParams.rollSpeed = Math.random() * 0.2
-			this.rgbParams.angle = Math.random() * 2
-			this.rgbParams.amount = Math.random() * 0.03
-			this.staticParams.amount = Math.random() * 0.2
+		let shaderIndices = []
+		let nShadersToPick = 3
+		for(let i=0 ; i<nShadersToPick ; i++) {
+			let shaderIndex = Math.floor(Math.random()*this.shaders.length)
+			shaderIndices.push(shaderIndex)
 		}
+
+		let i = 0
+		for(let shader of this.shaders) {
+			shader.object.on = shaderIndices.indexOf(i) >= 0
+			if(shader.object.on) {
+				shader.folder.open()
+			} else {
+				shader.folder.close()
+			}
+			for(let propertyName in shader.object.parameters) {
+				let propertiesObject = shader.object.parameters[propertyName]
+				propertiesObject.value = propertiesObject.type == 'color' ? 
+					this.getRandomColor() :  
+					this.getRandomOnInterval(propertiesObject.randomMin != null ? Math.max(propertiesObject.randomMin, propertiesObject.min) : propertiesObject.min, 
+											 propertiesObject.randomMax != null ? Math.min(propertiesObject.randomMax, propertiesObject.max) : propertiesObject.max)
+			}
+			i++
+		}
+
+		this.onToggleShaders(false)
 		this.onParamsChange()
+	}
+
+	getShaderParameters(): any {
+		let json: any = {}
+		for(let shader of this.shaders) {
+			let parameters: any = {}
+			for(let propertyName in shader.object.parameters) {
+				let propertiesObject: any = shader.object.parameters[propertyName]
+				parameters[propertyName] = propertiesObject.value
+			}
+			json[shader.object.name] = { parameters: parameters, on: shader.object.on }
+		}
+		return json
+	}
+
+	setShaderParameters(json: any) {
+		for(let shader of this.shaders) {
+			let parameters = json[shader.object.name].parameters
+			let on = json[shader.object.name].on
+			shader.object.on = on
+			if(on) {
+				shader.folder.open()
+			} else {
+				shader.folder.close()
+			}
+			for(let propertyName in shader.object.parameters) {
+				shader.object.parameters[propertyName].value = parameters[propertyName]
+			}
+		}
+		this.onToggleShaders(false)
+		this.onParamsChange(false)
 	}
 
 	animate() {
 		this.shaderTime += 0.1
-		this.badTVPass.uniforms[ 'time' ].value =  this.shaderTime
-		this.filmPass.uniforms[ 'time' ].value =  this.shaderTime
-		this.staticPass.uniforms[ 'time' ].value =  this.shaderTime
+
+		for(let shader of this.shaders) {
+			if(shader.object.time) {
+				shader.pass.uniforms['time'].value = this.shaderTime
+			}
+		}
+
 		this.composer.render(0.1)
 	}
 }

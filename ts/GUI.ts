@@ -165,6 +165,10 @@ export class GUI {
 		return new Controller( this.gui.add(object, propertyName, minOrArray, max) )
 	}
 
+	addColor(object: any, propertyName: string) {
+		return new Controller(this.gui.addColor(object, propertyName))
+	}
+
 	addButton(name: string, callback: ()=>any, object: any = {}): Controller {
 		let nameNoSpaces = name.replace(/\s+/g, '')
 		object[nameNoSpaces] = callback
@@ -237,5 +241,14 @@ export class GUI {
 	open() {
 		this.gui.open()
 		return this
+	}
+
+	close() {
+		this.gui.close()
+		return this
+	}
+
+	isFocused(): boolean {
+		return $('.dg.main').find(document.activeElement).length > 0
 	}
 }

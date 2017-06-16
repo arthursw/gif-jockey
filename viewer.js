@@ -63,10 +63,19 @@
 /******/ 	__webpack_require__.p = "";
 /******/
 /******/ 	// Load entry module and return exports
-/******/ 	return __webpack_require__(__webpack_require__.s = 8);
+/******/ 	return __webpack_require__(__webpack_require__.s = 15);
 /******/ })
 /************************************************************************/
 /******/ ({
+
+/***/ 15:
+/***/ (function(module, exports, __webpack_require__) {
+
+__webpack_require__(4);
+module.exports = __webpack_require__(2);
+
+
+/***/ }),
 
 /***/ 2:
 /***/ (function(module, exports) {
@@ -94,6 +103,7 @@ var Viewer;
         imagesJ.hide();
         $(imagesJ[imageIndex]).show();
     };
+    window.nextImage = nextImage;
     let addImage = (imageJ) => {
         $("#results").append(imageJ);
         nextImage();
@@ -116,19 +126,10 @@ var Viewer;
     };
     window.setGif = setGif;
     document.addEventListener("DOMContentLoaded", function (event) {
-        setInterval(nextImage, 300);
+        // setInterval(nextImage, 300)
         $("#results").append($(self.opener.document.body).find("#results").children().clone());
     });
 })(Viewer || (Viewer = {}));
-
-
-/***/ }),
-
-/***/ 8:
-/***/ (function(module, exports, __webpack_require__) {
-
-__webpack_require__(4);
-module.exports = __webpack_require__(2);
 
 
 /***/ })

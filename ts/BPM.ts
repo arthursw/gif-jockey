@@ -1,12 +1,12 @@
 import { GUI, Controller } from "./GUI"
 declare var stasilo: any
 
-declare type GifGrave = {
+declare type GifJockey = {
 	nextImage: ()=> void
 }
 
 export class BPM {
-	gifGrave: GifGrave
+	gifJockey: GifJockey
 	tapButton: Controller = null
 	bpmSlider: Controller
 
@@ -23,8 +23,8 @@ export class BPM {
 	bpmDetectionButton: Controller = null
 	autoBPM = true
 
-	constructor(gifGrave: GifGrave) {
-		this.gifGrave = gifGrave
+	constructor(gifJockey: GifJockey) {
+		this.gifJockey = gifJockey
 	}
 
 	isAutoBPM() {
@@ -94,7 +94,7 @@ export class BPM {
 		if(this.pause) {
 			return
 		}
-		this.gifGrave.nextImage()
+		this.gifJockey.nextImage()
 	}
 
 	getInterval(bpm: number = this.averageBPM) {
@@ -105,7 +105,7 @@ export class BPM {
 		this.averageBPM = bpm
 		this.stopBPMinterval()
 		let delay = this.getInterval(bpm)
-		this.gifGrave.nextImage()
+		this.gifJockey.nextImage()
 		this.tapIntervalID = setInterval(()=>this.onInterval(), delay)
 		if(updateBpmSlider) {
 			this.tapButton.setName('Tapping' + (newBPM != null ? ' - Instant BPM: ' + newBPM.toFixed(2) : ''))

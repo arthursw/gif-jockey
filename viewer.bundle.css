@@ -1,5 +1,8 @@
+html {
+  background-color: black; }
+
 body {
-  background-color: #f0f0f0;
+  background-color: black;
   overflow: hidden;
   margin: 0; }
 
@@ -13,9 +16,6 @@ body {
   -webkit-touch-callout: none;
   /* iOS Safari */ }
 
-#results {
-  position: relative; }
-  #results img {
-    position: absolute;
-    top: 0;
-    left: 0; }
+#results img {
+  display: block;
+  width: 100%; }
