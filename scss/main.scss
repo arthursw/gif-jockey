@@ -130,6 +130,19 @@ ul.gg-list {
 		.gg-selection-rectangle {
 			border-color: #64b5f6;
 		}
+
+		&.ui-state-default {
+			.gg-selection-rectangle {
+				display: block;
+				border-color: yellow;
+			}
+		}
+		&.ui-state-hover {
+			.gg-selection-rectangle {
+				display: block;
+				border-color: green;
+			}
+		}
 	}
 }
 
@@ -251,10 +264,13 @@ ul.gg-list {
 		left: -1px;
 	}
 	&.play-btn {
-		right: 15px;
+		right: 30px;
 		&.playing {
 			background-color: #cddc39;
 		}
+	}
+	&.duplicate-btn {
+		right: 15px;
 	}
 	&:focus {
 		outline: none;

@@ -185,6 +185,19 @@ class GifJokey {
 		this.nextImage()
 	}
 
+	duplicateImage(imageName: string) {
+
+		let imageThumbnailJ = $('#thumbnails').children("[data-name='"+imageName+"']")
+		let img: HTMLImageElement = <any>imageThumbnailJ.find('img.original')[0]
+		let imageJ = this.addImage(img.src)
+
+		let filteredImageJ = imageThumbnailJ.find('img.filtered').clone()
+		filteredImageJ.attr('data-name', imageJ.attr('data-name'))
+		this.setFilteredImage(imageJ, filteredImageJ)
+
+		this.nextImage()
+	}
+
 	selectImage(imageName: string) {
 		let imagesToSelectJ = $('#thumbnails').children("[data-name='"+imageName+"']")
 		let imagesAlreadySelected = imagesToSelectJ.hasClass('gg-selected')
@@ -245,18 +258,23 @@ class GifJokey {
 	createThumbnail(imgJ: any, filteredImageJ: any = null) {
 		let imageName = imgJ.attr('data-name')
 		let liJ = $('<li class="ui-state-default gg-thumbnail" data-name="'+imageName+'">')
-		let buttonJ = $('<button type="button" class="gg-small-btn close-btn">')
-		let spanJ = $('<span class="ui-icon ui-icon-closethick">')
+		let closeButtonJ = $('<button type="button" class="gg-small-btn close-btn">')
+		let closeButtonIconJ = $('<span class="ui-icon ui-icon-closethick">')
+		let duplicateButtonJ = $('<button type="button" class="gg-small-btn duplicate-btn">')
+		let duplicateButtonIconJ = $('<span class="ui-icon ui-icon-plusthick">')
 		let divJ = $('<div class="gg-thumbnail-container">')
 		let selectionRectangleJ = $('<div class="gg-selection-rectangle">')
-		buttonJ.append(spanJ)
+		closeButtonJ.append(closeButtonIconJ)
+		duplicateButtonJ.append(duplicateButtonIconJ)
 		divJ.append(imgJ.addClass('gg-hidden original'))
 		divJ.append(filteredImageJ)
 		liJ.append(selectionRectangleJ)
 		liJ.append(divJ)
-		liJ.append(buttonJ)
+		liJ.append(closeButtonJ)
+		liJ.append(duplicateButtonJ)
 
-		buttonJ.click(()=> this.removeImage(imageName) )
+		closeButtonJ.click(()=> this.removeImage(imageName) )
+		duplicateButtonJ.click(()=> this.duplicateImage(imageName) )
 		liJ.mousedown((event: JQueryMouseEventObject)=>{
 			setTimeout(()=>this.selectImage(imageName), 0)
 		}) // add timeout to not to disturbe draggable

@@ -5,6 +5,7 @@ import { Webcam } from "./Webcam"
 declare var gifshot: any
 
 declare type GifJockey = {
+	imageID: number
 	viewer: Window
 	bpm: BPM
 	webcam: Webcam
@@ -45,13 +46,21 @@ export class Gif {
 	getFirstImageJ(): any {
 		return this.containerJ.find('img.original').first()
 	}
+	
+	addCopy(originalImageJ: any, filteredImageJ: any, imageID: number) {
+		let originalJ = originalImageJ.clone()
+		originalJ.attr('data-name', imageID)
+		let filteredJ = filteredImageJ.clone()
+		filteredJ.attr('data-name', imageID)
+		this.addImage(originalJ, filteredJ)
+	}
 
-	addImage(imgJ: any, filteredImageJ: any=null) {
+	addImage(originalImageJ: any, filteredImageJ: any=null) {
 		this.containerJ.find('.gg-placeholder').remove()
 
 		let divJ = $('<div class="gg-image-container">')
-		divJ.attr('data-name', imgJ.attr('data-name'))
-		divJ.append(imgJ.addClass('gg-hidden original'))
+		divJ.attr('data-name', originalImageJ.attr('data-name'))
+		divJ.append(originalImageJ.addClass('gg-hidden original'))
 
 		if(filteredImageJ != null) {
 			divJ.append(filteredImageJ)
@@ -225,6 +234,9 @@ export class GifManager {
 		let closeSpanJ = $('<span class="ui-icon ui-icon-closethick">')
 		let playButtonJ = $('<button type="button" class="gg-small-btn play-btn">')
 		let playSpanJ = $('<span class="ui-icon ui-icon-play">')
+		let duplicateButtonJ = $('<button type="button" class="gg-small-btn duplicate-btn">')
+		let duplicateButtonIconJ = $('<span class="ui-icon ui-icon-plusthick">')
+		duplicateButtonJ.append(duplicateButtonIconJ)
 		let divJ = $('<div class="gg-thumbnail-container">')
 		let selectionRectangleJ = $('<div class="gg-selection-rectangle">')
 
@@ -234,9 +246,11 @@ export class GifManager {
 		currentGifJ.append(selectionRectangleJ)
 		currentGifJ.append(divJ)
 		currentGifJ.append(closeButtonJ)
+		currentGifJ.append(duplicateButtonJ)
 		currentGifJ.append(playButtonJ)
 		let currentGifID = this.gifID
 		closeButtonJ.click( ()=> this.removeGif(currentGifID) )
+		duplicateButtonJ.click(()=> this.duplicateGif(currentGifID) )
 		playButtonJ.mousedown( (event: JQueryEventObject)=> {
 			$('#outputs').find('.gg-small-btn.play-btn').removeClass('playing')
 			playButtonJ.addClass('playing')
@@ -260,13 +274,51 @@ export class GifManager {
 		this.gifs.set(this.gifID, this.currentGif)
 
 		this.gifID++
+
+		(<any>currentGifJ).droppable({
+			classes: {
+				"ui-droppable-hover": "ui-state-hover",
+				"ui-droppable-active": "ui-state-default"
+			},
+			drop: ( event:any, ui:any )=> {
+				let originalJ = ui.helper.find('img.original')
+				let filteredJ = ui.helper.find('img.filtered')
+				let gif = this.gifs.get(currentGifID)
+
+				// Ignore if the gif already contains the image:
+				if(gif.getImageContainerJ(originalJ.attr('data-name')).length > 0) {
+					return
+				}
+				
+				gif.addCopy(originalJ, filteredJ, this.gifJockey.imageID++)
+			}
+		})
+
+		// outputsJ.sortable(({ stop: ()=> this.gifManager.sortGifsStop(), connectWith: '#thumbnails', receive: function( event: any, ui: any ) {
+		// 	if(ui.sender.is('#thumbnails')) {
+				
+		// 	}
+		// } }))
 	}
 
 	removeGif(gifID: number) {
 		$('#outputs').find('[data-name="gif-' + gifID + '"]').remove()
+		$('#thumbnails').empty()
 		this.gifs.delete(gifID)
 		if(this.currentGif != null && this.currentGif.id == gifID) {
 			this.currentGif = null
+		}
+	}
+
+	duplicateGif(gifID: number) {
+		let gif = this.gifs.get(gifID)
+		this.addGif()
+
+		let imagePairsJ = gif.getImagePairsJ()
+		for(let imagePairJ of imagePairsJ) {
+			let originalImageJ = imagePairJ.filter('.original')
+			let filteredImageJ = imagePairJ.filter('.filtered')
+			this.currentGif.addCopy(originalImageJ, filteredImageJ, this.gifJockey.imageID++)
 		}
 	}
 
