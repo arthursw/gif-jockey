@@ -1,11 +1,13 @@
 import { GUI, Controller } from "./GUI"
 import { BPM } from "./BPM"
+import { Webcam } from "./Webcam"
 
 declare var gifshot: any
 
 declare type GifJockey = {
 	viewer: Window
 	bpm: BPM
+	webcam: Webcam
 	emptyThumbnails: ()=> void
 	setGif: (gif: Gif)=> void
 	playGif: (gif: Gif)=> void
@@ -16,8 +18,9 @@ export class Gif {
 	containerJ: any
 	imageIndex: number
 	hasPreview = false
+	id = -1
 
-	constructor(containerJ: any) {
+	constructor(containerJ: any, id: number) {
 		this.containerJ = containerJ
 		this.imageIndex = 0
 	}
@@ -44,6 +47,8 @@ export class Gif {
 	}
 
 	addImage(imgJ: any, filteredImageJ: any=null) {
+		this.containerJ.find('.gg-placeholder').remove()
+
 		let divJ = $('<div class="gg-image-container">')
 		divJ.attr('data-name', imgJ.attr('data-name'))
 		divJ.append(imgJ.addClass('gg-hidden original'))
@@ -59,11 +64,11 @@ export class Gif {
 		let originalImageJ = this.getImageJ(imageName)
 		originalImageJ.siblings('.filtered').remove()
 		resultJ.insertBefore(originalImageJ)
-		resultJ.css({width: '100%'})
+		// resultJ.css({width: '100%'})
 	}
 
 	replaceImage(oldImageName: string, newImageJ: any) {
-		newImageJ.css({width: '100%'})
+		// newImageJ.css({width: '100%'})
 		this.getImageJ(oldImageName).replaceWith(newImageJ)
 	}
 
@@ -166,14 +171,14 @@ export class GifManager {
 		gui.addSlider('Gif degradation', this.gifQuality, 1, 5000, 1).onChange((value: number)=>{ this.gifQuality = value })
 		gui.addButton('Save gif', ()=> this.currentGif.preview(true))
 		// gui.addButton('Save gif', ()=> {
-		// 	if(!this.currentGif.hasPreview) {
+		// 	if(!this.currentGif.hasPreview) {
 		// 		this.currentGif.preview(true)
-		// 	} else {
+		// 	} else {
 		// 		let linkJ = $('#result').find('a')
 		// 		linkJ[0].click()
 		// 	}
 		// })
-		this.gif = new Gif($('#result'))
+		this.gif = new Gif($('#result'), this.gifID++)
 	}
 
 	removeImage(imageName: string) {
@@ -182,6 +187,10 @@ export class GifManager {
 	}
 
 	addImage(imgJ: any) {
+		if(this.gifs.size == 0) {
+			this.addGif()
+		}
+
 		this.gif.addImage(imgJ.clone())
 		this.currentGif.addImage(imgJ.clone())
 	}
@@ -206,6 +215,7 @@ export class GifManager {
 	getGifContainer = ()=> {
 		return this.currentGif.containerJ.parentUntil('li.gg-thumbnail')
 	}
+
 	addGif() {
 		this.gifJockey.emptyThumbnails()
 		this.gif.empty()
@@ -216,8 +226,12 @@ export class GifManager {
 		let playButtonJ = $('<button type="button" class="gg-small-btn play-btn">')
 		let playSpanJ = $('<span class="ui-icon ui-icon-play">')
 		let divJ = $('<div class="gg-thumbnail-container">')
+		let selectionRectangleJ = $('<div class="gg-selection-rectangle">')
+
 		closeButtonJ.append(closeSpanJ)
 		playButtonJ.append(playSpanJ)
+
+		currentGifJ.append(selectionRectangleJ)
 		currentGifJ.append(divJ)
 		currentGifJ.append(closeButtonJ)
 		currentGifJ.append(playButtonJ)
@@ -231,22 +245,29 @@ export class GifManager {
 			return -1
 		})
 		currentGifJ.mousedown( (event: JQueryMouseEventObject )=> {
-			this.selectGif(currentGifID) 
-			event.stopPropagation()
-			event.preventDefault()
-			return -1
+			this.selectGif(currentGifID)
 		})
 		
-		$('#outputs').append(currentGifJ)
+		let width = $('#outputs').width()
+		let ratio = this.gifJockey.webcam.height / this.gifJockey.webcam.width
+		let height = width * ratio
+		currentGifJ.css({width: width, height: height})
 
-		this.currentGif = new Gif(divJ)
+		let outputJ = $('#outputs')
+		outputJ.append(currentGifJ)
+
+		this.currentGif = new Gif(divJ, this.gifID)
 		this.gifs.set(this.gifID, this.currentGif)
 
 		this.gifID++
 	}
 
-	removeGif(gifID: number) {
+	removeGif(gifID: number) {
 		$('#outputs').find('[data-name="gif-' + gifID + '"]').remove()
+		this.gifs.delete(gifID)
+		if(this.currentGif != null && this.currentGif.id == gifID) {
+			this.currentGif = null
+		}
 	}
 
 	toggleThumbnails(show: boolean) {
@@ -268,16 +289,22 @@ export class GifManager {
 		// }
 	}
 
-	selectGif(gifID: number) {
+	selectGif(gifID: number) {
 
 		let gifsToSelectJ = $('#outputs').children("[data-name='gif-"+gifID+"']")
-		let gifsAlreadySelected = gifsToSelectJ.hasClass('gg-selected')
-		$('#outputs').children().removeClass('gg-selected')
 		
-		if(gifsAlreadySelected || gifsToSelectJ.length == 0) {
+		if(gifsToSelectJ.length == 0) {
 			this.toggleThumbnails(false)
 			return
 		}
+
+		let gifsAlreadySelected = gifsToSelectJ.hasClass('gg-selected')
+
+		if(gifsAlreadySelected) {
+			return
+		}
+
+		$('#outputs').children().removeClass('gg-selected')
 
 		gifsToSelectJ.addClass('gg-selected')
 
@@ -289,7 +316,21 @@ export class GifManager {
 		this.toggleThumbnails(true)
 	}
 
-	deselectGif() {
+	// Select parent gif when select an image 
+	selectImage(imageName: string) {
+		if(this.currentGif != null && this.currentGif.getImageJ(imageName).length > 0) {
+			return
+		} else {
+			for(let [gifID, gif] of this.gifs) {
+				if(gif.getImageJ(imageName).length > 0) {
+					this.selectGif(gifID)
+					return
+				}
+			}
+		}
+	}
+
+	deselectGif() {
 		$('#outputs').children().removeClass('gg-selected')
 		this.toggleThumbnails(false)
 	}

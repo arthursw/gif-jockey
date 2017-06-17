@@ -114,7 +114,7 @@ class Filter {
 			for(let parameter of this.parameters) {
 				if(parameter.type == 'slider') {
 					args.push(this.sliderControllers.get(parameter.name).getValue())
-				} else {
+				} else {
 					args.push(this.nubControllers.get(parameter.name).position.x)
 					args.push(this.nubControllers.get(parameter.name).position.y)
 				}
@@ -401,8 +401,8 @@ export class FilterManager {
 		if(	image.naturalWidth != null && image.naturalHeight != null && 
 			image.naturalWidth != 0 && image.naturalHeight != 0 ) {
 			this.filterLoadedImage(args)
-		} else {
-			image.onload = () => {
+		} else {
+			image.onload = () => {
 				console.log("Image loaded")
 				this.filterLoadedImage(args)
 			}

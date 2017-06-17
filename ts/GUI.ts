@@ -48,7 +48,7 @@ export class Controller {
 	setVisibility(visible: boolean) {
 		if(visible) {
 			this.show()
-		} else {
+		} else {
 			this.hide()
 		}
 	}
@@ -156,7 +156,7 @@ export class GUI {
 	setVisibility(visible: boolean) {
 		if(visible) {
 			this.show()
-		} else {
+		} else {
 			this.hide()
 		}
 	}

@@ -68,6 +68,415 @@
 /************************************************************************/
 /******/ ([
 /* 0 */
+/***/ (function(module, exports) {
+
+// removed by extract-text-webpack-plugin
+
+/***/ }),
+/* 1 */,
+/* 2 */
+/***/ (function(module, exports, __webpack_require__) {
+
+"use strict";
+
+/// <reference path="../node_modules/@types/jquery/index.d.ts"/>
+Object.defineProperty(exports, "__esModule", { value: true });
+const GUI_1 = __webpack_require__(5);
+const Webcam_1 = __webpack_require__(13);
+const Renderer_1 = __webpack_require__(7);
+const ShaderManager_1 = __webpack_require__(8);
+const Gif_1 = __webpack_require__(6);
+const BPM_1 = __webpack_require__(4);
+// import { FilterManager } from "./Filters"
+class GifJokey {
+    constructor() {
+        this.imageID = 0;
+        this.viewer = null;
+        // filterManager = new FilterManager(this)
+        this.bpm = new BPM_1.BPM(this);
+        this.gifManager = new Gif_1.GifManager(this);
+        this.webcam = null;
+        this.renderer = null;
+        this.shaderManager = null;
+        this.guiWasFocusedWhenPressedEnter = false;
+        this.showGifThumbnails = false;
+        this.previousIsOnBeat = false;
+        console.log("Gif Grave");
+        // Webcam.set({
+        // 	width: 320,
+        // 	height: 240,
+        // 	image_format: 'jpeg',
+        // 	jpeg_quality: 90,
+        // 	swfURL: './lib/webcam.swf'
+        // });
+        // Webcam.attach( '#camera' );
+        // // $('#camera').css({margin: 'auto'})
+        // $("#takeSnapshot").click(this.takeSnapshot)
+        // $("#createViewer").click(this.createViewer)
+        $("#camera").click(() => this.deselectImages());
+        $("#gif-thumbnails").mousedown(() => this.deselectImages());
+        let thumbnailsJ = $("#thumbnails");
+        thumbnailsJ.sortable(({ stop: () => this.sortImagesStop() }));
+        thumbnailsJ.disableSelection();
+        let outputsJ = $("#outputs");
+        outputsJ.sortable(({ stop: () => this.gifManager.sortGifsStop() }));
+        outputsJ.disableSelection();
+        $(document).keydown((event) => this.onKeyDown(event));
+        $('#gui').keydown((event) => {
+            console.log(event.keyCode);
+            if (event.keyCode == 13 || event.keyCode == 27) {
+                console.log('prevent key down');
+                event.preventDefault();
+                event.stopPropagation();
+                return -1;
+            }
+        });
+        this.createGUI();
+        this.webcam = new Webcam_1.Webcam(() => this.webcamLoaded());
+        this.gifManager.addGif();
+        this.toggleGifThumbnails(this.showGifThumbnails);
+    }
+    onKeyDown(event) {
+        if (event.keyCode == 32) {
+            this.takeSnapshot();
+            event.preventDefault();
+        }
+        else if (event.keyCode == 13) {
+            // Ignore if one of the dat.gui item is focused
+            if (!this.gui.isFocused()) {
+                this.bpm.tap();
+            }
+        }
+        else if (event.keyCode == 27) {
+            // Ignore if one of the dat.gui item is focused
+            if (!this.gui.isFocused()) {
+                this.bpm.stopTap();
+            }
+        }
+        else if (String.fromCharCode(event.keyCode) == 'R') {
+            this.shaderManager.randomizeParams();
+        }
+    }
+    webcamLoaded() {
+        this.renderer = new Renderer_1.Renderer(this.webcam, this.gui);
+        this.shaderManager = new ShaderManager_1.ShaderManager(this.gui, this.renderer.camera, this.renderer.scene, this.renderer.renderer);
+        this.renderer.setShaderManager(this.shaderManager);
+        document.addEventListener('shaderChanged', () => this.updateFilteredImage());
+        this.shaderManager.randomizeParams();
+    }
+    initialize() {
+        this.animate();
+    }
+    createGUI() {
+        this.gui = new GUI_1.GUI({ autoPlace: false, width: '100%' });
+        document.getElementById('gui').appendChild(this.gui.getDomElement());
+        this.gui.addButton('Take snapshot', () => this.takeSnapshot());
+        this.gui.addButton('Create viewer', () => this.createViewer());
+        this.gui.add(this, 'showGifThumbnails').name('Show Gifs').onChange((value) => this.toggleGifThumbnails(value));
+        this.bpm.createGUI(this.gui);
+        this.gifManager.createGUI(this.gui);
+        // onSliderChange()
+        // $(gui.getDomElement()).css({ width: '100%' })
+    }
+    toggleGifThumbnails(show) {
+        let gifThumbnailsJ = $('#gif-thumbnails');
+        let visible = gifThumbnailsJ.is(':visible');
+        if (show && !visible) {
+            gifThumbnailsJ.show();
+            document.dispatchEvent(new Event('cameraResized'));
+        }
+        else if (!show && visible) {
+            gifThumbnailsJ.hide();
+            document.dispatchEvent(new Event('cameraResized'));
+        }
+    }
+    setFilteredImage(imageJ, resultJ) {
+        imageJ.siblings('.filtered').remove();
+        let imageName = imageJ.attr('data-name');
+        resultJ.insertBefore(imageJ);
+        this.gifManager.setFilteredImage(imageName, resultJ.clone());
+        // if(viewer != null) {
+        // 	(<any>viewer).setFilteredImage(imageJ, resultJ)
+        // }
+    }
+    removeImage(imageAlt) {
+        this.gifManager.removeImage(imageAlt);
+        $('#thumbnails').children("[data-name='" + imageAlt + "']").remove();
+        // if(viewer != null) {
+        // 	(<any>viewer).removeImage(imageAlt)
+        // }
+        this.nextImage();
+    }
+    selectImage(imageName) {
+        let imagesToSelectJ = $('#thumbnails').children("[data-name='" + imageName + "']");
+        let imagesAlreadySelected = imagesToSelectJ.hasClass('gg-selected');
+        $('#thumbnails').children().removeClass('gg-selected');
+        if (imagesAlreadySelected || imagesToSelectJ.length == 0) {
+            this.renderer.setContent(this.webcam.video);
+            return;
+        }
+        imagesToSelectJ.addClass('gg-selected');
+        let imgJ = imagesToSelectJ.find('img.original');
+        this.renderer.setContent(imgJ[0]);
+        let filteredImageJ = imagesToSelectJ.find('img.filtered');
+        if (filteredImageJ.length > 0) {
+            let args = JSON.parse(filteredImageJ.attr('data-filter'));
+            this.shaderManager.setShaderParameters(args);
+        }
+        // this.filterManager.setImage(imgJ)
+    }
+    deselectImages() {
+        $('#thumbnails').children().removeClass('gg-selected');
+        this.renderer.setContent(this.webcam.video);
+        this.gifManager.deselectGif();
+    }
+    addImage(data_uri, canvas = null, context = null) {
+        // display results in page
+        let imageName = 'img-' + this.imageID;
+        let imgJ = $('<img src="' + data_uri + '" data-name="' + imageName + '" alt="img-' + this.imageID + '">');
+        this.imageID++;
+        this.gifManager.addImage(imgJ.clone());
+        let thumbnailImageJ = imgJ.clone();
+        this.createThumbnail(thumbnailImageJ);
+        imgJ.on('load', () => {
+            // this.selectImage(imageName)
+            this.nextImage();
+        });
+        // if(viewer != null) {
+        // 	(<any>viewer).addImage(imgJ.clone())
+        // }
+        return thumbnailImageJ;
+    }
+    createThumbnail(imgJ, filteredImageJ = null) {
+        let imageName = imgJ.attr('data-name');
+        let liJ = $('<li class="ui-state-default gg-thumbnail" data-name="' + imageName + '">');
+        let buttonJ = $('<button type="button" class="gg-small-btn close-btn">');
+        let spanJ = $('<span class="ui-icon ui-icon-closethick">');
+        let divJ = $('<div class="gg-thumbnail-container">');
+        buttonJ.append(spanJ);
+        divJ.append(imgJ.addClass('gg-hidden original'));
+        divJ.append(filteredImageJ);
+        liJ.append(divJ);
+        liJ.append(buttonJ);
+        buttonJ.click(() => this.removeImage(imageName));
+        liJ.mousedown((event) => {
+            setTimeout(() => this.selectImage(imageName), 0);
+            event.preventDefault();
+            event.stopPropagation();
+            return -1;
+        }); // add timeout to not to disturbe draggable
+        $('#thumbnails').append(liJ);
+    }
+    takeSnapshot() {
+        // let filteredDataURL = canvas.toDataURL()
+        let imageDataURL = this.webcam.getImage();
+        let imageJ = this.addImage(imageDataURL);
+        this.updateFilteredImage(imageJ);
+        // Webcam.snap((data_uri: string, canvas: HTMLCanvasElement, context: CanvasRenderingContext2D)=>this.addImage(data_uri, canvas, context))
+    }
+    getSelectedImage() {
+        return $('#thumbnails').children('.gg-selected').first();
+    }
+    updateFilteredImage(imageJ = null) {
+        if (imageJ == null) {
+            imageJ = this.getSelectedImage().find('img.original');
+        }
+        let filtered = this.renderer.getFilteredImage();
+        let filteredImage = filtered.image;
+        let shaderParameters = filtered.shaderParameters;
+        filteredImage.className = 'filtered';
+        let filteredImageJ = $(filteredImage);
+        let imageName = imageJ.attr('data-name');
+        filteredImageJ.attr('data-name', imageName);
+        filteredImageJ.attr('data-filter', JSON.stringify(shaderParameters));
+        this.setFilteredImage(imageJ, filteredImageJ);
+    }
+    nextImage() {
+        this.gifManager.nextImage();
+        if (this.viewer != null && this.viewer.hasOwnProperty('nextImage')) {
+            this.viewer.nextImage();
+        }
+    }
+    // let sortImagesStart = (event: Event, ui: any)=> {
+    // 	let imageName = $(ui.item).attr('data-name')
+    // 	selectImage(imageName)
+    // }
+    sortImagesStop() {
+        let thumbnailsJ = $('#thumbnails').children();
+        let imageNames = [];
+        thumbnailsJ.each(function (index, element) {
+            imageNames.push($(element).attr('data-name'));
+        });
+        this.gifManager.sortImages(imageNames);
+    }
+    createViewer() {
+        let windowFeatures = "menubar=yes,location=yes,resizable=yes,scrollbars=yes,status=yes";
+        this.viewer = window.open("viewer.html", "Gif Grave Viewer", windowFeatures);
+    }
+    animate() {
+        requestAnimationFrame(() => this.animate());
+        if (!this.bpm.isAutoBPM()) {
+            return;
+        }
+        let isOnBeat = this.bpm.isOnBeat();
+        if (isOnBeat && !this.previousIsOnBeat) {
+            this.nextImage();
+        }
+        this.previousIsOnBeat = isOnBeat;
+    }
+    emptyThumbnails() {
+        $('#thumbnails').empty();
+        $('#thumbnails').append($('<li>').addClass('placeholder'));
+    }
+    setGif(gif) {
+        this.emptyThumbnails();
+        for (let imagePairJ of gif.getImagePairsJ()) {
+            this.createThumbnail(imagePairJ.filter('.original'), imagePairJ.filter('.filtered'));
+        }
+        this.selectImage(gif.getFirstImageJ().attr('data-name'));
+        this.nextImage();
+    }
+    playGif(gif) {
+        if (this.viewer != null) {
+            this.viewer.setGif(gif.containerJ.find('img.filtered').clone());
+        }
+    }
+}
+let gifJokey = null;
+document.addEventListener("DOMContentLoaded", function (event) {
+    gifJokey = new GifJokey();
+    gifJokey.initialize();
+});
+
+
+/***/ }),
+/* 3 */,
+/* 4 */
+/***/ (function(module, exports, __webpack_require__) {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", { value: true });
+class BPM {
+    constructor(gifJockey) {
+        this.tapButton = null;
+        this.pause = false;
+        this.lastTap = Date.now();
+        this.nTaps = 0;
+        this.MaxTapTime = 3000;
+        this.averageBPM = 120;
+        this.tapIntervalID = null;
+        this.tapTimeoutID = null;
+        this.song = null;
+        this.bpmDetectionFolder = null;
+        this.bpmDetectionButton = null;
+        this.autoBPM = true;
+        this.gifJockey = gifJockey;
+    }
+    isAutoBPM() {
+        return this.song != null && this.autoBPM;
+    }
+    isOnBeat() {
+        return this.isAutoBPM() && this.song.isOnBeat() && !this.pause;
+    }
+    createGUI(gui) {
+        this.bpmDetectionButton = gui.addButton('Manual BPM', () => this.toggleBPMdetection());
+        this.tapButton = gui.addButton('Tap', () => this.tap());
+        this.bpmSlider = gui.addSlider('BPM', 120, 40, 250, 1).onChange((value) => this.setBPMinterval(value, undefined, false));
+        this.tapButton.setVisibility(!this.autoBPM);
+        this.bpmSlider.setVisibility(!this.autoBPM);
+        this.bpmDetectionFolder = gui.addFolder('BPM detection settings');
+        let sliders = { sensitivity: null, analyserFFTSize: null, passFreq: null, visualizerFFTSize: null };
+        let onSliderChange = () => {
+            let sens = sliders.sensitivity.getValue();
+            let analyserFFTSize = Math.pow(2, sliders.analyserFFTSize.getValue());
+            let visualizerFFTSize = Math.pow(2, sliders.visualizerFFTSize.getValue());
+            let passFreq = sliders.passFreq.getValue();
+            this.song = new stasilo.BeatDetector({ sens: sens,
+                visualizerFFTSize: visualizerFFTSize,
+                analyserFFTSize: analyserFFTSize,
+                passFreq: passFreq });
+        };
+        sliders.sensitivity = this.bpmDetectionFolder.addSlider('Sensitivity', 14, 1, 16, 1).onChange(onSliderChange);
+        sliders.analyserFFTSize = this.bpmDetectionFolder.addSlider('Analyser FFT Size', 14, 5, 15, 1).onChange(onSliderChange);
+        sliders.passFreq = this.bpmDetectionFolder.addSlider('Bandpass Filter Frequency', 600, 1, 10000, 1).onChange(onSliderChange);
+        sliders.visualizerFFTSize = this.bpmDetectionFolder.addSlider('Visualizer FFT Size', 7, 5, 15, 1).onChange(onSliderChange);
+        onSliderChange();
+        gui.addToggleButton('Pause', 'Resume', this, 'pause');
+    }
+    toggleBPMdetection() {
+        this.autoBPM = !this.autoBPM;
+        this.bpmDetectionButton.setName(this.autoBPM ? 'Manual BPM' : 'Auto BPM');
+        this.tapButton.setVisibility(!this.autoBPM);
+        this.bpmSlider.setVisibility(!this.autoBPM);
+        this.bpmDetectionFolder.setVisibility(this.autoBPM);
+        if (this.autoBPM) {
+            this.stopBPMinterval();
+        }
+        else if (this.tapIntervalID == null) {
+            this.tapIntervalID = setInterval(() => this.onInterval(), this.getInterval());
+        }
+    }
+    stopBPMinterval() {
+        if (this.tapIntervalID != null) {
+            clearInterval(this.tapIntervalID);
+            this.tapIntervalID = null;
+        }
+    }
+    onInterval() {
+        if (this.pause) {
+            return;
+        }
+        this.gifJockey.nextImage();
+    }
+    getInterval(bpm = this.averageBPM) {
+        return 1 / (bpm / 60 / 1000);
+    }
+    setBPMinterval(bpm, newBPM = null, updateBpmSlider = true) {
+        this.averageBPM = bpm;
+        this.stopBPMinterval();
+        let delay = this.getInterval(bpm);
+        this.gifJockey.nextImage();
+        this.tapIntervalID = setInterval(() => this.onInterval(), delay);
+        if (updateBpmSlider) {
+            this.tapButton.setName('Tapping' + (newBPM != null ? ' - Instant BPM: ' + newBPM.toFixed(2) : ''));
+            this.bpmSlider.setValueNoCallback(bpm);
+        }
+    }
+    stopTap() {
+        if (this.isAutoBPM()) {
+            return;
+        }
+        this.nTaps = 0;
+        this.tapButton.setName('Tap');
+    }
+    tap() {
+        if (this.isAutoBPM()) {
+            return;
+        }
+        this.nTaps++;
+        let now = Date.now();
+        if (this.tapTimeoutID != null) {
+            clearTimeout(this.tapTimeoutID);
+        }
+        this.tapTimeoutID = setTimeout(() => this.stopTap(), this.MaxTapTime);
+        if (this.nTaps == 1) {
+            this.lastTap = now;
+            this.tapButton.setName('Tapping');
+            return;
+        }
+        let newBPM = 60 / ((now - this.lastTap) / 1000);
+        this.averageBPM = (this.averageBPM * (this.nTaps - 1) + newBPM) / this.nTaps;
+        console.log(this.averageBPM + ', ' + newBPM);
+        this.setBPMinterval(this.averageBPM, newBPM);
+        this.lastTap = now;
+    }
+}
+exports.BPM = BPM;
+
+
+/***/ }),
+/* 5 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -264,704 +673,7 @@ exports.GUI = GUI;
 
 
 /***/ }),
-/* 1 */
-/***/ (function(module, exports) {
-
-// removed by extract-text-webpack-plugin
-
-/***/ }),
-/* 2 */,
-/* 3 */
-/***/ (function(module, exports, __webpack_require__) {
-
-"use strict";
-
-/// <reference path="../node_modules/@types/jquery/index.d.ts"/>
-Object.defineProperty(exports, "__esModule", { value: true });
-const GUI_1 = __webpack_require__(0);
-const Webcam_1 = __webpack_require__(13);
-const Renderer_1 = __webpack_require__(8);
-const ShaderManager_1 = __webpack_require__(9);
-const Gif_1 = __webpack_require__(7);
-const BPM_1 = __webpack_require__(5);
-const Filters_1 = __webpack_require__(6);
-class GifJokey {
-    constructor() {
-        this.imageID = 0;
-        this.viewer = null;
-        this.filterManager = new Filters_1.FilterManager(this);
-        this.bpm = new BPM_1.BPM(this);
-        this.gifManager = new Gif_1.GifManager(this);
-        this.webcam = null;
-        this.renderer = null;
-        this.shaderManager = null;
-        this.guiWasFocusedWhenPressedEnter = false;
-        this.previousIsOnBeat = false;
-        console.log("Gif Grave");
-        // Webcam.set({
-        // 	width: 320,
-        // 	height: 240,
-        // 	image_format: 'jpeg',
-        // 	jpeg_quality: 90,
-        // 	swfURL: './lib/webcam.swf'
-        // });
-        // Webcam.attach( '#camera' );
-        // // $('#camera').css({margin: 'auto'})
-        $("#takeSnapshot").click(this.takeSnapshot);
-        $("#createViewer").click(this.createViewer);
-        let thumbnailsJ = $("#thumbnails");
-        thumbnailsJ.sortable(({ stop: () => this.sortImagesStop() }));
-        thumbnailsJ.disableSelection();
-        let outputsJ = $("#outputs");
-        outputsJ.sortable(({ stop: () => this.gifManager.sortGifsStop() }));
-        outputsJ.disableSelection();
-        $(document).keydown((event) => this.onKeyDown(event));
-        $('#gui').keydown((event) => {
-            if (event.keyCode == 13 || event.keyCode == 27) {
-                event.preventDefault();
-                event.stopPropagation();
-                return -1;
-            }
-        });
-        this.createGUI();
-        this.webcam = new Webcam_1.Webcam(() => this.webcamLoaded());
-        this.gifManager.addGif();
-    }
-    onKeyDown(event) {
-        if (event.keyCode == 32) {
-            this.takeSnapshot();
-            event.preventDefault();
-        }
-        else if (event.keyCode == 13) {
-            // Ignore if one of the dat.gui item is focused
-            if (!this.gui.isFocused()) {
-                this.bpm.tap();
-            }
-        }
-        else if (event.keyCode == 27) {
-            // Ignore if one of the dat.gui item is focused
-            if (!this.gui.isFocused()) {
-                this.bpm.stopTap();
-            }
-        }
-        else if (String.fromCharCode(event.keyCode) == 'R') {
-            this.shaderManager.randomizeParams();
-        }
-    }
-    webcamLoaded() {
-        this.renderer = new Renderer_1.Renderer(this.webcam, this.gui);
-        this.shaderManager = new ShaderManager_1.ShaderManager(this.gui, this.renderer.camera, this.renderer.scene, this.renderer.renderer);
-        this.renderer.setShaderManager(this.shaderManager);
-    }
-    initialize() {
-        this.animate();
-    }
-    createGUI() {
-        this.gui = new GUI_1.GUI({ autoPlace: false, width: '100%' });
-        document.getElementById('gui').appendChild(this.gui.getDomElement());
-        this.gui.addButton('Take snapshot', () => this.takeSnapshot());
-        this.gui.addButton('Create viewer', () => this.createViewer());
-        this.bpm.createGUI(this.gui);
-        this.gifManager.createGUI(this.gui);
-        // onSliderChange()
-        // $(gui.getDomElement()).css({ width: '100%' })
-    }
-    setFilteredImage(imageJ, resultJ) {
-        imageJ.siblings('.filtered').remove();
-        let imageName = imageJ.attr('data-name');
-        resultJ.insertBefore(imageJ);
-        this.gifManager.setFilteredImage(imageName, resultJ.clone());
-        // if(viewer != null) {
-        // 	(<any>viewer).setFilteredImage(imageJ, resultJ)
-        // }
-    }
-    removeImage(imageAlt) {
-        this.gifManager.removeImage(imageAlt);
-        $('#thumbnails').children("[data-name='" + imageAlt + "']").remove();
-        // if(viewer != null) {
-        // 	(<any>viewer).removeImage(imageAlt)
-        // }
-        this.nextImage();
-    }
-    selectImage(imageName) {
-        $('#thumbnails').children().removeClass('gg-selected');
-        $('#thumbnails').children("[data-name='" + imageName + "']").addClass('gg-selected');
-        let imgJ = $('#thumbnails').children("[data-name='" + imageName + "']").find('img.original');
-        this.filterManager.setImage(imgJ);
-    }
-    addImage(data_uri, canvas = null, context = null) {
-        // display results in page
-        let imageName = 'img-' + this.imageID;
-        let imgJ = $('<img src="' + data_uri + '" data-name="' + imageName + '" alt="img-' + this.imageID + '">');
-        this.imageID++;
-        this.gifManager.addImage(imgJ.clone());
-        this.createThumbnail(imgJ.clone());
-        imgJ.on('load', () => {
-            this.selectImage(imageName);
-            this.nextImage();
-        });
-        // if(viewer != null) {
-        // 	(<any>viewer).addImage(imgJ.clone())
-        // }
-    }
-    createThumbnail(imgJ, filteredImageJ = null) {
-        let imageName = imgJ.attr('data-name');
-        let liJ = $('<li class="ui-state-default gg-thumbnail" data-name="' + imageName + '">');
-        let buttonJ = $('<button type="button" class="gg-small-btn close-btn">');
-        let spanJ = $('<span class="ui-icon ui-icon-closethick">');
-        let divJ = $('<div class="gg-thumbnail-container">');
-        buttonJ.append(spanJ);
-        divJ.append(imgJ.addClass('gg-hidden original'));
-        divJ.append(filteredImageJ);
-        liJ.append(divJ);
-        liJ.append(buttonJ);
-        buttonJ.click(() => this.removeImage(imageName));
-        liJ.mousedown(() => setTimeout(() => { this.selectImage(imageName); }, 0)); // add timeout to not to disturbe draggable
-        $('#thumbnails').append(liJ);
-    }
-    takeSnapshot() {
-        // Webcam.snap((data_uri: string, canvas: HTMLCanvasElement, context: CanvasRenderingContext2D)=>this.addImage(data_uri, canvas, context))
-    }
-    nextImage() {
-        this.gifManager.nextImage();
-        if (this.viewer != null && this.viewer.hasOwnProperty('nextImage')) {
-            this.viewer.nextImage();
-        }
-    }
-    // let sortImagesStart = (event: Event, ui: any)=> {
-    // 	let imageName = $(ui.item).attr('data-name')
-    // 	selectImage(imageName)
-    // }
-    sortImagesStop() {
-        let thumbnailsJ = $('#thumbnails').children();
-        let imageNames = [];
-        thumbnailsJ.each(function (index, element) {
-            imageNames.push($(element).attr('data-name'));
-        });
-        this.gifManager.sortImages(imageNames);
-    }
-    createViewer() {
-        let windowFeatures = "menubar=yes,location=yes,resizable=yes,scrollbars=yes,status=yes";
-        this.viewer = window.open("viewer.html", "Gif Grave Viewer", windowFeatures);
-    }
-    animate() {
-        requestAnimationFrame(() => this.animate());
-        if (!this.bpm.isAutoBPM()) {
-            return;
-        }
-        let isOnBeat = this.bpm.isOnBeat();
-        if (isOnBeat && !this.previousIsOnBeat) {
-            this.nextImage();
-        }
-        this.previousIsOnBeat = isOnBeat;
-    }
-    emptyThumbnails() {
-        $('#thumbnails').empty();
-        $('#thumbnails').append($('<li>').addClass('placeholder'));
-    }
-    setGif(gif) {
-        this.emptyThumbnails();
-        for (let imagePairJ of gif.getImagePairsJ()) {
-            this.createThumbnail(imagePairJ.filter('.original'), imagePairJ.filter('.filtered'));
-        }
-        this.selectImage(gif.getFirstImageJ().attr('data-name'));
-        this.nextImage();
-    }
-    playGif(gif) {
-        if (this.viewer != null) {
-            this.viewer.setGif(gif.containerJ.find('img.filtered').clone());
-        }
-    }
-}
-let gifJokey = null;
-document.addEventListener("DOMContentLoaded", function (event) {
-    gifJokey = new GifJokey();
-    gifJokey.initialize();
-});
-
-
-/***/ }),
-/* 4 */,
-/* 5 */
-/***/ (function(module, exports, __webpack_require__) {
-
-"use strict";
-
-Object.defineProperty(exports, "__esModule", { value: true });
-class BPM {
-    constructor(gifGrave) {
-        this.tapButton = null;
-        this.pause = false;
-        this.lastTap = Date.now();
-        this.nTaps = 0;
-        this.MaxTapTime = 3000;
-        this.averageBPM = 120;
-        this.tapIntervalID = null;
-        this.tapTimeoutID = null;
-        this.song = null;
-        this.bpmDetectionFolder = null;
-        this.bpmDetectionButton = null;
-        this.autoBPM = true;
-        this.gifGrave = gifGrave;
-    }
-    isAutoBPM() {
-        return this.song != null && this.autoBPM;
-    }
-    isOnBeat() {
-        return this.isAutoBPM() && this.song.isOnBeat() && !this.pause;
-    }
-    createGUI(gui) {
-        this.bpmDetectionButton = gui.addButton('Manual BPM', () => this.toggleBPMdetection());
-        this.tapButton = gui.addButton('Tap', () => this.tap());
-        this.bpmSlider = gui.addSlider('BPM', 120, 40, 250, 1).onChange((value) => this.setBPMinterval(value, undefined, false));
-        this.tapButton.setVisibility(!this.autoBPM);
-        this.bpmSlider.setVisibility(!this.autoBPM);
-        this.bpmDetectionFolder = gui.addFolder('BPM detection settings');
-        let sliders = { sensitivity: null, analyserFFTSize: null, passFreq: null, visualizerFFTSize: null };
-        let onSliderChange = () => {
-            let sens = sliders.sensitivity.getValue();
-            let analyserFFTSize = Math.pow(2, sliders.analyserFFTSize.getValue());
-            let visualizerFFTSize = Math.pow(2, sliders.visualizerFFTSize.getValue());
-            let passFreq = sliders.passFreq.getValue();
-            this.song = new stasilo.BeatDetector({ sens: sens,
-                visualizerFFTSize: visualizerFFTSize,
-                analyserFFTSize: analyserFFTSize,
-                passFreq: passFreq });
-        };
-        sliders.sensitivity = this.bpmDetectionFolder.addSlider('Sensitivity', 5, 1, 16, 1).onChange(onSliderChange);
-        sliders.analyserFFTSize = this.bpmDetectionFolder.addSlider('Analyser FFT Size', 13, 5, 15, 1).onChange(onSliderChange);
-        sliders.passFreq = this.bpmDetectionFolder.addSlider('Bandpass Filter Frequency', 600, 1, 10000, 1).onChange(onSliderChange);
-        sliders.visualizerFFTSize = this.bpmDetectionFolder.addSlider('Visualizer FFT Size', 7, 5, 15, 1).onChange(onSliderChange);
-        onSliderChange();
-        gui.addToggleButton('Pause', 'Resume', this, 'pause');
-    }
-    toggleBPMdetection() {
-        this.autoBPM = !this.autoBPM;
-        this.bpmDetectionButton.setName(this.autoBPM ? 'Manual BPM' : 'Auto BPM');
-        this.tapButton.setVisibility(!this.autoBPM);
-        this.bpmSlider.setVisibility(!this.autoBPM);
-        this.bpmDetectionFolder.setVisibility(this.autoBPM);
-        if (this.autoBPM) {
-            this.stopBPMinterval();
-        }
-        else if (this.tapIntervalID == null) {
-            this.tapIntervalID = setInterval(() => this.onInterval(), this.getInterval());
-        }
-    }
-    stopBPMinterval() {
-        if (this.tapIntervalID != null) {
-            clearInterval(this.tapIntervalID);
-            this.tapIntervalID = null;
-        }
-    }
-    onInterval() {
-        if (this.pause) {
-            return;
-        }
-        this.gifGrave.nextImage();
-    }
-    getInterval(bpm = this.averageBPM) {
-        return 1 / (bpm / 60 / 1000);
-    }
-    setBPMinterval(bpm, newBPM = null, updateBpmSlider = true) {
-        this.averageBPM = bpm;
-        this.stopBPMinterval();
-        let delay = this.getInterval(bpm);
-        this.gifGrave.nextImage();
-        this.tapIntervalID = setInterval(() => this.onInterval(), delay);
-        if (updateBpmSlider) {
-            this.tapButton.setName('Tapping' + (newBPM != null ? ' - Instant BPM: ' + newBPM.toFixed(2) : ''));
-            this.bpmSlider.setValueNoCallback(bpm);
-        }
-    }
-    stopTap() {
-        if (this.isAutoBPM()) {
-            return;
-        }
-        this.nTaps = 0;
-        this.tapButton.setName('Tap');
-    }
-    tap() {
-        if (this.isAutoBPM()) {
-            return;
-        }
-        this.nTaps++;
-        let now = Date.now();
-        if (this.nTaps == 1) {
-            this.lastTap = now;
-            this.tapButton.setName('Tapping');
-            return;
-        }
-        let newBPM = 60 / ((now - this.lastTap) / 1000);
-        this.averageBPM = (this.averageBPM * (this.nTaps - 1) + newBPM) / this.nTaps;
-        console.log(this.averageBPM + ', ' + newBPM);
-        this.setBPMinterval(this.averageBPM, newBPM);
-        if (this.tapTimeoutID != null) {
-            clearTimeout(this.tapTimeoutID);
-        }
-        this.tapTimeoutID = setTimeout(() => this.stopTap(), this.MaxTapTime);
-        this.lastTap = now;
-    }
-}
-exports.BPM = BPM;
-
-
-/***/ }),
 /* 6 */
-/***/ (function(module, exports, __webpack_require__) {
-
-"use strict";
-
-Object.defineProperty(exports, "__esModule", { value: true });
-const GUI_1 = __webpack_require__(0);
-class Nub {
-    constructor(name, x, y, relative, onChange) {
-        this.size = 10;
-        let parentJ = $('#effect');
-        let parent = parentJ[0];
-        parentJ.css({ width: parentJ.innerWidth(), height: parentJ.innerHeight() });
-        this.position = { x: relative ? x * parentJ.innerWidth() : x, y: relative ? y * parentJ.innerHeight() : y };
-        let divJ = $('<div class="nub">');
-        divJ.css({ top: this.position.y - this.size / 2, left: this.position.x - this.size / 2, position: 'absolute' });
-        $(parent).append(divJ);
-        divJ.draggable({
-            containement: parent,
-            drag: (event, ui) => {
-                ui.position.left = Math.max(-this.size / 2, Math.min(parentJ.innerWidth() - this.size / 2, ui.position.left));
-                ui.position.top = Math.max(-this.size / 2, Math.min(parentJ.innerHeight() - this.size / 2, ui.position.top));
-                this.position.x = ui.position.left + this.size / 2;
-                this.position.y = ui.position.top + this.size / 2;
-                onChange();
-            }
-        });
-        this.divJ = divJ;
-    }
-    remove() {
-        this.divJ.remove();
-    }
-}
-class Filter {
-    constructor(name, functionName, gui, code, fileName = null) {
-        this.name = name;
-        this.functionName = functionName;
-        this.parameters = [];
-        this.sliders = new Map();
-        this.nubs = new Map();
-        this.sliderControllers = new Map();
-        this.nubControllers = new Map();
-        gui.apply(this);
-    }
-    addSlider(name, label, min, max, value, step) {
-        this.parameters.push({ name: name, type: 'slider' });
-        this.sliders.set(name, {
-            name: name,
-            label: label,
-            min: min,
-            max: max,
-            value: value,
-            step: step
-        });
-    }
-    addNub(name, x, y) {
-        this.parameters.push({ name: name, type: 'nub' });
-        this.nubs.set(name, {
-            name: name,
-            x: x,
-            y: y
-        });
-    }
-    setCode(code) {
-    }
-    apply(args = null) {
-        let canvas = Filter.filterManager.canvas;
-        let imageJ = Filter.filterManager.currentImageJ;
-        if (imageJ == null) {
-            return;
-        }
-        let texture = canvas.texture(imageJ[0]);
-        if (args == null) {
-            args = [];
-            for (let parameter of this.parameters) {
-                if (parameter.type == 'slider') {
-                    args.push(this.sliderControllers.get(parameter.name).getValue());
-                }
-                else {
-                    args.push(this.nubControllers.get(parameter.name).position.x);
-                    args.push(this.nubControllers.get(parameter.name).position.y);
-                }
-            }
-        }
-        canvas.draw(texture);
-        canvas[this.functionName].apply(canvas, args);
-        canvas.update();
-        let result = new Image();
-        result.src = canvas.toDataURL();
-        result.className = 'filtered';
-        let resultJ = $(result);
-        let imageName = imageJ.attr('data-name');
-        resultJ.attr('data-name', imageName);
-        let filterJSON = { name: this.name, args: args };
-        resultJ.attr('data-filter', JSON.stringify(filterJSON));
-        Filter.filterManager.gifGrave.setFilteredImage(imageJ, resultJ);
-    }
-    activate(args = null) {
-        Filter.filterManager.currentFilter = this;
-        let argNameToValue = new Map();
-        if (args != null) {
-            let i = 0;
-            for (let parameter of this.parameters) {
-                if (parameter.type == 'slider') {
-                    argNameToValue.set(parameter.name, args[i]);
-                }
-                else if (parameter.type == 'nub') {
-                    argNameToValue.set(parameter.name, { x: args[i], y: args[i + 1] });
-                    i++;
-                }
-                i++;
-            }
-        }
-        for (let [sliderName, slider] of this.sliders) {
-            let value = args != null ? argNameToValue.get(sliderName) : slider.value;
-            this.sliderControllers.set(sliderName, Filter.filterManager.gui.addSlider(slider.name, value, slider.min, slider.max, slider.step).onChange(() => this.apply()));
-        }
-        for (let [nubName, nub] of this.nubs) {
-            let position = args != null ? argNameToValue.get(nubName) : nub;
-            let relative = args == null;
-            this.nubControllers.set(nubName, new Nub(nub.name, position.x, position.y, relative, () => this.apply()));
-        }
-    }
-    deativate() {
-        for (let [sliderName, slider] of this.sliderControllers) {
-            slider.remove();
-        }
-        for (let [nubName, nub] of this.nubControllers) {
-            nub.remove();
-        }
-    }
-}
-let perspectiveNubs = [175, 156, 496, 55, 161, 279, 504, 330];
-let filters = {
-    'Adjust': [
-        new Filter('Brightness / Contrast', 'brightnessContrast', function () {
-            this.addSlider('brightness', 'Brightness', -1, 1, 0, 0.01);
-            this.addSlider('contrast', 'Contrast', -1, 1, 0, 0.01);
-        }, function () {
-            this.setCode('canvas.draw(texture).brightnessContrast(' + this.brightness + ', ' + this.contrast + ').update();');
-        }),
-        new Filter('Hue / Saturation', 'hueSaturation', function () {
-            this.addSlider('hue', 'Hue', -1, 1, 0, 0.01);
-            this.addSlider('saturation', 'Saturation', -1, 1, 0, 0.01);
-        }, function () {
-            this.setCode('canvas.draw(texture).hueSaturation(' + this.hue + ', ' + this.saturation + ').update();');
-        }),
-        new Filter('Vibrance', 'vibrance', function () {
-            this.addSlider('amount', 'Amount', -1, 1, 0.5, 0.01);
-        }, function () {
-            this.setCode('canvas.draw(texture).vibrance(' + this.amount + ').update();');
-        }),
-        new Filter('Denoise', 'denoise', function () {
-            this.addSlider('exponent', 'Exponent', 0, 50, 20, 1);
-        }, function () {
-            this.setCode('canvas.draw(texture).denoise(' + this.exponent + ').update();');
-        }),
-        new Filter('Unsharp Mask', 'unsharpMask', function () {
-            this.addSlider('radius', 'Radius', 0, 200, 20, 1);
-            this.addSlider('strength', 'Strength', 0, 5, 2, 0.01);
-        }, function () {
-            this.setCode('canvas.draw(texture).unsharpMask(' + this.radius + ', ' + this.strength + ').update();');
-        }),
-        new Filter('Noise', 'noise', function () {
-            this.addSlider('amount', 'Amount', 0, 1, 0.5, 0.01);
-        }, function () {
-            this.setCode('canvas.draw(texture).noise(' + this.amount + ').update();');
-        }),
-        new Filter('Sepia', 'sepia', function () {
-            this.addSlider('amount', 'Amount', 0, 1, 1, 0.01);
-        }, function () {
-            this.setCode('canvas.draw(texture).sepia(' + this.amount + ').update();');
-        }),
-        new Filter('Vignette', 'vignette', function () {
-            this.addSlider('size', 'Size', 0, 1, 0.5, 0.01);
-            this.addSlider('amount', 'Amount', 0, 1, 0.5, 0.01);
-        }, function () {
-            this.setCode('canvas.draw(texture).vignette(' + this.size + ', ' + this.amount + ').update();');
-        })
-    ],
-    'Blur': [
-        new Filter('Zoom Blur', 'zoomBlur', function () {
-            this.addNub('center', 0.5, 0.5);
-            this.addSlider('strength', 'Strength', 0, 1, 0.3, 0.01);
-        }, function () {
-            this.setCode('canvas.draw(texture).zoomBlur(' + this.center.x + ', ' + this.center.y + ', ' + this.strength + ').update();');
-        }),
-        new Filter('Triangle Blur', 'triangleBlur', function () {
-            this.addSlider('radius', 'Radius', 0, 200, 50, 1);
-        }, function () {
-            this.setCode('canvas.draw(texture).triangleBlur(' + this.radius + ').update();');
-        }),
-        new Filter('Tilt Shift', 'tiltShift', function () {
-            this.addNub('start', 0.15, 0.75);
-            this.addNub('end', 0.75, 0.6);
-            this.addSlider('blurRadius', 'Blur Radius', 0, 50, 15, 1);
-            this.addSlider('gradientRadius', 'Gradient Radius', 0, 400, 200, 1);
-        }, function () {
-            this.setCode('canvas.draw(texture).tiltShift(' + this.start.x + ', ' + this.start.y + ', ' + this.end.x + ', ' + this.end.y + ', ' + this.blurRadius + ', ' + this.gradientRadius + ').update();');
-        }),
-        new Filter('Lens Blur', 'lensBlur', function () {
-            this.addSlider('radius', 'Radius', 0, 50, 10, 1);
-            this.addSlider('brightness', 'Brightness', -1, 1, 0.75, 0.01);
-            this.addSlider('angle', 'Angle', -Math.PI, Math.PI, 0, 0.01);
-        }, function () {
-            this.setCode('canvas.draw(texture).lensBlur(' + this.radius + ', ' + this.brightness + ', ' + this.angle + ').update();');
-        }, 'lighthouse.jpg')
-    ],
-    'Warp': [
-        new Filter('Swirl', 'swirl', function () {
-            this.addNub('center', 0.5, 0.5);
-            this.addSlider('radius', 'Radius', 0, 600, 200, 1);
-            this.addSlider('angle', 'Angle', -25, 25, 3, 0.1);
-        }, function () {
-            this.setCode('canvas.draw(texture).swirl(' + this.center.x + ', ' + this.center.y + ', ' + this.radius + ', ' + this.angle + ').update();');
-        }),
-        new Filter('Bulge / Pinch', 'bulgePinch', function () {
-            this.addNub('center', 0.5, 0.5);
-            this.addSlider('radius', 'Radius', 0, 600, 200, 1);
-            this.addSlider('strength', 'Strength', -1, 1, 0.5, 0.01);
-        }, function () {
-            this.setCode('canvas.draw(texture).bulgePinch(' + this.center.x + ', ' + this.center.y + ', ' + this.radius + ', ' + this.strength + ').update();');
-        })
-        // ,
-        // new Filter('Perspective', 'perspective', function() {
-        //     var w = 640, h = 425;
-        //     this.addNub('a', perspectiveNubs[0] / w, perspectiveNubs[1] / h);
-        //     this.addNub('b', perspectiveNubs[2] / w, perspectiveNubs[3] / h);
-        //     this.addNub('c', perspectiveNubs[4] / w, perspectiveNubs[5] / h);
-        //     this.addNub('d', perspectiveNubs[6] / w, perspectiveNubs[7] / h);
-        // }, function() {
-        //     var before = perspectiveNubs;
-        //     var after = [this.a.x, this.a.y, this.b.x, this.b.y, this.c.x, this.c.y, this.d.x, this.d.y];
-        //     this.setCode('canvas.draw(texture).perspective([' + before + '], [' + after + ']).update();');
-        // }, 'perspective.jpg')
-    ],
-    'Fun': [
-        new Filter('Ink', 'ink', function () {
-            this.addSlider('strength', 'Strength', 0, 1, 0.25, 0.01);
-        }, function () {
-            this.setCode('canvas.draw(texture).ink(' + this.strength + ').update();');
-        }),
-        new Filter('Edge Work', 'edgeWork', function () {
-            this.addSlider('radius', 'Radius', 0, 200, 10, 1);
-        }, function () {
-            this.setCode('canvas.draw(texture).edgeWork(' + this.radius + ').update();');
-        }),
-        new Filter('Hexagonal Pixelate', 'hexagonalPixelate', function () {
-            this.addNub('center', 0.5, 0.5);
-            this.addSlider('scale', 'Scale', 10, 100, 20, 1);
-        }, function () {
-            this.setCode('canvas.draw(texture).hexagonalPixelate(' + this.center.x + ', ' + this.center.y + ', ' + this.scale + ').update();');
-        }),
-        new Filter('Dot Screen', 'dotScreen', function () {
-            this.addNub('center', 0.5, 0.5);
-            this.addSlider('angle', 'Angle', 0, Math.PI / 2, 1.1, 0.01);
-            this.addSlider('size', 'Size', 3, 20, 3, 0.01);
-        }, function () {
-            this.setCode('canvas.draw(texture).dotScreen(' + this.center.x + ', ' + this.center.y + ', ' + this.angle + ', ' + this.size + ').update();');
-        }),
-        new Filter('Color Halftone', 'colorHalftone', function () {
-            this.addNub('center', 0.5, 0.5);
-            this.addSlider('angle', 'Angle', 0, Math.PI / 2, 0.25, 0.01);
-            this.addSlider('size', 'Size', 3, 20, 4, 0.01);
-        }, function () {
-            this.setCode('canvas.draw(texture).colorHalftone(' + this.center.x + ', ' + this.center.y + ', ' + this.angle + ', ' + this.size + ').update();');
-        })
-    ]
-};
-class FilterManager {
-    constructor(gifGrave) {
-        this.gifGrave = gifGrave;
-        Filter.filterManager = this;
-        this.nameToFilter = new Map();
-        this.initialize();
-    }
-    activateFilter(name, updateSelect = true, args = null) {
-        if (updateSelect) {
-            this.filterSelect.setValueNoCallback(name);
-        }
-        if (this.currentFilter != null) {
-            this.currentFilter.deativate();
-        }
-        this.currentFilter = this.nameToFilter.get(name);
-        this.currentFilter.activate(args);
-    }
-    initialize() {
-        try {
-            this.canvas = fx.canvas();
-        }
-        catch (e) {
-            alert(e);
-            return;
-        }
-        $('#effect').append(this.canvas);
-        this.gui = new GUI_1.GUI({ autoPlace: false, width: '100%' });
-        document.getElementById('gui').appendChild(this.gui.getDomElement());
-        let filterNames = [];
-        for (let filterCategory in filters) {
-            for (let filter of filters[filterCategory]) {
-                this.nameToFilter.set(filter.name, filter);
-                filterNames.push(filter.name);
-            }
-        }
-        let defaultFilter = 'Hue / Saturation';
-        this.filterSelect = this.gui.addSelect('Filter', filterNames, defaultFilter).onChange((value) => {
-            this.activateFilter(value);
-            this.currentFilter.apply();
-        });
-        this.activateFilter(defaultFilter);
-    }
-    filterLoadedImage(args) {
-        let image = this.currentImageJ[0];
-        let texture = this.canvas.texture(image);
-        if (texture._.width == null || texture._.width == 0 && texture._.height == null || texture._.height == 0) {
-            console.log("texture not loaded");
-            return;
-        }
-        this.canvas.draw(texture);
-        if (this.currentFilter != null) {
-            this.currentFilter.apply(args);
-        }
-    }
-    filterImage(fromImageData = false) {
-        let args = null;
-        if (fromImageData) {
-            let imageFilterData = this.currentImageJ.siblings('.filtered').attr('data-filter');
-            if (imageFilterData != null && imageFilterData.length > 0) {
-                let filter = JSON.parse(imageFilterData);
-                args = filter.args;
-                this.activateFilter(filter.name, true, args);
-            }
-        }
-        let image = this.currentImageJ[0];
-        if (image.naturalWidth != null && image.naturalHeight != null &&
-            image.naturalWidth != 0 && image.naturalHeight != 0) {
-            this.filterLoadedImage(args);
-        }
-        else {
-            image.onload = () => {
-                console.log("Image loaded");
-                this.filterLoadedImage(args);
-            };
-        }
-    }
-    setImage(imgJ) {
-        this.currentImageJ = imgJ;
-        this.filterImage(true);
-    }
-}
-exports.FilterManager = FilterManager;
-
-
-/***/ }),
-/* 7 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -969,6 +681,7 @@ exports.FilterManager = FilterManager;
 Object.defineProperty(exports, "__esModule", { value: true });
 class Gif {
     constructor(containerJ) {
+        this.hasPreview = false;
         this.containerJ = containerJ;
         this.imageIndex = 0;
     }
@@ -1001,8 +714,10 @@ class Gif {
         let originalImageJ = this.getImageJ(imageName);
         originalImageJ.siblings('.filtered').remove();
         resultJ.insertBefore(originalImageJ);
+        resultJ.css({ width: '100%' });
     }
     replaceImage(oldImageName, newImageJ) {
+        newImageJ.css({ width: '100%' });
         this.getImageJ(oldImageName).replaceWith(newImageJ);
     }
     removeImage(imageName) {
@@ -1044,34 +759,38 @@ class Gif {
     empty() {
         this.containerJ.empty();
     }
-    preview() {
+    preview(save = false) {
         let imagesJ = this.getFilteredImagesJ().toArray();
         if (imagesJ.length == 0) {
             return;
         }
         let width = imagesJ[0].naturalWidth;
         let height = imagesJ[0].naturalHeight;
-        let interval = Gif.gifManager.gifGrave.bpm.getInterval() / 1000;
+        let interval = Gif.gifManager.gifJockey.bpm.getInterval() / 1000;
         gifshot.createGIF({
             gifWidth: width,
             gifHeight: height,
             interval: interval,
             images: imagesJ,
             sampleInterval: Gif.gifManager.gifQuality
-        }, function (obj) {
+        }, (obj) => {
             if (!obj.error) {
                 var image = obj.image, animatedImage = document.createElement('img');
                 animatedImage.src = image;
                 let aJ = $('<a download="gif.gif" href="' + image + '">');
                 aJ.append(animatedImage);
                 $('#gif-result').empty().append(aJ);
+                this.hasPreview = true;
+                if (save) {
+                    aJ[0].click();
+                }
             }
         });
     }
 }
 exports.Gif = Gif;
 class GifManager {
-    constructor(gifGrave) {
+    constructor(gifJockey) {
         this.gifID = 0;
         this.gifs = new Map();
         this.currentGif = null;
@@ -1081,14 +800,22 @@ class GifManager {
         };
         this.sortGifsStop = () => {
         };
-        this.gifGrave = gifGrave;
+        this.gifJockey = gifJockey;
         Gif.gifManager = this;
+        // this.toggleThumbnails(false)
     }
     createGUI(gui) {
         gui.addButton('Add gif', () => this.addGif());
         gui.addSlider('Gif degradation', this.gifQuality, 1, 5000, 1).onChange((value) => { this.gifQuality = value; });
-        gui.addButton('Preview gif', () => this.currentGif.preview());
-        gui.addButton('Save gif', () => $('#gif-result').find('a')[0].click());
+        gui.addButton('Save gif', () => this.currentGif.preview(true));
+        // gui.addButton('Save gif', ()=> {
+        // 	if(!this.currentGif.hasPreview) {
+        // 		this.currentGif.preview(true)
+        // 	} else {
+        // 		let linkJ = $('#result').find('a')
+        // 		linkJ[0].click()
+        // 	}
+        // })
         this.gif = new Gif($('#result'));
     }
     removeImage(imageName) {
@@ -1114,7 +841,7 @@ class GifManager {
         this.currentGif.sortImages(imageNames);
     }
     addGif() {
-        this.gifGrave.emptyThumbnails();
+        this.gifJockey.emptyThumbnails();
         this.gif.empty();
         let currentGifJ = $('<li class="gg-thumbnail" data-name="gif-' + this.gifID + '">');
         let closeButtonJ = $('<button type="button" class="gg-small-btn close-btn">');
@@ -1129,12 +856,19 @@ class GifManager {
         currentGifJ.append(playButtonJ);
         let currentGifID = this.gifID;
         closeButtonJ.click(() => this.removeGif(currentGifID));
-        playButtonJ.click(() => {
+        playButtonJ.mousedown((event) => {
             $('#outputs').find('.gg-small-btn.play-btn').removeClass('playing');
             playButtonJ.addClass('playing');
             this.playGif(currentGifID);
+            event.stopPropagation();
+            return -1;
         });
-        currentGifJ.mousedown(() => this.selectGif(currentGifID));
+        currentGifJ.mousedown((event) => {
+            this.selectGif(currentGifID);
+            event.stopPropagation();
+            event.preventDefault();
+            return -1;
+        });
         $('#outputs').append(currentGifJ);
         this.currentGif = new Gif(divJ);
         this.gifs.set(this.gifID, this.currentGif);
@@ -1143,23 +877,53 @@ class GifManager {
     removeGif(gifID) {
         $('#outputs').find('[data-name="gif-' + gifID + '"]').remove();
     }
+    toggleThumbnails(show) {
+        let thumbnailsJ = $('#thumbnails');
+        let thumbnailsVisible = thumbnailsJ.is(':visible');
+        if (show && !thumbnailsVisible) {
+            thumbnailsJ.show();
+            document.dispatchEvent(new Event('cameraResized'));
+        }
+        else if (!show && thumbnailsVisible) {
+            thumbnailsJ.hide();
+            document.dispatchEvent(new Event('cameraResized'));
+        }
+        // let resultJ = $('#result')
+        // let resultVisible = resultJ.is(':visible')
+        // if(show && !resultVisible) {
+        // 	resultJ.show()
+        // } else if (!show && resultVisible) {
+        // 	resultJ.hide()
+        // }
+    }
     selectGif(gifID) {
+        let gifsToSelectJ = $('#outputs').children("[data-name='gif-" + gifID + "']");
+        let gifsAlreadySelected = gifsToSelectJ.hasClass('gg-selected');
         $('#outputs').children().removeClass('gg-selected');
-        $('#outputs').children("[data-name='gif-" + gifID + "']").addClass('gg-selected');
+        if (gifsAlreadySelected || gifsToSelectJ.length == 0) {
+            this.toggleThumbnails(false);
+            return;
+        }
+        gifsToSelectJ.addClass('gg-selected');
         this.currentGif = this.gifs.get(gifID);
         this.gif.setGif(this.currentGif);
-        this.gifGrave.setGif(this.currentGif);
+        this.gifJockey.setGif(this.currentGif);
+        this.toggleThumbnails(true);
+    }
+    deselectGif() {
+        $('#outputs').children().removeClass('gg-selected');
+        this.toggleThumbnails(false);
     }
     playGif(gifID) {
         let gif = this.gifs.get(gifID);
-        this.gifGrave.playGif(gif);
+        this.gifJockey.playGif(gif);
     }
 }
 exports.GifManager = GifManager;
 
 
 /***/ }),
-/* 8 */
+/* 7 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -1167,28 +931,50 @@ exports.GifManager = GifManager;
 Object.defineProperty(exports, "__esModule", { value: true });
 class Renderer {
     constructor(webcam, gui) {
+        let cameraJ = $('#camera');
+        this.setCameraSize();
         this.webcam = webcam;
         let width = webcam.width;
         let height = webcam.height;
         this.camera = new THREE.OrthographicCamera(width / -2, width / 2, height / 2, height / -2, 1, 1000);
         this.scene = new THREE.Scene();
-        this.renderer = new THREE.WebGLRenderer({ antialias: true });
-        this.renderer.setSize(this.webcam.width, this.webcam.height);
+        this.renderer = new THREE.WebGLRenderer({ antialias: true, preserveDrawingBuffer: true });
+        this.renderer.setSize(width, height);
+        let size = this.computeRendererSize(webcam, cameraJ);
+        this.setCanvasSize(size.width, size.height);
         let container = document.getElementById('camera');
         container.appendChild(this.renderer.domElement);
-        this.texture = new THREE.Texture(webcam.video);
-        // this.material = new THREE.MeshBasicMaterial( (<any>{ map: this.texture, overdraw: true } ))
-        this.material = new THREE.MeshBasicMaterial({ map: this.texture });
-        // this.material = new THREE.ShaderMaterial(PixelateShader)
-        // this.material.uniforms.tDiffuse = { value: this.texture }
-        this.texture.minFilter = THREE.LinearFilter;
-        this.texture.magFilter = THREE.LinearFilter;
-        let geometry = new THREE.PlaneGeometry(webcam.width, webcam.height);
-        this.mesh = new THREE.Mesh(geometry, this.material);
-        this.scene.add(this.mesh);
+        this.setContent(webcam.video);
         this.camera.position.z = 5;
         window.addEventListener('resize', () => this.windowResize(), false);
+        document.addEventListener('cameraResized', () => this.windowResize());
         requestAnimationFrame(() => this.render());
+        this.centerOnRectangle(this.webcam.width, this.webcam.height);
+        setTimeout(() => this.windowResize(), 0);
+    }
+    setCameraSize() {
+        let cameraJ = $('#camera');
+        cameraJ.css({ width: 0, height: 0 });
+        let parentJ = cameraJ.parent();
+        cameraJ.css({
+            width: '' + parentJ.width() + 'px',
+            height: '' + parentJ.height() + 'px',
+            display: 'flex',
+            'align-items': 'center',
+            'justify-conten': 'center',
+        });
+    }
+    setContent(content) {
+        this.texture = new THREE.Texture(content);
+        this.material = new THREE.MeshBasicMaterial({ map: this.texture });
+        this.texture.minFilter = THREE.LinearFilter;
+        this.texture.magFilter = THREE.LinearFilter;
+        let geometry = new THREE.PlaneGeometry(content.width, content.height);
+        if (this.mesh != null) {
+            this.scene.remove(this.mesh);
+        }
+        this.mesh = new THREE.Mesh(geometry, this.material);
+        this.scene.add(this.mesh);
     }
     setShaderManager(shaderManager) {
         this.shaderManager = shaderManager;
@@ -1196,16 +982,44 @@ class Renderer {
     getDomElement() {
         return this.renderer.domElement;
     }
+    getFilteredImage() {
+        let canvas = this.getDomElement();
+        let result = new Image();
+        result.src = canvas.toDataURL();
+        return { image: result, shaderParameters: this.shaderManager.getShaderParameters() };
+    }
+    computeRendererSize(webcam, cameraJ) {
+        this.setCameraSize();
+        let cameraWidth = cameraJ.width();
+        let cameraHeight = cameraJ.height();
+        let cameraRatio = cameraWidth / cameraHeight;
+        let webcamRatio = webcam.width / webcam.height;
+        let width = null;
+        let height = null;
+        if (cameraRatio < webcamRatio) {
+            width = cameraWidth;
+            height = cameraWidth / webcamRatio;
+        }
+        else {
+            width = cameraHeight * webcamRatio;
+            height = cameraHeight;
+        }
+        return { width: width, height: height };
+    }
+    setCanvasSize(width, height) {
+        $(this.renderer.domElement).css({ width: '' + width + 'px', height: '' + height + 'px', margin: 'auto', display: 'block' });
+    }
+    centerOnRectangle(width, height) {
+        let margin = 0;
+        let ratio = Math.max((width + margin) / this.renderer.getSize().width, (height + margin) / this.renderer.getSize().height);
+        this.camera.zoom = 1 / ratio;
+        this.camera.updateProjectionMatrix();
+    }
     windowResize() {
-        // let width = this.webcam.width
-        // let height = this.webcam.height
-        // this.camera.left = width / -2
-        // this.camera.right = width / 2
-        // this.camera.top = height / -2
-        // this.camera.bottom = height / 2
-        // this.camera.updateProjectionMatrix()
-        // this.camera.position.z = 5
-        // this.renderer.setSize( this.webcam.width, this.webcam.height )
+        let cameraJ = $('#camera');
+        this.setCameraSize();
+        let size = this.computeRendererSize(this.webcam, cameraJ);
+        this.setCanvasSize(size.width, size.height);
     }
     render() {
         requestAnimationFrame(() => this.render());
@@ -1220,15 +1034,16 @@ exports.Renderer = Renderer;
 
 
 /***/ }),
-/* 9 */
+/* 8 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
 
 Object.defineProperty(exports, "__esModule", { value: true });
-const BadTV_1 = __webpack_require__(10);
+const BadTV_1 = __webpack_require__(9);
 const Static_1 = __webpack_require__(12);
 const Film_1 = __webpack_require__(11);
+const DotMatrix_1 = __webpack_require__(10);
 class ShaderManager {
     constructor(gui, camera, scene, renderer) {
         this.shaderParameters = {
@@ -1244,7 +1059,7 @@ class ShaderManager {
                         min: 0.1,
                         max: 20,
                         randomMin: 0.1,
-                        randomMax: 10,
+                        randomMax: 3,
                         step: 0.1
                     },
                     distortion2: {
@@ -1253,7 +1068,7 @@ class ShaderManager {
                         min: 0.1,
                         max: 20,
                         randomMin: 0.1,
-                        randomMax: 10,
+                        randomMax: 7,
                         step: 0.1
                     },
                     speed: {
@@ -1296,6 +1111,8 @@ class ShaderManager {
                         value: 4,
                         min: 1,
                         max: 100,
+                        randomMin: 1,
+                        randomMax: 20,
                         step: 1
                     }
                 }
@@ -1363,6 +1180,8 @@ class ShaderManager {
                         value: 1,
                         min: 0,
                         max: 10,
+                        randomMin: 0,
+                        randomMax: 1.7,
                         step: 0.1
                     }
                 }
@@ -1377,6 +1196,8 @@ class ShaderManager {
                         value: 0.25,
                         min: 0,
                         max: 1,
+                        randomMin: 0,
+                        randomMax: 0.2,
                         step: 0.01
                     },
                     contrast: {
@@ -1410,6 +1231,8 @@ class ShaderManager {
                         value: 256,
                         min: 2,
                         max: 1024,
+                        randomMin: 256,
+                        randomMax: 512,
                         step: 1,
                         getValue: (value) => new THREE.Vector2(value, value)
                     },
@@ -1426,7 +1249,41 @@ class ShaderManager {
                         value: 1,
                         min: 0.1,
                         max: 10,
+                        randomMin: 1,
+                        randomMax: 1,
                         step: 0.01
+                    }
+                }
+            },
+            dotMatrix: {
+                name: 'Dot Matrix',
+                shader: DotMatrix_1.DotMatrix,
+                on: false,
+                parameters: {
+                    sharpness: {
+                        name: 'Sharpness',
+                        value: 0.7,
+                        min: 0,
+                        max: 1,
+                        step: 0.01
+                    },
+                    gridSize: {
+                        name: 'Grid Size',
+                        value: 10,
+                        min: 0,
+                        max: 200,
+                        randomMin: 50,
+                        randomMax: 200,
+                        step: 1
+                    },
+                    dotSize: {
+                        name: 'Dot Size',
+                        value: 0.1,
+                        min: 0,
+                        max: 1,
+                        randomMin: 0,
+                        randomMax: 0.5,
+                        step: 0.1
                     }
                 }
             },
@@ -1440,6 +1297,8 @@ class ShaderManager {
                         value: 512,
                         min: 2,
                         max: 1024,
+                        randomMin: 300,
+                        randomMax: 512,
                         step: 1,
                         getValue: (value) => new THREE.Vector2(value, value)
                     }
@@ -1495,7 +1354,7 @@ class ShaderManager {
                     sides: {
                         name: 'Sides',
                         value: 6,
-                        min: 0,
+                        min: 1,
                         max: 12,
                         step: 1
                     },
@@ -1559,6 +1418,7 @@ class ShaderManager {
                 }
             }
         };
+        this.shaderChangedTimeout = null;
         this.shaders = new Array();
         this.shaderTime = 0;
         this.camera = camera;
@@ -1571,23 +1431,23 @@ class ShaderManager {
             let shaderObject = this.shaderParameters[shaderName];
             let folder = gui.addFolder(shaderObject.name);
             this.shaders.push({ pass: new THREE.ShaderPass(shaderObject.shader), object: shaderObject, folder: folder });
-            folder.add(shaderObject, 'on').name('On').listen().onChange(onToggleShaders);
+            folder.add(shaderObject, 'on').name('On').onChange(onToggleShaders);
             for (let propertyName in shaderObject.parameters) {
                 let propertiesObject = shaderObject.parameters[propertyName];
                 if (propertiesObject.type != null && propertiesObject.type == 'color') {
-                    folder.addColor(propertiesObject, 'value').listen().onChange(onParamsChange);
+                    folder.addColor(propertiesObject, 'value').onChange(onParamsChange);
                 }
                 else {
-                    folder.add(propertiesObject, 'value', propertiesObject.min, propertiesObject.max).step(propertiesObject.step).listen().setName(propertiesObject.name).onChange(onParamsChange);
+                    folder.add(propertiesObject, 'value', propertiesObject.min, propertiesObject.max).step(propertiesObject.step).setName(propertiesObject.name).onChange(onParamsChange);
                 }
             }
             folder.open();
         }
         this.copyPass = new THREE.ShaderPass(THREE.CopyShader);
-        this.onParamsChange();
+        this.onParamsChange(false);
         this.onToggleShaders();
     }
-    onToggleShaders() {
+    onToggleShaders(dispatchEvent = true) {
         //Add Shader Passes to Composer
         //order is important 
         this.composer = new THREE.EffectComposer(this.renderer);
@@ -1599,8 +1459,17 @@ class ShaderManager {
         }
         this.composer.addPass(this.copyPass);
         this.copyPass.renderToScreen = true;
+        if (dispatchEvent) {
+            this.dispatchChange();
+        }
     }
-    onParamsChange() {
+    dispatchChange() {
+        if (this.shaderChangedTimeout != null) {
+            clearTimeout(this.shaderChangedTimeout);
+        }
+        this.shaderChangedTimeout = setTimeout(() => document.dispatchEvent(new Event('shaderChanged')), 500);
+    }
+    onParamsChange(dispatchEvent = true) {
         for (let shader of this.shaders) {
             for (let propertyName in shader.object.parameters) {
                 let propertiesObject = shader.object.parameters[propertyName];
@@ -1609,6 +1478,9 @@ class ShaderManager {
                     propertiesObject.type != null && propertiesObject.type == 'color' ?
                         new THREE.Color(propertiesObject.value) : propertiesObject.value;
             }
+        }
+        if (dispatchEvent) {
+            this.dispatchChange();
         }
     }
     getRandomOnInterval(min, max) {
@@ -1639,10 +1511,46 @@ class ShaderManager {
                     this.getRandomColor() :
                     this.getRandomOnInterval(propertiesObject.randomMin != null ? Math.max(propertiesObject.randomMin, propertiesObject.min) : propertiesObject.min, propertiesObject.randomMax != null ? Math.min(propertiesObject.randomMax, propertiesObject.max) : propertiesObject.max);
             }
+            for (let controller of shader.folder.getControllers()) {
+                controller.updateDisplay();
+            }
             i++;
         }
-        this.onToggleShaders();
+        this.onToggleShaders(false);
         this.onParamsChange();
+    }
+    getShaderParameters() {
+        let json = {};
+        for (let shader of this.shaders) {
+            let parameters = {};
+            for (let propertyName in shader.object.parameters) {
+                let propertiesObject = shader.object.parameters[propertyName];
+                parameters[propertyName] = propertiesObject.value;
+            }
+            json[shader.object.name] = { parameters: parameters, on: shader.object.on };
+        }
+        return json;
+    }
+    setShaderParameters(json) {
+        for (let shader of this.shaders) {
+            let parameters = json[shader.object.name].parameters;
+            let on = json[shader.object.name].on;
+            shader.object.on = on;
+            if (on) {
+                shader.folder.open();
+            }
+            else {
+                shader.folder.close();
+            }
+            for (let propertyName in shader.object.parameters) {
+                shader.object.parameters[propertyName].value = parameters[propertyName];
+            }
+            for (let controller of shader.folder.getControllers()) {
+                controller.updateDisplay();
+            }
+        }
+        this.onToggleShaders(false);
+        this.onParamsChange(false);
     }
     animate() {
         this.shaderTime += 0.1;
@@ -1658,7 +1566,7 @@ exports.ShaderManager = ShaderManager;
 
 
 /***/ }),
-/* 10 */
+/* 9 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -1778,6 +1686,81 @@ exports.BadTVShader = {
         "gl_FragColor = texture2D(tDiffuse,  vec2(fract(p.x + offset),fract(p.y-time*rollSpeed) ));",
         "}"
     ].join("\n")
+};
+
+
+/***/ }),
+/* 10 */
+/***/ (function(module, exports, __webpack_require__) {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", { value: true });
+/**
+ * @author Arthur Masson
+ *
+ * sharpness - sharpness of the dots (0 - 1)
+ * size - size of noise grains (pixels)
+ *
+ * The MIT License
+ *
+ * Copyright (c) 2014 Felix Turner
+ *
+ * Permission is hereby granted, free of charge, to any person obtaining a copy
+ * of this software and associated documentation files (the "Software"), to deal
+ * in the Software without restriction, including without limitation the rights
+ * to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+ * copies of the Software, and to permit persons to whom the Software is
+ * furnished to do so, subject to the following conditions:
+ *
+ * The above copyright notice and this permission notice shall be included in
+ * all copies or substantial portions of the Software.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+ * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+ * AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+ * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+ * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+ * THE SOFTWARE.
+ *
+ */
+exports.DotMatrix = {
+    uniforms: {
+        "tDiffuse": { type: "t", value: null },
+        "sharpness": { type: "f", value: 0.7 },
+        "gridSize": { type: "f", value: 10.0 },
+        "dotSize": { type: "f", value: 1.0 }
+    },
+    vertexShader: `
+		varying vec2 vUv;
+
+		void main() {
+			vUv = uv;
+			gl_Position = projectionMatrix * modelViewMatrix * vec4( position, 1.0 );
+		}
+		`,
+    fragmentShader: `
+		uniform sampler2D tDiffuse;
+		uniform float dotSize;
+		uniform float gridSize;
+		uniform float sharpness;
+
+		varying vec2 vUv;
+
+		void main() {
+			vec2 p = vUv;
+			vec4 color = texture2D(tDiffuse, floor( p * gridSize ) / gridSize);
+
+			float halfSharpness = sharpness / 2.;
+			
+			vec2 f = 2. * abs(fract( p * gridSize ) - 0.5);
+
+			color *= smoothstep(1.-halfSharpness, 0.+halfSharpness, dotSize*length(f));
+
+			gl_FragColor = color;
+ 		}
+ 		`,
 };
 
 
@@ -1950,10 +1933,12 @@ class Webcam {
         this.streaming = false;
         this.video = null;
         this.canvas = null;
+        this.context = null;
         this.photo = null;
-        // this.canvas = <HTMLCanvasElement>document.getElementById('canvas')
         // this.photo = document.getElementById('photo')
         this.video = document.createElement('video');
+        this.canvas = document.createElement('canvas');
+        this.context = this.canvas.getContext('2d');
         let n = navigator;
         n.getMedia = (navigator.getUserMedia ||
             n.webkitGetUserMedia ||
@@ -1982,11 +1967,20 @@ class Webcam {
                 }
                 this.video.setAttribute('width', this.width.toString());
                 this.video.setAttribute('height', this.height.toString());
+                this.canvas.width = this.width;
+                this.canvas.height = this.height;
                 this.streaming = true;
                 callback();
             }
         }, false);
         // this.clearPhoto()
+    }
+    getImage() {
+        if (this.width && this.height) {
+            this.context.drawImage(this.video, 0, 0, this.width, this.height);
+            return this.canvas.toDataURL();
+        }
+        return null;
     }
 }
 exports.Webcam = Webcam;
@@ -1996,8 +1990,8 @@ exports.Webcam = Webcam;
 /* 14 */
 /***/ (function(module, exports, __webpack_require__) {
 
-__webpack_require__(3);
-module.exports = __webpack_require__(1);
+__webpack_require__(2);
+module.exports = __webpack_require__(0);
 
 
 /***/ })

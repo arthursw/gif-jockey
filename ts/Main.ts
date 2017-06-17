@@ -8,6 +8,11 @@ import { Gif, GifManager } from "./Gif"
 import { BPM } from "./BPM"
 // import { FilterManager } from "./Filters"
 
+let ctrlKey = 17
+let cmdKey = 91
+let vKey = 86
+let cKey = 67
+
 class GifJokey {
 	
 	imageID = 0
@@ -24,6 +29,7 @@ class GifJokey {
 
 	guiWasFocusedWhenPressedEnter = false
 	showGifThumbnails = false
+	ctrlDown = false
 
 	constructor() {
 		console.log("Gif Grave")
@@ -42,7 +48,11 @@ class GifJokey {
 		// $("#takeSnapshot").click(this.takeSnapshot)
 		// $("#createViewer").click(this.createViewer)
 		$("#camera").click(()=>this.deselectImages())
-		$("#gif-thumbnails").mousedown(()=>this.deselectImages())
+		$("#gif-thumbnails").mousedown((event:JQueryMouseEventObject)=> {
+			if(!$.contains($('#outputs')[0], event.target) && !$.contains($('#thumbnails')[0], event.target)) {
+				this.deselectImages()
+			}
+		})
 
 		let thumbnailsJ: any = $("#thumbnails")
 		thumbnailsJ.sortable(({ stop: ()=> this.sortImagesStop() }))
@@ -67,11 +77,29 @@ class GifJokey {
 	    this.createGUI()
 	    this.webcam = new Webcam(()=>this.webcamLoaded())
 
-	    this.gifManager.addGif()
 
 	    this.toggleGifThumbnails(this.showGifThumbnails)
+
+	    this.initializeClipboard()
 	}
 	
+	initializeClipboard() {
+
+		$(document).keydown((e)=> {
+			if (e.keyCode == ctrlKey || e.keyCode == cmdKey) { 
+				this.ctrlDown = true
+			} else if (this.ctrlDown && e.keyCode == cKey && this.getSelectedImage().length > 0 && !this.gui.isFocused()) {
+				this.shaderManager.copyEffects()
+			} else if (this.ctrlDown && e.keyCode == vKey && this.getSelectedImage().length > 0 && !this.gui.isFocused()) {
+				this.shaderManager.pastEffects()
+			}
+		}).keyup((e)=> {
+			if (e.keyCode == ctrlKey || e.keyCode == cmdKey) {
+				this.ctrlDown = false
+			}
+		})
+	}
+
 	onKeyDown(event: KeyboardEvent) {
 		if(event.keyCode == 32) {			// space bar
 			this.takeSnapshot()
@@ -86,7 +114,7 @@ class GifJokey {
 			if(!this.gui.isFocused()) {
 				this.bpm.stopTap()
 			}
-		} else if(String.fromCharCode(event.keyCode) == 'R') {
+		} else if(String.fromCharCode(event.keyCode) == 'R') {
 			this.shaderManager.randomizeParams()
 		}
 	}
@@ -97,6 +125,7 @@ class GifJokey {
 		this.renderer.setShaderManager(this.shaderManager)
 		document.addEventListener('shaderChanged', ()=> this.updateFilteredImage())
 		this.shaderManager.randomizeParams()
+		this.gifManager.addGif()
 	}
 
 	initialize() {
@@ -159,31 +188,37 @@ class GifJokey {
 	selectImage(imageName: string) {
 		let imagesToSelectJ = $('#thumbnails').children("[data-name='"+imageName+"']")
 		let imagesAlreadySelected = imagesToSelectJ.hasClass('gg-selected')
-		$('#thumbnails').children().removeClass('gg-selected')
 		
-		if(imagesAlreadySelected || imagesToSelectJ.length == 0) {
-			this.renderer.setContent(this.webcam.video)
+		if(imagesAlreadySelected || imagesToSelectJ.length == 0) {
+			// this.renderer.displayVideo()
 			return
 		}
+
+		$('#thumbnails').children().removeClass('gg-selected')
 
 		imagesToSelectJ.addClass('gg-selected')
 
 		let imgJ = imagesToSelectJ.find('img.original')
-		this.renderer.setContent(<any>imgJ[0])
+		this.renderer.displayImage(<any>imgJ[0])
 
 		let filteredImageJ = imagesToSelectJ.find('img.filtered')
-		if(filteredImageJ.length > 0) {
+		if(filteredImageJ.length > 0) {
 			let args = JSON.parse(filteredImageJ.attr('data-filter'))
 			this.shaderManager.setShaderParameters(args)
 		}
 
+		this.gifManager.selectImage(imageName)
 		// this.filterManager.setImage(imgJ)
 	}
 
-	deselectImages() {
+	deselectImages() {
 		$('#thumbnails').children().removeClass('gg-selected')
-		this.renderer.setContent(this.webcam.video)
-		this.gifManager.deselectGif()
+		if(this.renderer != null) {
+			this.renderer.displayVideo()
+		}
+		if(this.gifManager != null) {
+			this.gifManager.deselectGif()
+		}
 	}
 
 	addImage(data_uri: string, canvas: HTMLCanvasElement=null, context: CanvasRenderingContext2D=null) {
@@ -213,18 +248,19 @@ class GifJokey {
 		let buttonJ = $('<button type="button" class="gg-small-btn close-btn">')
 		let spanJ = $('<span class="ui-icon ui-icon-closethick">')
 		let divJ = $('<div class="gg-thumbnail-container">')
+		let selectionRectangleJ = $('<div class="gg-selection-rectangle">')
 		buttonJ.append(spanJ)
 		divJ.append(imgJ.addClass('gg-hidden original'))
 		divJ.append(filteredImageJ)
+		liJ.append(selectionRectangleJ)
 		liJ.append(divJ)
 		liJ.append(buttonJ)
+
 		buttonJ.click(()=> this.removeImage(imageName) )
 		liJ.mousedown((event: JQueryMouseEventObject)=>{
 			setTimeout(()=>this.selectImage(imageName), 0)
-			event.preventDefault()
-			event.stopPropagation()
-			return -1
 		}) // add timeout to not to disturbe draggable
+
 		$('#thumbnails').append(liJ)
 	}
 
@@ -243,7 +279,7 @@ class GifJokey {
 	}
 
 	updateFilteredImage(imageJ: any=null) {
-		if(imageJ == null) {
+		if(imageJ == null) {
 			imageJ = this.getSelectedImage().find('img.original')
 		}
 
@@ -307,7 +343,7 @@ class GifJokey {
 
 	emptyThumbnails() {
 		$('#thumbnails').empty()
-		$('#thumbnails').append($('<li>').addClass('placeholder'))
+		// $('#thumbnails').append($('<li>').addClass('placeholder'))
 	}
 
 	setGif(gif: Gif) {
@@ -316,7 +352,12 @@ class GifJokey {
 		for(let imagePairJ of gif.getImagePairsJ()) {
 			this.createThumbnail(imagePairJ.filter('.original'), imagePairJ.filter('.filtered'))
 		}
-		this.selectImage(gif.getFirstImageJ().attr('data-name'))
+		
+		let firstImageJ = gif.getFirstImageJ()
+		if(firstImageJ.length > 0) {
+			this.selectImage(firstImageJ.attr('data-name'))
+		}
+
 		this.nextImage()
 	}
 

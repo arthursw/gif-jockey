@@ -59,8 +59,8 @@ export class BPM {
 												passFreq: passFreq })
 		}
 
-		sliders.sensitivity = this.bpmDetectionFolder.addSlider('Sensitivity', 5, 1, 16, 1).onChange(onSliderChange)
-		sliders.analyserFFTSize = this.bpmDetectionFolder.addSlider('Analyser FFT Size', 13, 5, 15, 1).onChange(onSliderChange)
+		sliders.sensitivity = this.bpmDetectionFolder.addSlider('Sensitivity', 14, 1, 16, 1).onChange(onSliderChange)
+		sliders.analyserFFTSize = this.bpmDetectionFolder.addSlider('Analyser FFT Size', 14, 5, 15, 1).onChange(onSliderChange)
 		sliders.passFreq = this.bpmDetectionFolder.addSlider('Bandpass Filter Frequency', 600, 1, 10000, 1).onChange(onSliderChange)
 		sliders.visualizerFFTSize = this.bpmDetectionFolder.addSlider('Visualizer FFT Size', 7, 5, 15, 1).onChange(onSliderChange)
 
@@ -78,7 +78,7 @@ export class BPM {
 		this.bpmDetectionFolder.setVisibility(this.autoBPM)
 		if(this.autoBPM) {
 			this.stopBPMinterval()
-		} else if(this.tapIntervalID == null) {
+		} else if(this.tapIntervalID == null) {
 			this.tapIntervalID = setInterval(()=>this.onInterval(), this.getInterval())
 		}
 	}
@@ -130,6 +130,12 @@ export class BPM {
 		this.nTaps++
 
 		let now = Date.now()
+
+		if(this.tapTimeoutID != null) {
+			clearTimeout(this.tapTimeoutID)
+		}
+		this.tapTimeoutID = setTimeout(()=>this.stopTap(), this.MaxTapTime)
+
 		if(this.nTaps == 1) {
 			this.lastTap = now
 			this.tapButton.setName('Tapping')
@@ -141,11 +147,6 @@ export class BPM {
 
 		console.log(this.averageBPM + ', ' + newBPM)
 		this.setBPMinterval(this.averageBPM, newBPM)
-
-		if(this.tapTimeoutID != null) {
-			clearTimeout(this.tapTimeoutID)
-		}
-		this.tapTimeoutID = setTimeout(()=>this.stopTap(), this.MaxTapTime)
 
 		this.lastTap = now
 	}

@@ -35,12 +35,12 @@ export class Renderer {
 		this.renderer.setSize( width, height )
 
 		let size = this.computeRendererSize(webcam, cameraJ)
-		this.setCanvasSize(size.width, size.height)
+		// this.setCanvasSize(size.width, size.height)
 
 		let container = document.getElementById( 'camera' )
 		container.appendChild( this.renderer.domElement )
 
-		this.setContent(webcam.video)
+		this.displayVideo()
 		
 		this.camera.position.z = 5
 
@@ -54,16 +54,30 @@ export class Renderer {
 	}
 	
 	setCameraSize() {
-		let cameraJ = $('#camera')
-		cameraJ.css({width: 0, height:0})
-		let parentJ = cameraJ.parent()
-		cameraJ.css({
-			width: ''+parentJ.width()+'px',
-			height: ''+parentJ.height()+'px',
-			display: 'flex',
-			'align-items': 'center',
-			'justify-conten': 'center',
-		})
+		// let cameraJ = $('#camera')
+		// cameraJ.css({width: 0, height:0})
+		// let parentJ = cameraJ.parent()
+		// cameraJ.css({
+		// 	width: ''+parentJ.width()+'px',
+		// 	height: ''+parentJ.height()+'px',
+		// 	display: 'flex',
+		// 	'align-items': 'center',
+		// 	'justify-conten': 'center',
+		// })
+	}
+
+	displayVideo() {
+		if(this.shaderManager != null) {
+			this.shaderManager.pause = false
+		}
+		this.setContent(this.webcam.video)
+	}
+
+	displayImage(content: HTMLImageElement | HTMLVideoElement) {
+		if(this.shaderManager != null) {
+			this.shaderManager.pause = true
+		}
+		this.setContent(content)
 	}
 
 	setContent(content: HTMLImageElement | HTMLVideoElement) {

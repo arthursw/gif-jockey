@@ -68,23 +68,23 @@
 /************************************************************************/
 /******/ ({
 
-/***/ 15:
-/***/ (function(module, exports, __webpack_require__) {
-
-__webpack_require__(4);
-module.exports = __webpack_require__(2);
-
-
-/***/ }),
-
-/***/ 2:
+/***/ 1:
 /***/ (function(module, exports) {
 
 // removed by extract-text-webpack-plugin
 
 /***/ }),
 
-/***/ 4:
+/***/ 15:
+/***/ (function(module, exports, __webpack_require__) {
+
+__webpack_require__(3);
+module.exports = __webpack_require__(1);
+
+
+/***/ }),
+
+/***/ 3:
 /***/ (function(module, exports) {
 
 /// <reference path="../node_modules/@types/jquery/index.d.ts"/>

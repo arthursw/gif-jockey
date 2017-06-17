@@ -384,6 +384,7 @@ export class ShaderManager {
 		}
 	}
 	shaderChangedTimeout:number = null
+	pause = false
 
 	shaders = new Array<{pass: THREE.ShaderPass, object: any, folder: GUI}>()
 
@@ -396,6 +397,8 @@ export class ShaderManager {
 	scene: THREE.Scene
 	renderer: THREE.WebGLRenderer
 
+	folder: GUI
+	clipboard: any
 
 	constructor(gui: GUI, camera: THREE.OrthographicCamera, scene: THREE.Scene, renderer: THREE.WebGLRenderer) {
 		this.camera = camera
@@ -407,16 +410,23 @@ export class ShaderManager {
 		let onParamsChange = ()=> this.onParamsChange()
 		let onToggleShaders = ()=> this.onToggleShaders()
 
+		this.folder = gui.addFolder('Effects')
+		this.folder.open()
+
+		this.folder.addButton('Deactivate all', ()=> this.deactivateAll())
+		this.folder.addButton('Copy effects', ()=> this.copyEffects())
+		this.folder.addButton('Past effects', ()=> this.pastEffects())
+
 		for(let shaderName in this.shaderParameters) {
 			let shaderObject = this.shaderParameters[shaderName]
 			
-			let folder = gui.addFolder(shaderObject.name)
+			let folder = this.folder.addFolder(shaderObject.name)
 			this.shaders.push({pass: new THREE.ShaderPass(shaderObject.shader), object: shaderObject, folder: folder})
 			
 			folder.add(shaderObject, 'on').name('On').onChange(onToggleShaders)
 			for(let propertyName in shaderObject.parameters) {
 				let propertiesObject = shaderObject.parameters[propertyName]
-				if(propertiesObject.type != null && propertiesObject.type == 'color') {
+				if(propertiesObject.type != null && propertiesObject.type == 'color') {
 					folder.addColor(propertiesObject, 'value').onChange(onParamsChange)
 				} else {
 					folder.add(propertiesObject, 'value', propertiesObject.min, propertiesObject.max).step(propertiesObject.step).setName(propertiesObject.name).onChange(onParamsChange)
@@ -431,6 +441,17 @@ export class ShaderManager {
 		this.onToggleShaders()
 	}
 
+	deactivateAll() {
+
+		for(let shader of this.shaders) {
+			shader.object.on = false
+			shader.folder.getControllers()[0].updateDisplay()
+			shader.folder.close()
+		}
+
+		this.onToggleShaders()
+	}
+
 	onToggleShaders(dispatchEvent: boolean=true) {
 		//Add Shader Passes to Composer
 		//order is important 
@@ -438,7 +459,7 @@ export class ShaderManager {
 		this.composer.addPass( this.renderPass )
 		
 		for(let shader of this.shaders) {
-			if(shader.object.on) {
+			if(shader.object.on) {
 				this.composer.addPass(shader.pass)
 			}
 		}
@@ -451,8 +472,8 @@ export class ShaderManager {
 		}
 	}
 
-	dispatchChange() {
-		if(this.shaderChangedTimeout != null) {
+	dispatchChange() {
+		if(this.shaderChangedTimeout != null) {
 			clearTimeout(this.shaderChangedTimeout)
 		}
 		this.shaderChangedTimeout = setTimeout(()=>document.dispatchEvent(new Event('shaderChanged')), 500)	
@@ -486,7 +507,7 @@ export class ShaderManager {
 	randomizeParams() {
 		let shaderIndices = []
 		let nShadersToPick = 3
-		for(let i=0 ; i<nShadersToPick ; i++) {
+		for(let i=0 ; i<nShadersToPick ; i++) {
 			let shaderIndex = Math.floor(Math.random()*this.shaders.length)
 			shaderIndices.push(shaderIndex)
 		}
@@ -494,9 +515,9 @@ export class ShaderManager {
 		let i = 0
 		for(let shader of this.shaders) {
 			shader.object.on = shaderIndices.indexOf(i) >= 0
-			if(shader.object.on) {
+			if(shader.object.on) {
 				shader.folder.open()
-			} else {
+			} else {
 				shader.folder.close()
 			}
 			for(let propertyName in shader.object.parameters) {
@@ -506,7 +527,7 @@ export class ShaderManager {
 					this.getRandomOnInterval(propertiesObject.randomMin != null ? Math.max(propertiesObject.randomMin, propertiesObject.min) : propertiesObject.min, 
 											 propertiesObject.randomMax != null ? Math.min(propertiesObject.randomMax, propertiesObject.max) : propertiesObject.max)
 			}
-			for(let controller of shader.folder.getControllers()) {
+			for(let controller of shader.folder.getControllers()) {
 				controller.updateDisplay()
 			}
 			i++
@@ -534,15 +555,15 @@ export class ShaderManager {
 			let parameters = json[shader.object.name].parameters
 			let on = json[shader.object.name].on
 			shader.object.on = on
-			if(on) {
+			if(on) {
 				shader.folder.open()
-			} else {
+			} else {
 				shader.folder.close()
 			}
 			for(let propertyName in shader.object.parameters) {
 				shader.object.parameters[propertyName].value = parameters[propertyName]
 			}
-			for(let controller of shader.folder.getControllers()) {
+			for(let controller of shader.folder.getControllers()) {
 				controller.updateDisplay()
 			}
 		}
@@ -550,15 +571,26 @@ export class ShaderManager {
 		this.onParamsChange(false)
 	}
 
-	animate() {
-		this.shaderTime += 0.1
+	copyEffects() {
+		this.clipboard = this.getShaderParameters()
+	}
 
+	pastEffects() {
+		this.setShaderParameters(this.clipboard)
+		this.dispatchChange()
+	}
+
+	animate() {
+		if(!this.pause) {
+			this.shaderTime += 0.1
+		}
+		
 		for(let shader of this.shaders) {
-			if(shader.object.time) {
+			if(shader.object.time) {
 				shader.pass.uniforms['time'].value = this.shaderTime
 			}
 		}
-
+		
 		this.composer.render(0.1)
 	}
 }

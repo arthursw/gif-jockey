@@ -7,7 +7,7 @@ export class Webcam {
 	context: CanvasRenderingContext2D = null
 	photo: HTMLElement = null
 
-	constructor(callback: ()=>void) {
+	constructor(callback: ()=>void) {
 
 		// this.photo = document.getElementById('photo')
 		this.video = document.createElement('video')
