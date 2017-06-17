@@ -1,4 +1,3 @@
-@charset "UTF-8";
 html {
   background-color: black;
   overflow-x: auto; }
@@ -25,27 +24,31 @@ ul.gg-list {
   overflow-y: auto;
   overflow-x: hidden;
   font-size: 0; }
-  ul.gg-list li.gg-thumbnail, ul.gg-list li.placeholder {
+  ul.gg-list li.gg-thumbnail {
     list-style-type: none;
     border: 0;
     width: auto;
     position: relative;
     margin-bottom: 0;
+    background-color: rgba(255, 255, 255, 0.3);
     cursor: -webkit-grab;
     cursor: -khtml-grab;
     cursor: -moz-grab;
     cursor: -ms-grab;
     cursor: -o-grab;
     cursor: grab; }
-    ul.gg-list li.gg-thumbnail .gg-thumbnail-container img, ul.gg-list li.placeholder .gg-thumbnail-container img {
+    ul.gg-list li.gg-thumbnail .gg-thumbnail-container img {
       width: 100%; }
-  ul.gg-list li.placeholder {
-    background-color: #cddc39;
-    width: 320px; }
-
-.gg-selected .gg-thumbnail-container {
-  padding: 5px;
-  background-color: #64b5f6; }
+    ul.gg-list li.gg-thumbnail .gg-selection-rectangle {
+      display: none;
+      width: calc(100% - 10px);
+      height: calc(100% - 10px);
+      border: 5px solid #cddc39;
+      position: absolute;
+      top: 0;
+      left: 0; }
+    ul.gg-list li.gg-thumbnail.gg-selected .gg-selection-rectangle {
+      display: block; }
 
 .gg-hidden {
   display: none; }
@@ -60,7 +63,7 @@ ul.gg-list {
   #result .gg-image-container {
     width: 400px;
     height: 300px; }
-    #result .gg-image-container img.filtered  {
+    #result .gg-image-container img.filtered {
       width: 400px;
       height: 300px; }
 
@@ -70,8 +73,18 @@ ul.gg-list {
   height: 100%;
   overflow: auto; }
 
-#outputs .gg-selected .gg-thumbnail-container {
-  background-color: #cddc39; }
+#outputs {
+  width: 200px; }
+  #outputs li.gg-thumbnail .gg-thumbnail-container {
+    height: 100%; }
+  #outputs li.gg-thumbnail .gg-selection-rectangle {
+    border-color: #64b5f6; }
+  #outputs li.gg-thumbnail.ui-state-default .gg-selection-rectangle {
+    display: block;
+    border-color: yellow; }
+  #outputs li.gg-thumbnail.ui-state-hover .gg-selection-rectangle {
+    display: block;
+    border-color: green; }
 
 #effect {
   position: relative; }
@@ -87,7 +100,7 @@ ul.gg-list {
   display: flex;
   flex-direction: row; }
 
-.gg-h100  {
+.gg-h100 {
   height: 100%;
   overflow: auto; }
 
@@ -97,28 +110,42 @@ ul.gg-list {
   align-content: flex-start; }
 
 #logo {
-  margin-top: 10px;
-  margin-bottom: 10px;
-  margin-left: 10px; }
+  margin: 10px;
+  display: flex;
+  flex-direction: row;
+  align-items: center; }
+  #logo img {
+    width: 30%;
+    margin-bottom: 10px; }
+  #logo h1 {
+    color: white;
+    font-family: 'Russo One', sans-serif;
+    margin-left: 10px; }
 
-#logo-img  {
-  width: 30%; }
-
-#camera  {
+#camera {
   display: flex;
   align-items: center;
-  justify-content: center; }
-  #camera  canvas {
+  justify-content: center;
+  flex-grow: 1;
+  max-width: 100%; }
+  #camera canvas {
+    max-width: 100%;
+    max-height: 100%;
     width: 100%;
-    height: 100%;
-    margin: auto;
-    display: block; }
+    object-fit: contain; }
 
 #gif-result {
   display: none; }
 
 .gg-grow {
   flex-grow: 1; }
+
+.gg-basis100 {
+  flex-basis: 100%; }
+
+.gg-center {
+  align-items: center;
+  justify-content: center; }
 
 .gg-slider, .slider.slider-horizontal {
   width: 100%; }
@@ -144,9 +171,11 @@ ul.gg-list {
     top: 2px;
     left: -1px; }
   .gg-small-btn.play-btn {
-    right: 15px; }
+    right: 30px; }
     .gg-small-btn.play-btn.playing {
       background-color: #cddc39; }
+  .gg-small-btn.duplicate-btn {
+    right: 15px; }
   .gg-small-btn:focus {
     outline: none; }
   .gg-small-btn:active {
