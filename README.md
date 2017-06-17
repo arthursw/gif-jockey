@@ -1,3 +1,3 @@
 # Gif Jokey
 
-[Gif-Jokey](https://arthursw.github.io/gif-jokey/) to party!
+[Gif-Jokey](https://arthursw.github.io/gif-jockey/) to party!
