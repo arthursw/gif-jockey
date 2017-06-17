@@ -138,6 +138,7 @@ class GifJokey {
 		document.getElementById('gui').appendChild(this.gui.getDomElement())
 
 		this.gui.addButton('Take snapshot', ()=> this.takeSnapshot())
+		this.gui.addFileSelectorButton('Upload image', 'image/*', (event:any)=> this.uploadImage(event))
 		this.gui.addButton('Create viewer', ()=> this.createViewer())
 		this.gui.add(this, 'showGifThumbnails').name('Show Gifs').onChange((value: boolean)=> this.toggleGifThumbnails(value))
 
@@ -234,11 +235,13 @@ class GifJokey {
 		}
 	}
 
-	addImage(data_uri: string, canvas: HTMLCanvasElement=null, context: CanvasRenderingContext2D=null) {
+	addImage(data_uri: string, callback:(imgJ:any)=>void=null) {
 		// display results in page
-		let imageName = 'img-' + this.imageID
-		let imgJ = $('<img src="' + data_uri + '" data-name="' + imageName + '" alt="img-' + this.imageID + '">')
-		this.imageID++
+		let imageName = 'img-' + (this.imageID++)
+		let imgJ = $('<img src="' + data_uri + '" data-name="' + imageName + '" alt="' + imageName + '">')
+		
+		imgJ.width(this.webcam.width)
+		imgJ.height(this.webcam.height)
 
 		this.gifManager.addImage(imgJ.clone())
 
@@ -248,6 +251,9 @@ class GifJokey {
 		imgJ.on('load', ()=>{
 			// this.selectImage(imageName)
 			this.nextImage()
+			if(callback != null) {
+				callback(imgJ)
+			}
 		})
 		// if(viewer != null) {
 		// 	(<any>viewer).addImage(imgJ.clone())
@@ -290,6 +296,27 @@ class GifJokey {
 
 		this.updateFilteredImage(imageJ)
 		// Webcam.snap((data_uri: string, canvas: HTMLCanvasElement, context: CanvasRenderingContext2D)=>this.addImage(data_uri, canvas, context))
+	}
+
+	uploadImage(event: any) {
+		let files: FileList = event.dataTransfer != null ? event.dataTransfer.files : event.target.files
+
+		for (let i = 0; i < files.length; i++) {
+			let file = files.item(i)
+			
+			if ( /\.(jpe?g|png|gif)$/i.test(file.name) ) {
+				var reader = new FileReader()
+
+				reader.addEventListener("load", (event:any)=> {
+					let imageJ = this.addImage(event.target.result, (imgJ: any)=> {
+						this.renderer.displayImage(<any>imgJ[0])
+						setTimeout(()=>this.updateFilteredImage(imageJ), 500)
+					})
+				}, false)
+
+				reader.readAsDataURL(file)
+			}
+		}
 	}
 
 	getSelectedImage() {

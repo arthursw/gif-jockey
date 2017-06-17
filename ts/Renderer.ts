@@ -106,6 +106,7 @@ export class Renderer {
 	}
 
 	getFilteredImage(): {image: HTMLImageElement, shaderParameters: any} {
+		// this.shaderManager.animate()
 		let canvas = this.getDomElement()
 		let result = new Image()
 		result.src = canvas.toDataURL()

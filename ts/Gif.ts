@@ -49,9 +49,9 @@ export class Gif {
 	
 	addCopy(originalImageJ: any, filteredImageJ: any, imageID: number) {
 		let originalJ = originalImageJ.clone()
-		originalJ.attr('data-name', imageID)
+		originalJ.attr('data-name', 'img-'+imageID)
 		let filteredJ = filteredImageJ.clone()
-		filteredJ.attr('data-name', imageID)
+		filteredJ.attr('data-name', 'img-'+imageID)
 		this.addImage(originalJ, filteredJ)
 	}
 
@@ -289,7 +289,7 @@ export class GifManager {
 				if(gif.getImageContainerJ(originalJ.attr('data-name')).length > 0) {
 					return
 				}
-				
+
 				gif.addCopy(originalJ, filteredJ, this.gifJockey.imageID++)
 			}
 		})
