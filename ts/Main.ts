@@ -140,6 +140,7 @@ class GifJokey {
 		this.gui.addButton('Take snapshot', ()=> this.takeSnapshot())
 		this.gui.addFileSelectorButton('Upload image', 'image/*', (event:any)=> this.uploadImage(event))
 		this.gui.addButton('Create viewer', ()=> this.createViewer())
+
 		this.gui.add(this, 'showGifThumbnails').name('Show Gifs').onChange((value: boolean)=> this.toggleGifThumbnails(value))
 
 		this.bpm.createGUI(this.gui)
@@ -289,7 +290,10 @@ class GifJokey {
 	}
 
 	takeSnapshot() {
-		
+		let sound: any = document.getElementById('shutter-sound')
+		sound.currentTime = 0
+		sound.play()
+
 		// let filteredDataURL = canvas.toDataURL()
 		let imageDataURL = this.webcam.getImage()
 		let imageJ = this.addImage(imageDataURL)

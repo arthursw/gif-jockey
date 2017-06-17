@@ -12,6 +12,7 @@ declare type GifJockey = {
 	emptyThumbnails: ()=> void
 	setGif: (gif: Gif)=> void
 	playGif: (gif: Gif)=> void
+	takeSnapshot: ()=> void
 }
 
 export class Gif {
@@ -45,6 +46,14 @@ export class Gif {
 
 	getFirstImageJ(): any {
 		return this.containerJ.find('img.original').first()
+	}
+
+	containsImage(name: string): boolean {
+		return this.getImageContainerJ(name).length > 0
+	}
+
+	getNumberOfImages() {
+		return this.getImagePairsJ().length
 	}
 	
 	addCopy(originalImageJ: any, filteredImageJ: any, imageID: number) {
@@ -168,6 +177,9 @@ export class GifManager {
 	currentGif: Gif = null
 	gifJockey: GifJockey
 	gifQuality: number = 10
+	maxNumberOfImages = 10
+	nSnapshots = 0
+	autoGifInterval = -1
 
 	constructor(gifJockey: GifJockey) {
 		this.gifJockey = gifJockey
@@ -176,7 +188,9 @@ export class GifManager {
 	}
 
 	createGUI(gui: GUI) {
-		gui.addButton('Add gif', ()=> this.addGif())
+		gui.addButton('Create gif', ()=> this.addGif())
+		gui.addButton('Create auto gif', ()=> this.createAutoGif())
+		gui.addSlider('Max number of image', this.maxNumberOfImages, 1, 100).onChange((value:number)=>this.maxNumberOfImages = value)
 		gui.addSlider('Gif degradation', this.gifQuality, 1, 5000, 1).onChange((value: number)=>{ this.gifQuality = value })
 		gui.addButton('Save gif', ()=> this.currentGif.preview(true))
 		// gui.addButton('Save gif', ()=> {
@@ -286,7 +300,7 @@ export class GifManager {
 				let gif = this.gifs.get(currentGifID)
 
 				// Ignore if the gif already contains the image:
-				if(gif.getImageContainerJ(originalJ.attr('data-name')).length > 0) {
+				if(gif.containsImage(originalJ.attr('data-name'))) {
 					return
 				}
 
@@ -299,6 +313,26 @@ export class GifManager {
 				
 		// 	}
 		// } }))
+	}
+
+	createAutoGif() {
+		if(this.autoGifInterval != null) {
+			clearInterval(this.autoGifInterval)
+			this.autoGifInterval = null
+		}
+		if(this.currentGif.getNumberOfImages() > 0) {
+			this.addGif()
+		}
+		
+		this.nSnapshots = 0
+		this.autoGifInterval = setInterval(()=>{
+			this.gifJockey.takeSnapshot()
+			this.nSnapshots++
+			if(this.nSnapshots == this.maxNumberOfImages) {
+				clearInterval(this.autoGifInterval)
+				this.autoGifInterval = null
+			}
+		}, this.gifJockey.bpm.getInterval())
 	}
 
 	removeGif(gifID: number) {
