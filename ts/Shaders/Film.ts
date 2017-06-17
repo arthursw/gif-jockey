@@ -1,5 +1,4 @@
-import * as _THREE from 'THREE'
-declare var THREE: typeof _THREE
+import * as THREE from 'THREE'
 
 /**
  * @author alteredq / http://alteredqualia.com/

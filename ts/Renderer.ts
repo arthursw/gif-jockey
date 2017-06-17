@@ -1,5 +1,6 @@
-import * as _THREE from 'THREE'
-declare var THREE: typeof _THREE
+import * as $ from 'jquery'
+
+import * as THREE from 'THREE'
 
 import { Webcam } from "./Webcam"
 import { ShaderManager } from "./ShaderManager"

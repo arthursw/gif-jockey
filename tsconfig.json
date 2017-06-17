@@ -7,11 +7,19 @@
         "module": "commonjs",
         "target": "es6",
         "sourceMap": false,
-        "allowJs": true
+        "allowJs": true,
+         "typeRoots": [
+          "node_modules/@types",
+          "lib/@types"
+        ]
     },
     "compileOnSave": true,
     "exclude": [
         "node_modules"
     ],
-    "types": ["THREE"]
+    "paths": {
+        "*": ["./lib/@types/*"],
+        "gifshot": [ "./lib/@types/gifshot.d.ts" ],
+        "three-extras": [ "./lib/three-extras/shaders/*.js", "./lib/three-extras/postprocessing/*.js" ]
+    }
 }

@@ -1,5 +1,5 @@
 export class Webcam {
-	width = 640
+	width = 320
 	height = 0
 	streaming = false
 	video: HTMLVideoElement = null
@@ -13,7 +13,11 @@ export class Webcam {
 		this.video = document.createElement('video')
 		this.canvas = document.createElement('canvas')
 		this.context = this.canvas.getContext('2d')
+		this.initialize(callback)
+	}
 
+	initialize(callback: ()=>void) {
+		
 		let n:any = navigator
 		n.getMedia = ( navigator.getUserMedia ||
 			n.webkitGetUserMedia ||

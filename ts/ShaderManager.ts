@@ -1,5 +1,39 @@
-import * as _THREE from 'THREE'
-declare var THREE: typeof _THREE
+import * as THREE from 'THREE'
+
+// <script src='node_modules/three/examples/js/postprocessing/EffectComposer.js'></script>
+// <script src='node_modules/three/examples/js/postprocessing/RenderPass.js'></script>
+// <script src='node_modules/three/examples/js/postprocessing/ShaderPass.js'></script>
+// <script src='node_modules/three/examples/js/postprocessing/MaskPass.js'></script> 
+// <script src='node_modules/three/examples/js/shaders/CopyShader.js'></script>
+// <script src='node_modules/three/examples/js/shaders/BleachBypassShader.js'></script>
+// <script src='node_modules/three/examples/js/shaders/BrightnessContrastShader.js'></script>
+// <script src='node_modules/three/examples/js/shaders/ColorifyShader.js'></script>
+// <script src='node_modules/three/examples/js/shaders/DotScreenShader.js'></script>
+// <script src='node_modules/three/examples/js/shaders/EdgeShader2.js'></script> 
+// <script src='node_modules/three/examples/js/shaders/KaleidoShader.js'></script>
+// <script src='node_modules/three/examples/js/shaders/MirrorShader.js'></script>
+// <script src='node_modules/three/examples/js/shaders/SepiaShader.js'></script>
+// <script src='node_modules/three/examples/js/shaders/VignetteShader.js'></script>
+// <script src='node_modules/three/examples/js/shaders/FilmShader.js'></script>
+// <script src='node_modules/three/examples/js/shaders/RGBShiftShader.js'></script> 
+
+import "imports-loader?THREE=THREE!exports-loader?THREE.EffectComposer!./Shaders/postprocessing/EffectComposer"
+import "imports-loader?THREE=THREE!exports-loader?THREE.RenderPass!./Shaders/postprocessing/RenderPass"
+import "imports-loader?THREE=THREE!exports-loader?THREE.ShaderPass!./Shaders/postprocessing/ShaderPass"
+import "imports-loader?THREE=THREE!exports-loader?THREE.MaskPass!./Shaders/postprocessing/MaskPass"
+import "imports-loader?THREE=THREE!exports-loader?THREE.CopyShader!./Shaders/shaders/CopyShader"
+import "imports-loader?THREE=THREE!exports-loader?THREE.BleachBypassShader!./Shaders/shaders/BleachBypassShader"
+import "imports-loader?THREE=THREE!exports-loader?THREE.BrightnessContrastShader!./Shaders/shaders/BrightnessContrastShader"
+import "imports-loader?THREE=THREE!exports-loader?THREE.ColorifyShader!./Shaders/shaders/ColorifyShader"
+import "imports-loader?THREE=THREE!exports-loader?THREE.DotScreenShader!./Shaders/shaders/DotScreenShader"
+import "imports-loader?THREE=THREE!exports-loader?THREE.EdgeShader2!./Shaders/shaders/EdgeShader2"
+import "imports-loader?THREE=THREE!exports-loader?THREE.KaleidoShader!./Shaders/shaders/KaleidoShader"
+import "imports-loader?THREE=THREE!exports-loader?THREE.MirrorShader!./Shaders/shaders/MirrorShader"
+import "imports-loader?THREE=THREE!exports-loader?THREE.SepiaShader!./Shaders/shaders/SepiaShader"
+import "imports-loader?THREE=THREE!exports-loader?THREE.VignetteShader!./Shaders/shaders/VignetteShader"
+import "imports-loader?THREE=THREE!exports-loader?THREE.FilmShader!./Shaders/shaders/FilmShader"
+import "imports-loader?THREE=THREE!exports-loader?THREE.RGBShiftShader!./Shaders/shaders/RGBShiftShader"
+import "imports-loader?THREE=THREE!exports-loader?THREE.HueSaturationShader!./Shaders/shaders/HueSaturationShader"
 
 import { GUI } from "./GUI"
 import { Renderer } from "./Renderer"

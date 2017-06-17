@@ -1,4 +1,5 @@
-/// <reference path="../node_modules/@types/jquery/index.d.ts"/>
+import * as $ from 'jquery'
+import 'jqueryui'
 
 import { GUI, Controller } from "./GUI"
 import { Webcam } from "./Webcam"
@@ -290,6 +291,9 @@ class GifJokey {
 	}
 
 	takeSnapshot() {
+		// if(this.gifManager.currentGif.getNumberOfImages() == this.gifManager.maxNumberOfImages) {
+		// 	return
+		// }
 		let sound: any = document.getElementById('shutter-sound')
 		sound.currentTime = 0
 		sound.play()

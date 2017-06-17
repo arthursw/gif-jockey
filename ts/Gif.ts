@@ -1,8 +1,9 @@
+import * as $ from 'jquery'
+import * as gifshot from 'gifshot'
+
 import { GUI, Controller } from "./GUI"
 import { BPM } from "./BPM"
 import { Webcam } from "./Webcam"
-
-declare var gifshot: any
 
 declare type GifJockey = {
 	imageID: number
@@ -20,6 +21,7 @@ export class Gif {
 	containerJ: any
 	imageIndex: number
 	hasPreview = false
+	nImages = 0
 	id = -1
 
 	constructor(containerJ: any, id: number) {
@@ -53,7 +55,7 @@ export class Gif {
 	}
 
 	getNumberOfImages() {
-		return this.getImagePairsJ().length
+		return this.nImages
 	}
 	
 	addCopy(originalImageJ: any, filteredImageJ: any, imageID: number) {
@@ -65,6 +67,7 @@ export class Gif {
 	}
 
 	addImage(originalImageJ: any, filteredImageJ: any=null) {
+		this.nImages++
 		this.containerJ.find('.gg-placeholder').remove()
 
 		let divJ = $('<div class="gg-image-container">')
@@ -91,6 +94,7 @@ export class Gif {
 	}
 
 	removeImage(imageName: string) {
+		this.nImages--
 		this.getImageContainerJ(imageName).remove()
 	}
 
@@ -137,6 +141,7 @@ export class Gif {
 
 	empty() {
 		this.containerJ.empty()
+		this.nImages = 0
 	}
 
 	preview(save = false) {
@@ -153,7 +158,7 @@ export class Gif {
     		interval: interval,
 			images: imagesJ,
 			sampleInterval: Gif.gifManager.gifQuality
-			}, (obj:any)=> {
+			}, (obj:{image: string, error: any})=> {
 				if (!obj.error) {
 					var image = obj.image, animatedImage = document.createElement('img')
 					animatedImage.src = image
@@ -177,7 +182,7 @@ export class GifManager {
 	currentGif: Gif = null
 	gifJockey: GifJockey
 	gifQuality: number = 10
-	maxNumberOfImages = 10
+	numberOfImages = 4
 	nSnapshots = 0
 	autoGifInterval = -1
 
@@ -190,7 +195,7 @@ export class GifManager {
 	createGUI(gui: GUI) {
 		gui.addButton('Create gif', ()=> this.addGif())
 		gui.addButton('Create auto gif', ()=> this.createAutoGif())
-		gui.addSlider('Max number of image', this.maxNumberOfImages, 1, 100).onChange((value:number)=>this.maxNumberOfImages = value)
+		gui.addSlider('N images', this.numberOfImages, 1, 10).onChange((value:number)=>this.numberOfImages = value)
 		gui.addSlider('Gif degradation', this.gifQuality, 1, 5000, 1).onChange((value: number)=>{ this.gifQuality = value })
 		gui.addButton('Save gif', ()=> this.currentGif.preview(true))
 		// gui.addButton('Save gif', ()=> {
@@ -328,7 +333,7 @@ export class GifManager {
 		this.autoGifInterval = setInterval(()=>{
 			this.gifJockey.takeSnapshot()
 			this.nSnapshots++
-			if(this.nSnapshots == this.maxNumberOfImages) {
+			if(this.nSnapshots == this.numberOfImages) {
 				clearInterval(this.autoGifInterval)
 				this.autoGifInterval = null
 			}

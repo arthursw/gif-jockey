@@ -1,3 +1,4 @@
+const path = require('path');
 var ExtractTextPlugin = require('extract-text-webpack-plugin');
 
 module.exports = {
@@ -30,7 +31,10 @@ module.exports = {
     }),
   ],
   resolve: {
-    extensions: [".tsx", ".ts", ".js", ".scss"]
+    extensions: [".tsx", ".ts", ".js", ".scss"],
+    alias: {
+      'three-extras': path.resolve(__dirname, './node_modules/three/examples/js/')
+    }
   },
   externals: {
     'three': 'three'

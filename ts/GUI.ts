@@ -1,3 +1,5 @@
+import * as $ from 'jquery'
+
 declare var dat: any
 
 declare type DatController = {
