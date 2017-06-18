@@ -56566,7 +56566,10 @@ class GifJokey {
         let sound = document.getElementById('shutter-sound');
         sound.currentTime = 0;
         sound.play();
-        // let filteredDataURL = canvas.toDataURL()
+        $('body').css({ opacity: 0 });
+        $('body').animate({ opacity: 1 }, 250);
+        // $('body').addClass('flash')
+        // setTimeout(()=>$('body').removeClass('flash'), 500)
         let imageDataURL = this.webcam.getImage();
         let imageJ = this.addImage(imageDataURL);
         this.updateFilteredImage(imageJ);

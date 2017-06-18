@@ -1,5 +1,5 @@
 html {
-  background-color: black;
+  background-color: white;
   overflow-x: auto; }
 
 body {
@@ -9,7 +9,42 @@ body {
   height: 100vh;
   margin: 0;
   overflow-y: auto;
-  overflow-x: auto; }
+  overflow-x: auto;
+  background-color: black;
+  opacity: 1; }
+  body.flash {
+    -webkit-animation: flashOpacity 0.25s 1;
+    -moz-animation: flashOpacity 0.25s 1;
+    -o-animation: flashOpacity 0.25s 1;
+    animation: flashOpacity 0.25s 1;
+    -webkit-animation-delay: 0s;
+    -moz-animation-delay: 0s;
+    -o-animation-delay: 0s;
+    animation-delay: 0s; }
+
+@-webkit-keyframes flashOpacity {
+  0% {
+    opacity: 0; }
+  100% {
+    opacity: 1; } }
+
+@-moz-keyframes flashOpacity {
+  0% {
+    opacity: 0; }
+  100% {
+    opacity: 1; } }
+
+@-o-keyframes flashOpacity {
+  0% {
+    opacity: 0; }
+  100% {
+    opacity: 1; } }
+
+@keyframes flashOpacity {
+  0% {
+    opacity: 0; }
+  100% {
+    opacity: 1; } }
 
 #main-container {
   width: 100%;
