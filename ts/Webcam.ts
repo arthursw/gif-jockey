@@ -1,5 +1,6 @@
 export class Webcam {
-	width = 640
+	static WIDTH = 640
+	width = Webcam.WIDTH
 	height = 0
 	streaming = false
 	video: HTMLVideoElement = null
@@ -10,6 +11,8 @@ export class Webcam {
 	constructor(callback: ()=>void, width: number = null) {
 		if(width) {
 			this.width = Math.max(100, Math.min(width, 2048))
+		} else {
+			this.width = Webcam.WIDTH
 		}
 
 		// this.photo = document.getElementById('photo')

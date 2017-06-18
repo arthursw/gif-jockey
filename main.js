@@ -56342,7 +56342,10 @@ class GifJokey {
             }
         });
         let webcamWidth = location.hash.length > 0 ? parseInt(location.hash.substring(1)) : null;
-        this.createGUI(webcamWidth);
+        if (webcamWidth != null && Number.isFinite(webcamWidth)) {
+            Webcam_1.Webcam.WIDTH = webcamWidth;
+        }
+        this.createGUI();
         $('#gif-thumbnails .open-close-btn').mousedown((event) => {
             let outputsJ = $('#outputs');
             let visible = outputsJ.is(':visible');
@@ -56431,7 +56434,7 @@ class GifJokey {
     initialize() {
         this.animate();
     }
-    createGUI(webcamWidth) {
+    createGUI() {
         this.gui = new GUI_1.GUI({ autoPlace: false, width: '100%' });
         document.getElementById('gui').appendChild(this.gui.getDomElement());
         this.folder = this.gui.addFolder('General');
@@ -56440,7 +56443,7 @@ class GifJokey {
         this.folder.addButton('Create viewer', () => this.createViewer());
         // this.folder.add(this, 'showGifThumbnails').name('Show Gifs').onChange((value: boolean)=> this.toggleGifThumbnails(value))
         this.folder.addSlider('N images / GIF', this.gifManager.numberOfImages, 1, 10).onChange((value) => this.gifManager.numberOfImages = value);
-        this.folder.addSlider('Webcam width', webcamWidth, 100, 1024).onChange((value) => {
+        this.folder.addSlider('Webcam width', Webcam_1.Webcam.WIDTH, 100, 1024).onChange((value) => {
             // this.webcam.resizeVideo(value)
             // this.renderer.resize(this.webcam.width, this.webcam.height)
             location.hash = '' + Math.round(value);
@@ -62400,7 +62403,7 @@ exports.StaticShader = {
 Object.defineProperty(exports, "__esModule", { value: true });
 class Webcam {
     constructor(callback, width = null) {
-        this.width = 640;
+        this.width = Webcam.WIDTH;
         this.height = 0;
         this.streaming = false;
         this.video = null;
@@ -62409,6 +62412,9 @@ class Webcam {
         this.photo = null;
         if (width) {
             this.width = Math.max(100, Math.min(width, 2048));
+        }
+        else {
+            this.width = Webcam.WIDTH;
         }
         // this.photo = document.getElementById('photo')
         this.video = document.createElement('video');
@@ -62480,6 +62486,7 @@ class Webcam {
         return null;
     }
 }
+Webcam.WIDTH = 640;
 exports.Webcam = Webcam;
 
 
