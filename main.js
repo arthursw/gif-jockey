@@ -56313,6 +56313,7 @@ class GifJokey {
         this.shaderManager = null;
         this.guiWasFocusedWhenPressedEnter = false;
         this.showGifThumbnails = false;
+        this.showGIF = true;
         this.ctrlDown = false;
         this.previousIsOnBeat = false;
         console.log("Gif Grave");
@@ -56358,6 +56359,17 @@ class GifJokey {
         });
         $('.add-gif-btn').click(() => this.gifManager.addGif());
         $('.add-gif-auto-btn').click(() => this.gifManager.createAutoGif());
+        // $('.snapshot-btn').mousedown((event: JQueryMouseEventObject)=>{
+        // 	this.deselectAndTakeSnapshot()
+        // 	event.stopPropagation()
+        // 	return -1
+        // })
+        $('.upload-image-btn input').change((e) => this.uploadImage(event));
+        $('.upload-image-btn').mousedown((event) => {
+            $('.upload-image-btn input').click();
+            event.stopPropagation();
+            return -1;
+        });
         this.webcam = new Webcam_1.Webcam(() => this.webcamLoaded());
         // this.toggleGifThumbnails(this.showGifThumbnails)
         this.initializeClipboard();
@@ -56416,10 +56428,11 @@ class GifJokey {
         document.getElementById('gui').appendChild(this.gui.getDomElement());
         this.folder = this.gui.addFolder('General');
         this.folder.addButton('Take snapshot', () => this.deselectAndTakeSnapshot());
-        this.folder.addFileSelectorButton('Upload image', 'image/*', (event) => this.uploadImage(event));
+        // this.folder.addFileSelectorButton('Upload image', 'image/*', (event:any)=> this.uploadImage(event))
         this.folder.addButton('Create viewer', () => this.createViewer());
         // this.folder.add(this, 'showGifThumbnails').name('Show Gifs').onChange((value: boolean)=> this.toggleGifThumbnails(value))
         this.folder.addSlider('N images / GIF', this.gifManager.numberOfImages, 1, 10).onChange((value) => this.gifManager.numberOfImages = value);
+        this.folder.add(this, 'showGIF').name('Show GIF').onChange(() => { $('#result').toggle(); });
         this.folder.open();
         this.bpm.createGUI(this.gui);
         this.gifManager.createGUI(this.gui);
@@ -56495,8 +56508,7 @@ class GifJokey {
         // display results in page
         let imageName = 'img-' + (this.imageID++);
         let imgJ = $('<img src="' + data_uri + '" data-name="' + imageName + '" alt="' + imageName + '">');
-        imgJ.width(this.webcam.width);
-        imgJ.height(this.webcam.height);
+        let img = imgJ[0];
         this.gifManager.addImage(imgJ.clone());
         let thumbnailImageJ = imgJ.clone();
         this.createThumbnail(thumbnailImageJ);
@@ -56564,10 +56576,27 @@ class GifJokey {
             if (/\.(jpe?g|png|gif)$/i.test(file.name)) {
                 var reader = new FileReader();
                 reader.addEventListener("load", (event) => {
-                    let imageJ = this.addImage(event.target.result, (imgJ) => {
-                        this.renderer.displayImage(imgJ[0]);
-                        setTimeout(() => this.updateFilteredImage(imageJ), 250);
-                    });
+                    let img = new Image();
+                    img.src = event.target.result;
+                    img.onload = () => {
+                        let canvas = document.createElement('canvas');
+                        let context = canvas.getContext('2d');
+                        let imgRatio = img.width / img.height;
+                        let webcamRatio = this.webcam.width / this.webcam.height;
+                        if (imgRatio < webcamRatio) {
+                            canvas.height = this.webcam.height;
+                            canvas.width = this.webcam.height * imgRatio;
+                        }
+                        else {
+                            canvas.width = this.webcam.width;
+                            canvas.height = this.webcam.width / imgRatio;
+                        }
+                        context.drawImage(img, 0, 0, img.width, img.height, 0, 0, canvas.width, canvas.height);
+                        let imageJ = this.addImage(canvas.toDataURL(), (imgJ) => {
+                            this.renderer.displayImage(imgJ[0]);
+                            setTimeout(() => this.updateFilteredImage(imageJ), 250);
+                        });
+                    };
                 }, false);
                 reader.readAsDataURL(file);
             }

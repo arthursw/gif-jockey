@@ -36,6 +36,7 @@ class GifJokey {
 
 	guiWasFocusedWhenPressedEnter = false
 	showGifThumbnails = false
+	showGIF: boolean = true
 	ctrlDown = false
 
 	constructor() {
@@ -88,6 +89,17 @@ class GifJokey {
 
 	    $('.add-gif-btn').click(()=>this.gifManager.addGif())
 	    $('.add-gif-auto-btn').click(()=>this.gifManager.createAutoGif())
+	    // $('.snapshot-btn').mousedown((event: JQueryMouseEventObject)=>{
+	    // 	this.deselectAndTakeSnapshot()
+	    // 	event.stopPropagation()
+	    // 	return -1
+	    // })
+	    $('.upload-image-btn input').change((e:any)=>this.uploadImage(event))
+	    $('.upload-image-btn').mousedown((event: JQueryMouseEventObject)=>{
+	    	$('.upload-image-btn input').click()
+	    	event.stopPropagation()
+	    	return -1
+	    })
 
 	    this.webcam = new Webcam(()=>this.webcamLoaded())
 
@@ -155,13 +167,13 @@ class GifJokey {
 		this.folder = this.gui.addFolder('General')
 
 		this.folder.addButton('Take snapshot', ()=> this.deselectAndTakeSnapshot())
-		this.folder.addFileSelectorButton('Upload image', 'image/*', (event:any)=> this.uploadImage(event))
+		// this.folder.addFileSelectorButton('Upload image', 'image/*', (event:any)=> this.uploadImage(event))
 		this.folder.addButton('Create viewer', ()=> this.createViewer())
 
 		// this.folder.add(this, 'showGifThumbnails').name('Show Gifs').onChange((value: boolean)=> this.toggleGifThumbnails(value))
 
 		this.folder.addSlider('N images / GIF', this.gifManager.numberOfImages, 1, 10).onChange((value:number)=>this.gifManager.numberOfImages = value)
-
+		this.folder.add(this, 'showGIF').name('Show GIF').onChange(()=>{$('#result').toggle()})
 		this.folder.open()
 
 		this.bpm.createGUI(this.gui)
@@ -261,9 +273,8 @@ class GifJokey {
 		// display results in page
 		let imageName = 'img-' + (this.imageID++)
 		let imgJ = $('<img src="' + data_uri + '" data-name="' + imageName + '" alt="' + imageName + '">')
+		let img: HTMLImageElement = <any>imgJ[0]
 		
-		imgJ.width(this.webcam.width)
-		imgJ.height(this.webcam.height)
 
 		this.gifManager.addImage(imgJ.clone())
 
@@ -272,6 +283,7 @@ class GifJokey {
 
 		imgJ.on('load', ()=>{
 			// this.selectImage(imageName)
+
 			this.nextImage()
 			if(callback != null) {
 				callback(imgJ)
@@ -345,10 +357,31 @@ class GifJokey {
 				var reader = new FileReader()
 
 				reader.addEventListener("load", (event:any)=> {
-					let imageJ = this.addImage(event.target.result, (imgJ: any)=> {
-						this.renderer.displayImage(<any>imgJ[0])
-						setTimeout(()=>this.updateFilteredImage(imageJ), 250)
-					})
+					let img = new Image()
+					img.src = event.target.result
+					img.onload = ()=> {
+
+						let canvas = document.createElement('canvas')
+						let context = canvas.getContext('2d')
+
+						let imgRatio = img.width / img.height
+						let webcamRatio = this.webcam.width / this.webcam.height
+
+						if(imgRatio < webcamRatio) {
+							canvas.height = this.webcam.height
+							canvas.width = this.webcam.height * imgRatio
+						} else {
+							canvas.width = this.webcam.width
+							canvas.height = this.webcam.width / imgRatio
+						}
+
+						context.drawImage(img, 0, 0, img.width, img.height, 0, 0, canvas.width, canvas.height)
+
+						let imageJ = this.addImage(canvas.toDataURL(), (imgJ: any)=> {
+							this.renderer.displayImage(<any>imgJ[0])
+							setTimeout(()=>this.updateFilteredImage(imageJ), 250)
+						})
+					}
 				}, false)
 
 				reader.readAsDataURL(file)

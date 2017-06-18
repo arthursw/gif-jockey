@@ -102,9 +102,8 @@ ul.gg-list {
 	right: 0;
 	bottom: 0;
 
-	border: 1px black solid;
-
 	.gg-image-container {
+		border: 1px black solid;
 		width: 400px;
 		height: 300px;
 		img.filtered {
@@ -269,6 +268,7 @@ button.open-close-btn {
 	color: white;
 	display: flex;
 	font-size: 10px;
+	width: 200px;
 	flex-grow: 1;
 	h4 {
 		display: flex;
@@ -293,7 +293,7 @@ button.open-close-btn {
 #thumbnails-container {
 	.list-header {
 		h4 {
-			width: 0;
+			// width: 0;
 		}
 	}
 }
