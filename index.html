@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html lang="en">
 	<head>
-		<title>Gif Jokey</title>
+		<title>GJ - Gif Jokey</title>
 
 		<link rel="icon" type="image/png" href="favicon-32x32.png" sizes="32x32">
 		<link rel="icon" type="image/png" href="favicon-96x96.png" sizes="96x96">
@@ -32,13 +32,38 @@
 
 				<div id="gif-thumbnails" class="gg-column gg-h100">
 					<div class="gg-row">
+
 						<ul id="outputs" class="gg-list">
 							<!-- <li class="placeholder"></li> -->
+							<div class="list-header gg-row">
+								<h4>Gifs</h4>
+								<button type="button" class="add-gif-btn">
+									<span>Add GIF</span>
+									<!-- <span class="ui-icon ui-icon-plusthick"></span> -->
+									<!-- <span class="ui-icon ui-icon-image"></span> -->
+								</button>
+								<button type="button" class="add-gif-auto-btn">
+									<span>Add auto GIF</span>
+									<!-- <span class="ui-icon ui-icon-plusthick"></span> -->
+									<!-- <span class="ui-icon ui-icon-video"></span> -->
+								</button>
+							<div>
 						</ul>
 
-						<ul id="thumbnails" class="gg-list">
+						<div id="thumbnails-container">
 							<!-- <li class="placeholder"></li> -->
-						</ul>
+							<div class="list-header gg-row">
+								<h4>Frames</h4>
+							</div>
+							<ul id="thumbnails" class="gg-list">
+
+							</ul>
+						</div>
+
+						<button type="button" class="open-close-btn">
+							<span class="ui-icon ui-icon-caret-1-e"></span>
+						</button>
+
 					</div>
 					
 				</div>

@@ -21,7 +21,6 @@ export class Renderer {
 
 	constructor(webcam: Webcam, gui: GUI) {
 		let cameraJ = $('#camera')
-		this.setCameraSize()
 
 		this.webcam = webcam
 
@@ -52,19 +51,6 @@ export class Renderer {
 		this.centerOnRectangle(this.webcam.width, this.webcam.height)
 
 		setTimeout(()=>this.windowResize(), 0)
-	}
-	
-	setCameraSize() {
-		// let cameraJ = $('#camera')
-		// cameraJ.css({width: 0, height:0})
-		// let parentJ = cameraJ.parent()
-		// cameraJ.css({
-		// 	width: ''+parentJ.width()+'px',
-		// 	height: ''+parentJ.height()+'px',
-		// 	display: 'flex',
-		// 	'align-items': 'center',
-		// 	'justify-conten': 'center',
-		// })
 	}
 
 	displayVideo() {
@@ -117,8 +103,6 @@ export class Renderer {
 
 	computeRendererSize(webcam: Webcam, cameraJ: any): {width: number, height: number} {
 
-		this.setCameraSize()
-
 		let cameraWidth = cameraJ.width()
 		let cameraHeight = cameraJ.height()
 
@@ -140,7 +124,7 @@ export class Renderer {
 	}
 
 	setCanvasSize(width: number, height: number) {
-		$(this.renderer.domElement).css({width: '' + width + 'px', height: '' + height + 'px', margin: 'auto', display: 'block'})
+		$(this.renderer.domElement).css({width: '' + width + 'px', height: '' + height + 'px'})
 	}
 
 	centerOnRectangle(width: number, height: number) {
@@ -152,7 +136,6 @@ export class Renderer {
 	
 	windowResize(){
 		let cameraJ = $('#camera')
-		this.setCameraSize()
 		let size = this.computeRendererSize(this.webcam, cameraJ)
 		this.setCanvasSize(size.width, size.height)
 	}

@@ -3,6 +3,7 @@ declare var stasilo: any
 
 declare type GifJockey = {
 	nextImage: ()=> void
+	shaderManager: { pause: boolean }
 }
 
 export class BPM {
@@ -19,9 +20,10 @@ export class BPM {
 	tapTimeoutID:number = null
 	song: any = null
 
+	folder: GUI
 	bpmDetectionFolder: GUI = null
 	bpmDetectionButton: Controller = null
-	autoBPM = true
+	autoBPM = false
 
 	constructor(gifJockey: GifJockey) {
 		this.gifJockey = gifJockey
@@ -36,14 +38,14 @@ export class BPM {
 	}
 
 	createGUI(gui: GUI) {
-		this.bpmDetectionButton = gui.addButton('Manual BPM', ()=> this.toggleBPMdetection())
+		this.folder = gui.addFolder('BPM')
 
-		this.tapButton = gui.addButton('Tap', ()=> this.tap())
-		this.bpmSlider = gui.addSlider('BPM', 120, 40, 250, 1).onChange((value)=>this.setBPMinterval(value, undefined, false))
+		this.bpmDetectionButton = this.folder.add(this, 'autoBPM').name('Auto BPM').onChange(()=> this.toggleBPMdetection())
 
-		this.tapButton.setVisibility(!this.autoBPM)
-		this.bpmSlider.setVisibility(!this.autoBPM)
-		this.bpmDetectionFolder = gui.addFolder('BPM detection settings')
+		this.tapButton = this.folder.addButton('Tap', ()=> this.tap())
+		this.bpmSlider = this.folder.addSlider('BPM', 120, 40, 250, 1).onChange((value)=>this.setBPMinterval(value, undefined, false))
+
+		this.bpmDetectionFolder = this.folder.addFolder('BPM detection settings')
 
 		let sliders:any = { sensitivity: null, analyserFFTSize: null, passFreq: null, visualizerFFTSize: null }
 
@@ -64,15 +66,17 @@ export class BPM {
 		sliders.passFreq = this.bpmDetectionFolder.addSlider('Bandpass Filter Frequency', 600, 1, 10000, 1).onChange(onSliderChange)
 		sliders.visualizerFFTSize = this.bpmDetectionFolder.addSlider('Visualizer FFT Size', 7, 5, 15, 1).onChange(onSliderChange)
 
-		onSliderChange()
+		this.folder.add(this, 'pause').name('Pause').onChange((value)=> { this.gifJockey.shaderManager.pause = value })
 
-		gui.addToggleButton('Pause', 'Resume', this, 'pause')
+		onSliderChange()
+		
+		// start
+		this.toggleBPMdetection()
 	}
 
 	toggleBPMdetection() {
-		this.autoBPM = !this.autoBPM
-
-		this.bpmDetectionButton.setName(this.autoBPM ? 'Manual BPM' : 'Auto BPM')
+		// this.autoBPM = !this.autoBPM
+		// this.bpmDetectionButton.setName(this.autoBPM ? 'Manual BPM' : 'Auto BPM')
 		this.tapButton.setVisibility(!this.autoBPM)
 		this.bpmSlider.setVisibility(!this.autoBPM)
 		this.bpmDetectionFolder.setVisibility(this.autoBPM)

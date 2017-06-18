@@ -214,6 +214,8 @@ ul.gg-list {
 	    max-height: 100%;
 	    width: 100%;
 	    object-fit: contain;
+	    display: block;
+	    margin: auto;
 	}
 }
 
@@ -245,6 +247,54 @@ ul.gg-list {
 	.dg.main .close-button.close-bottom {
 		// width: 150px;
 		position: static;
+	}
+}
+
+button.open-close-btn {
+	height: 50px;
+	background-color: #1a1a1a;
+	border-radius: 0;
+	border: 0;
+	border-right: 3px solid #2fa1d6;
+	cursor: pointer;
+	span {
+		filter: invert(100%);
+	}
+	&:focus {
+		outline: none;
+	}
+}
+
+.list-header {
+	color: white;
+	display: flex;
+	font-size: 10px;
+	flex-grow: 1;
+	h4 {
+		display: flex;
+    	flex-grow: 1;
+	}
+	button {
+		color: #eee;
+		border-radius: 0;
+		border: 0;
+		border-left: 3px solid #e61d5f;
+		display: flex;
+    	align-self: center;
+		background-color: #1a1a1a;
+		cursor: pointer;
+    	margin-right: 4px;
+		&:focus {
+			outline: none;
+		}
+	}
+}
+
+#thumbnails-container {
+	.list-header {
+		h4 {
+			width: 0;
+		}
 	}
 }
 

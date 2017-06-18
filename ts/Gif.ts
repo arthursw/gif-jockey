@@ -14,6 +14,8 @@ declare type GifJockey = {
 	setGif: (gif: Gif)=> void
 	playGif: (gif: Gif)=> void
 	takeSnapshot: ()=> void
+	deselectAndCallback: (callback: ()=> void, delay?: number)=> void
+	deselectImages: ()=> void
 }
 
 export class Gif {
@@ -56,6 +58,10 @@ export class Gif {
 
 	getNumberOfImages() {
 		return this.nImages
+	}
+
+	isEmpty() {
+		return this.nImages == 0
 	}
 	
 	addCopy(originalImageJ: any, filteredImageJ: any, imageID: number) {
@@ -193,11 +199,9 @@ export class GifManager {
 	}
 
 	createGUI(gui: GUI) {
-		gui.addButton('Create gif', ()=> this.addGif())
-		gui.addButton('Create auto gif', ()=> this.createAutoGif())
-		gui.addSlider('N images', this.numberOfImages, 1, 10).onChange((value:number)=>this.numberOfImages = value)
-		gui.addSlider('Gif degradation', this.gifQuality, 1, 5000, 1).onChange((value: number)=>{ this.gifQuality = value })
-		gui.addButton('Save gif', ()=> this.currentGif.preview(true))
+		let folder = gui.addFolder('Export GIF')
+		folder.addSlider('Gif degradation', this.gifQuality, 1, 5000, 1).onChange((value: number)=>{ this.gifQuality = value })
+		folder.addButton('Save gif', ()=> this.currentGif.preview(true))
 		// gui.addButton('Save gif', ()=> {
 		// 	if(!this.currentGif.hasPreview) {
 		// 		this.currentGif.preview(true)
@@ -245,6 +249,7 @@ export class GifManager {
 	}
 
 	addGif() {
+		this.gifJockey.deselectImages()
 		this.gifJockey.emptyThumbnails()
 		this.gif.empty()
 
@@ -325,19 +330,21 @@ export class GifManager {
 			clearInterval(this.autoGifInterval)
 			this.autoGifInterval = null
 		}
-		if(this.currentGif.getNumberOfImages() > 0) {
+		if(!this.currentGif.isEmpty()) {
 			this.addGif()
 		}
 		
-		this.nSnapshots = 0
-		this.autoGifInterval = setInterval(()=>{
-			this.gifJockey.takeSnapshot()
-			this.nSnapshots++
-			if(this.nSnapshots == this.numberOfImages) {
-				clearInterval(this.autoGifInterval)
-				this.autoGifInterval = null
-			}
-		}, this.gifJockey.bpm.getInterval())
+		this.gifJockey.deselectAndCallback(()=> {
+			this.nSnapshots = 0
+			this.autoGifInterval = setInterval(()=>{
+				this.gifJockey.takeSnapshot()
+				this.nSnapshots++
+				if(this.nSnapshots == this.numberOfImages) {
+					clearInterval(this.autoGifInterval)
+					this.autoGifInterval = null
+				}
+			}, this.gifJockey.bpm.getInterval())
+		})
 	}
 
 	removeGif(gifID: number) {
@@ -362,7 +369,7 @@ export class GifManager {
 	}
 
 	toggleThumbnails(show: boolean) {
-		let thumbnailsJ = $('#thumbnails')
+		let thumbnailsJ = $('#thumbnails-container')
 		let thumbnailsVisible = thumbnailsJ.is(':visible')
 		if(show && !thumbnailsVisible) {
 			thumbnailsJ.show()

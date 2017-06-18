@@ -1,5 +1,10 @@
 import * as $ from 'jquery'
-import 'jqueryui'
+
+// import '../lib/jquery-ui-1.12.1.custom/jquery-ui'
+import 'jquery-ui/ui/disable-selection'
+import 'jquery-ui/ui/widgets/droppable'
+import 'jquery-ui/ui/widgets/sortable'
+
 
 import { GUI, Controller } from "./GUI"
 import { Webcam } from "./Webcam"
@@ -19,6 +24,7 @@ class GifJokey {
 	imageID = 0
 
 	gui: GUI
+	folder: GUI
 	viewer: Window = null
 
 	// filterManager = new FilterManager(this)
@@ -35,19 +41,6 @@ class GifJokey {
 	constructor() {
 		console.log("Gif Grave")
 		
-		// Webcam.set({
-		// 	width: 320,
-		// 	height: 240,
-		// 	image_format: 'jpeg',
-		// 	jpeg_quality: 90,
-		// 	swfURL: './lib/webcam.swf'
-		// });
-		// Webcam.attach( '#camera' );
-		// // $('#camera').css({margin: 'auto'})
-
-
-		// $("#takeSnapshot").click(this.takeSnapshot)
-		// $("#createViewer").click(this.createViewer)
 		$("#camera").click(()=>this.deselectImages())
 		$("#gif-thumbnails").mousedown((event:JQueryMouseEventObject)=> {
 			if(!$.contains($('#outputs')[0], event.target) && !$.contains($('#thumbnails')[0], event.target)) {
@@ -58,11 +51,12 @@ class GifJokey {
 		let thumbnailsJ: any = $("#thumbnails")
 		thumbnailsJ.sortable(({ stop: ()=> this.sortImagesStop() }))
 	    thumbnailsJ.disableSelection()
+	    $('#thumbnails-container').hide()
 
 		let outputsJ: any = $("#outputs")
 		outputsJ.sortable(({ stop: ()=> this.gifManager.sortGifsStop() }))
 	    outputsJ.disableSelection()
-
+	    outputsJ.hide()
 
 		$( document ).keydown((event:KeyboardEvent) => this.onKeyDown(event))
 		$( '#gui' ).keydown((event:KeyboardEvent) => {
@@ -76,10 +70,29 @@ class GifJokey {
 		})
 
 	    this.createGUI()
+
+	    $('#gif-thumbnails .open-close-btn').mousedown((event:JQueryMouseEventObject)=> {
+	    	let outputsJ = $('#outputs')
+	    	let visible = outputsJ.is(':visible')
+	    	if(visible) {
+	    		outputsJ.hide()
+	    		this.deselectImages()
+	    		document.dispatchEvent(new Event('cameraResized'))
+	    		$('#gif-thumbnails .ui-icon').removeClass('ui-icon-caret-1-w').addClass('ui-icon-caret-1-e')
+	    	} else {
+	    		outputsJ.show()
+	    		document.dispatchEvent(new Event('cameraResized'))
+	    		$('#gif-thumbnails .ui-icon').removeClass('ui-icon-caret-1-e').addClass('ui-icon-caret-1-w')
+	    	}
+	    })
+
+	    $('.add-gif-btn').click(()=>this.gifManager.addGif())
+	    $('.add-gif-auto-btn').click(()=>this.gifManager.createAutoGif())
+
 	    this.webcam = new Webcam(()=>this.webcamLoaded())
 
 
-	    this.toggleGifThumbnails(this.showGifThumbnails)
+	    // this.toggleGifThumbnails(this.showGifThumbnails)
 
 	    this.initializeClipboard()
 	}
@@ -89,9 +102,9 @@ class GifJokey {
 		$(document).keydown((e)=> {
 			if (e.keyCode == ctrlKey || e.keyCode == cmdKey) { 
 				this.ctrlDown = true
-			} else if (this.ctrlDown && e.keyCode == cKey && this.getSelectedImage().length > 0 && !this.gui.isFocused()) {
+			} else if (this.ctrlDown && e.keyCode == cKey && this.isImageSelected() && !this.gui.isFocused()) {
 				this.shaderManager.copyEffects()
-			} else if (this.ctrlDown && e.keyCode == vKey && this.getSelectedImage().length > 0 && !this.gui.isFocused()) {
+			} else if (this.ctrlDown && e.keyCode == vKey && this.isImageSelected() && !this.gui.isFocused()) {
 				this.shaderManager.pastEffects()
 			}
 		}).keyup((e)=> {
@@ -103,7 +116,7 @@ class GifJokey {
 
 	onKeyDown(event: KeyboardEvent) {
 		if(event.keyCode == 32) {			// space bar
-			this.takeSnapshot()
+			this.deselectAndTakeSnapshot()
 			event.preventDefault()
 		} else if(event.keyCode == 13) {	// enter
 			// Ignore if one of the dat.gui item is focused
@@ -136,13 +149,20 @@ class GifJokey {
 	createGUI() {
 
 		this.gui = new GUI({ autoPlace: false, width: '100%' })
+
 		document.getElementById('gui').appendChild(this.gui.getDomElement())
 
-		this.gui.addButton('Take snapshot', ()=> this.takeSnapshot())
-		this.gui.addFileSelectorButton('Upload image', 'image/*', (event:any)=> this.uploadImage(event))
-		this.gui.addButton('Create viewer', ()=> this.createViewer())
+		this.folder = this.gui.addFolder('General')
 
-		this.gui.add(this, 'showGifThumbnails').name('Show Gifs').onChange((value: boolean)=> this.toggleGifThumbnails(value))
+		this.folder.addButton('Take snapshot', ()=> this.deselectAndTakeSnapshot())
+		this.folder.addFileSelectorButton('Upload image', 'image/*', (event:any)=> this.uploadImage(event))
+		this.folder.addButton('Create viewer', ()=> this.createViewer())
+
+		// this.folder.add(this, 'showGifThumbnails').name('Show Gifs').onChange((value: boolean)=> this.toggleGifThumbnails(value))
+
+		this.folder.addSlider('N images / GIF', this.gifManager.numberOfImages, 1, 10).onChange((value:number)=>this.gifManager.numberOfImages = value)
+
+		this.folder.open()
 
 		this.bpm.createGUI(this.gui)
 		this.gifManager.createGUI(this.gui)
@@ -151,17 +171,17 @@ class GifJokey {
 		// $(gui.getDomElement()).css({ width: '100%' })
 	}
 
-	toggleGifThumbnails(show: boolean) {
-		let gifThumbnailsJ = $('#gif-thumbnails')
-		let visible = gifThumbnailsJ.is(':visible')
-		if(show && !visible) {
-			gifThumbnailsJ.show()
-			document.dispatchEvent(new Event('cameraResized'))
-		} else if (!show && visible) {
-			gifThumbnailsJ.hide()
-			document.dispatchEvent(new Event('cameraResized'))
-		}
-	}
+	// toggleGifThumbnails(show: boolean) {
+	// 	let gifThumbnailsJ = $('#gif-thumbnails')
+	// 	let visible = gifThumbnailsJ.is(':visible')
+	// 	if(show && !visible) {
+	// 		gifThumbnailsJ.show()
+	// 		document.dispatchEvent(new Event('cameraResized'))
+	// 	} else if (!show && visible) {
+	// 		gifThumbnailsJ.hide()
+	// 		document.dispatchEvent(new Event('cameraResized'))
+	// 	}
+	// }
 
 	setFilteredImage(imageJ:any, resultJ:any) {
 
@@ -291,9 +311,6 @@ class GifJokey {
 	}
 
 	takeSnapshot() {
-		// if(this.gifManager.currentGif.getNumberOfImages() == this.gifManager.maxNumberOfImages) {
-		// 	return
-		// }
 		let sound: any = document.getElementById('shutter-sound')
 		sound.currentTime = 0
 		sound.play()
@@ -303,7 +320,19 @@ class GifJokey {
 		let imageJ = this.addImage(imageDataURL)
 
 		this.updateFilteredImage(imageJ)
-		// Webcam.snap((data_uri: string, canvas: HTMLCanvasElement, context: CanvasRenderingContext2D)=>this.addImage(data_uri, canvas, context))
+	}
+
+	deselectAndTakeSnapshot() {
+		this.deselectAndCallback(()=> this.takeSnapshot())
+	}
+
+	deselectAndCallback(callback: ()=> void, delay: number=250) {
+		if(this.isImageSelected()) {
+			this.deselectImages()
+			setTimeout(callback, delay)
+		} else {
+			callback()
+		}
 	}
 
 	uploadImage(event: any) {
@@ -318,7 +347,7 @@ class GifJokey {
 				reader.addEventListener("load", (event:any)=> {
 					let imageJ = this.addImage(event.target.result, (imgJ: any)=> {
 						this.renderer.displayImage(<any>imgJ[0])
-						setTimeout(()=>this.updateFilteredImage(imageJ), 500)
+						setTimeout(()=>this.updateFilteredImage(imageJ), 250)
 					})
 				}, false)
 
@@ -329,6 +358,10 @@ class GifJokey {
 
 	getSelectedImage() {
 		return $('#thumbnails').children('.gg-selected').first()
+	}
+
+	isImageSelected(): boolean {
+		return this.getSelectedImage().length > 0
 	}
 
 	updateFilteredImage(imageJ: any=null) {

@@ -510,7 +510,7 @@ export class ShaderManager {
 		if(this.shaderChangedTimeout != null) {
 			clearTimeout(this.shaderChangedTimeout)
 		}
-		this.shaderChangedTimeout = setTimeout(()=>document.dispatchEvent(new Event('shaderChanged')), 500)	
+		this.shaderChangedTimeout = setTimeout(()=>document.dispatchEvent(new Event('shaderChanged')), 250)	
 	}
 	
 	onParamsChange(dispatchEvent: boolean=true) {
@@ -579,7 +579,7 @@ export class ShaderManager {
 				let propertiesObject: any = shader.object.parameters[propertyName]
 				parameters[propertyName] = propertiesObject.value
 			}
-			json[shader.object.name] = { parameters: parameters, on: shader.object.on }
+			json[shader.object.name] = { parameters: parameters, on: shader.object.on, time: this.shaderTime }
 		}
 		return json
 	}
@@ -597,6 +597,7 @@ export class ShaderManager {
 			for(let propertyName in shader.object.parameters) {
 				shader.object.parameters[propertyName].value = parameters[propertyName]
 			}
+			this.shaderTime = json[shader.object.name].time
 			for(let controller of shader.folder.getControllers()) {
 				controller.updateDisplay()
 			}
