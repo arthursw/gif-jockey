@@ -7,7 +7,10 @@ export class Webcam {
 	context: CanvasRenderingContext2D = null
 	photo: HTMLElement = null
 
-	constructor(callback: ()=>void) {
+	constructor(callback: ()=>void, width: number = null) {
+		if(width) {
+			this.width = width
+		}
 
 		// this.photo = document.getElementById('photo')
 		this.video = document.createElement('video')
@@ -16,8 +19,30 @@ export class Webcam {
 		this.initialize(callback)
 	}
 
-	initialize(callback: ()=>void) {
+	resizeVideo(width: number=null) {
+		if(width != null) {
+			this.width = width
+		}
+
+		this.height = this.video.videoHeight / (this.video.videoWidth/this.width)
 		
+		// Firefox currently has a bug where the height can't be read from
+		// the video, so we will make assumptions if this happens.
+		
+		if (isNaN(this.height)) {
+			this.height = this.width / (4/3)
+		}
+		
+		this.video.setAttribute('width', this.width.toString())
+		this.video.setAttribute('height', this.height.toString())
+		this.canvas.width = this.width
+		this.canvas.height = this.height
+		console.log('Webcam: set size: ' + this.width + ', ' + this.height)
+	}
+
+	initialize(callbackCanPlay: ()=>void=null, callbackGetMedia: ()=> void =null) {
+		console.log('Webcam: initialize: ' + this.width + ', ' + this.height)
+
 		let n:any = navigator
 		n.getMedia = ( navigator.getUserMedia ||
 			n.webkitGetUserMedia ||
@@ -25,6 +50,10 @@ export class Webcam {
 			n.msGetUserMedia)
 
 		n.getMedia( { video: true, audio: false }, (stream: any) => {
+			// if(stream.active) {
+			// 	stream.removeTrack(stream.getVideoTracks()[0])
+			// 	this.video.src = ''
+			// }
 			if (n.mozGetUserMedia) {
 				let v: any = this.video
 				v.mozSrcObject = stream
@@ -32,7 +61,12 @@ export class Webcam {
 				var vendorURL = window.URL || (<any>window).webkitURL
 				this.video.src = vendorURL.createObjectURL(stream)
 			}
+			// stream.getVideoTracks()[0].stop()
+			console.log('Webcam: getMedia: ' + this.video.width + ', ' + this.video.height)
 			this.video.play()
+			if(callbackGetMedia != null) {
+				callbackGetMedia()
+			}
 		},
 		function(err: string) {
 			console.log("An error occured! " + err)
@@ -41,21 +75,11 @@ export class Webcam {
 
 		this.video.addEventListener('canplay', (ev)=> {
 			if (!this.streaming) {
-				this.height = this.video.videoHeight / (this.video.videoWidth/this.width)
-				
-				// Firefox currently has a bug where the height can't be read from
-				// the video, so we will make assumptions if this happens.
-				
-				if (isNaN(this.height)) {
-					this.height = this.width / (4/3)
-				}
-				
-				this.video.setAttribute('width', this.width.toString())
-				this.video.setAttribute('height', this.height.toString())
-				this.canvas.width = this.width
-				this.canvas.height = this.height
+				this.resizeVideo()
 				this.streaming = true
-				callback()
+				if(callbackCanPlay != null) {
+					callbackCanPlay()
+				}
 			}
 		}, false)
 

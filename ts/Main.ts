@@ -142,6 +142,8 @@ class GifJokey {
 			}
 		} else if(String.fromCharCode(event.keyCode) == 'R') {
 			this.shaderManager.randomizeParams()
+		} else if(String.fromCharCode(event.keyCode) == 'D') {
+			this.shaderManager.deactivateAll()
 		}
 	}
 
@@ -166,13 +168,18 @@ class GifJokey {
 
 		this.folder = this.gui.addFolder('General')
 
-		this.folder.addButton('Take snapshot', ()=> this.deselectAndTakeSnapshot())
+		this.folder.addButton('Take snapshot (Spacebar)', ()=> this.deselectAndTakeSnapshot())
 		// this.folder.addFileSelectorButton('Upload image', 'image/*', (event:any)=> this.uploadImage(event))
 		this.folder.addButton('Create viewer', ()=> this.createViewer())
 
 		// this.folder.add(this, 'showGifThumbnails').name('Show Gifs').onChange((value: boolean)=> this.toggleGifThumbnails(value))
 
 		this.folder.addSlider('N images / GIF', this.gifManager.numberOfImages, 1, 10).onChange((value:number)=>this.gifManager.numberOfImages = value)
+		this.folder.addSlider('Webcam width', 320, 100, 1024).onChange((value)=> {
+			this.webcam.resizeVideo(value)
+			this.renderer.resize(this.webcam.width, this.webcam.height)
+		})
+
 		this.folder.add(this, 'showGIF').name('Show GIF').onChange(()=>{$('#result').toggle()})
 		this.folder.open()
 
@@ -490,6 +497,7 @@ class GifJokey {
 let gifJokey: GifJokey = null
 document.addEventListener("DOMContentLoaded", function(event) { 
 	gifJokey = new GifJokey()
-	gifJokey.initialize()
+	gifJokey.initialize();
+	(<any>window).gifJokey = gifJokey
 });
 

@@ -56411,6 +56411,9 @@ class GifJokey {
         else if (String.fromCharCode(event.keyCode) == 'R') {
             this.shaderManager.randomizeParams();
         }
+        else if (String.fromCharCode(event.keyCode) == 'D') {
+            this.shaderManager.deactivateAll();
+        }
     }
     webcamLoaded() {
         this.renderer = new Renderer_1.Renderer(this.webcam, this.gui);
@@ -56427,11 +56430,15 @@ class GifJokey {
         this.gui = new GUI_1.GUI({ autoPlace: false, width: '100%' });
         document.getElementById('gui').appendChild(this.gui.getDomElement());
         this.folder = this.gui.addFolder('General');
-        this.folder.addButton('Take snapshot', () => this.deselectAndTakeSnapshot());
+        this.folder.addButton('Take snapshot (Spacebar)', () => this.deselectAndTakeSnapshot());
         // this.folder.addFileSelectorButton('Upload image', 'image/*', (event:any)=> this.uploadImage(event))
         this.folder.addButton('Create viewer', () => this.createViewer());
         // this.folder.add(this, 'showGifThumbnails').name('Show Gifs').onChange((value: boolean)=> this.toggleGifThumbnails(value))
         this.folder.addSlider('N images / GIF', this.gifManager.numberOfImages, 1, 10).onChange((value) => this.gifManager.numberOfImages = value);
+        this.folder.addSlider('Webcam width', 320, 100, 1024).onChange((value) => {
+            this.webcam.resizeVideo(value);
+            this.renderer.resize(this.webcam.width, this.webcam.height);
+        });
         this.folder.add(this, 'showGIF').name('Show GIF').onChange(() => { $('#result').toggle(); });
         this.folder.open();
         this.bpm.createGUI(this.gui);
@@ -56680,6 +56687,7 @@ let gifJokey = null;
 document.addEventListener("DOMContentLoaded", function (event) {
     gifJokey = new GifJokey();
     gifJokey.initialize();
+    window.gifJokey = gifJokey;
 });
 
 
@@ -60649,7 +60657,7 @@ class BPM {
     createGUI(gui) {
         this.folder = gui.addFolder('BPM');
         this.bpmDetectionButton = this.folder.add(this, 'autoBPM').name('Auto BPM').onChange(() => this.toggleBPMdetection());
-        this.tapButton = this.folder.addButton('Tap', () => this.tap());
+        this.tapButton = this.folder.addButton('Tap (Enter)', () => this.tap());
         this.bpmSlider = this.folder.addSlider('BPM', 120, 40, 250, 1).onChange((value) => this.setBPMinterval(value, undefined, false));
         this.bpmDetectionFolder = this.folder.addFolder('BPM detection settings');
         let sliders = { sensitivity: null, analyserFFTSize: null, passFreq: null, visualizerFFTSize: null };
@@ -60716,7 +60724,7 @@ class BPM {
             return;
         }
         this.nTaps = 0;
-        this.tapButton.setName('Tap');
+        this.tapButton.setName('Tap (Enter)');
     }
     tap() {
         if (this.isAutoBPM()) {
@@ -61334,6 +61342,17 @@ class Renderer {
         this.centerOnRectangle(this.webcam.width, this.webcam.height);
         setTimeout(() => this.windowResize(), 0);
     }
+    resize(width, height) {
+        this.camera.left = width / -2;
+        this.camera.right = width / 2;
+        this.camera.top = height / 2;
+        this.camera.bottom = height / -2;
+        this.camera.updateProjectionMatrix();
+        this.renderer.setSize(width, height);
+        console.log('Renderer: set size: ' + width + ', ' + height);
+        this.displayVideo();
+        this.windowResize();
+    }
     displayVideo() {
         if (this.shaderManager != null) {
             this.shaderManager.pause = false;
@@ -61347,6 +61366,7 @@ class Renderer {
         this.setContent(content);
     }
     setContent(content) {
+        console.log('Renderer: set content: ' + content.width + ', ' + content.height);
         this.texture = new THREE.Texture(content);
         this.material = new THREE.MeshBasicMaterial({ map: this.texture });
         this.texture.minFilter = THREE.LinearFilter;
@@ -61845,9 +61865,10 @@ class ShaderManager {
         let onToggleShaders = () => this.onToggleShaders();
         this.folder = gui.addFolder('Effects');
         this.folder.open();
-        this.folder.addButton('Deactivate all', () => this.deactivateAll());
-        this.folder.addButton('Copy effects', () => this.copyEffects());
-        this.folder.addButton('Past effects', () => this.pastEffects());
+        this.folder.addButton('Randomize	 (R)', () => this.randomizeParams());
+        this.folder.addButton('Deactivate all	 (D)', () => this.deactivateAll());
+        this.folder.addButton('Copy effects 	(Ctrl + C)', () => this.copyEffects());
+        this.folder.addButton('Past effects 	(Ctrl + V)', () => this.pastEffects());
         for (let shaderName in this.shaderParameters) {
             let shaderObject = this.shaderParameters[shaderName];
             let folder = this.folder.addFolder(shaderObject.name);
@@ -62366,7 +62387,7 @@ exports.StaticShader = {
 
 Object.defineProperty(exports, "__esModule", { value: true });
 class Webcam {
-    constructor(callback) {
+    constructor(callback, width = null) {
         this.width = 320;
         this.height = 0;
         this.streaming = false;
@@ -62374,19 +62395,43 @@ class Webcam {
         this.canvas = null;
         this.context = null;
         this.photo = null;
+        if (width) {
+            this.width = width;
+        }
         // this.photo = document.getElementById('photo')
         this.video = document.createElement('video');
         this.canvas = document.createElement('canvas');
         this.context = this.canvas.getContext('2d');
         this.initialize(callback);
     }
-    initialize(callback) {
+    resizeVideo(width = null) {
+        if (width != null) {
+            this.width = width;
+        }
+        this.height = this.video.videoHeight / (this.video.videoWidth / this.width);
+        // Firefox currently has a bug where the height can't be read from
+        // the video, so we will make assumptions if this happens.
+        if (isNaN(this.height)) {
+            this.height = this.width / (4 / 3);
+        }
+        this.video.setAttribute('width', this.width.toString());
+        this.video.setAttribute('height', this.height.toString());
+        this.canvas.width = this.width;
+        this.canvas.height = this.height;
+        console.log('Webcam: set size: ' + this.width + ', ' + this.height);
+    }
+    initialize(callbackCanPlay = null, callbackGetMedia = null) {
+        console.log('Webcam: initialize: ' + this.width + ', ' + this.height);
         let n = navigator;
         n.getMedia = (navigator.getUserMedia ||
             n.webkitGetUserMedia ||
             n.mozGetUserMedia ||
             n.msGetUserMedia);
         n.getMedia({ video: true, audio: false }, (stream) => {
+            // if(stream.active) {
+            // 	stream.removeTrack(stream.getVideoTracks()[0])
+            // 	this.video.src = ''
+            // }
             if (n.mozGetUserMedia) {
                 let v = this.video;
                 v.mozSrcObject = stream;
@@ -62395,24 +62440,22 @@ class Webcam {
                 var vendorURL = window.URL || window.webkitURL;
                 this.video.src = vendorURL.createObjectURL(stream);
             }
+            // stream.getVideoTracks()[0].stop()
+            console.log('Webcam: getMedia: ' + this.video.width + ', ' + this.video.height);
             this.video.play();
+            if (callbackGetMedia != null) {
+                callbackGetMedia();
+            }
         }, function (err) {
             console.log("An error occured! " + err);
         });
         this.video.addEventListener('canplay', (ev) => {
             if (!this.streaming) {
-                this.height = this.video.videoHeight / (this.video.videoWidth / this.width);
-                // Firefox currently has a bug where the height can't be read from
-                // the video, so we will make assumptions if this happens.
-                if (isNaN(this.height)) {
-                    this.height = this.width / (4 / 3);
-                }
-                this.video.setAttribute('width', this.width.toString());
-                this.video.setAttribute('height', this.height.toString());
-                this.canvas.width = this.width;
-                this.canvas.height = this.height;
+                this.resizeVideo();
                 this.streaming = true;
-                callback();
+                if (callbackCanPlay != null) {
+                    callbackCanPlay();
+                }
             }
         }, false);
         // this.clearPhoto()

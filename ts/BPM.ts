@@ -42,7 +42,7 @@ export class BPM {
 
 		this.bpmDetectionButton = this.folder.add(this, 'autoBPM').name('Auto BPM').onChange(()=> this.toggleBPMdetection())
 
-		this.tapButton = this.folder.addButton('Tap', ()=> this.tap())
+		this.tapButton = this.folder.addButton('Tap (Enter)', ()=> this.tap())
 		this.bpmSlider = this.folder.addSlider('BPM', 120, 40, 250, 1).onChange((value)=>this.setBPMinterval(value, undefined, false))
 
 		this.bpmDetectionFolder = this.folder.addFolder('BPM detection settings')
@@ -122,7 +122,7 @@ export class BPM {
 			return
 		}
 		this.nTaps = 0
-		this.tapButton.setName('Tap')
+		this.tapButton.setName('Tap (Enter)')
 	}
 
 	tap() {

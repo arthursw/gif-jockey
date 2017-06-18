@@ -53,6 +53,18 @@ export class Renderer {
 		setTimeout(()=>this.windowResize(), 0)
 	}
 
+	resize(width: number, height: number) {
+		this.camera.left = width / -2
+		this.camera.right = width / 2
+		this.camera.top = height / 2
+		this.camera.bottom = height / -2
+		this.camera.updateProjectionMatrix()
+		this.renderer.setSize( width, height )
+		console.log('Renderer: set size: ' + width + ', ' + height)
+		this.displayVideo()
+		this.windowResize()
+	}
+
 	displayVideo() {
 		if(this.shaderManager != null) {
 			this.shaderManager.pause = false
@@ -68,7 +80,7 @@ export class Renderer {
 	}
 
 	setContent(content: HTMLImageElement | HTMLVideoElement) {
-
+		console.log('Renderer: set content: ' + content.width + ', ' + content.height)
 		this.texture = new THREE.Texture( content )
 		this.material = new THREE.MeshBasicMaterial( (<any>{ map: this.texture } ))
 		

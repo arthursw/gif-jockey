@@ -447,9 +447,10 @@ export class ShaderManager {
 		this.folder = gui.addFolder('Effects')
 		this.folder.open()
 
-		this.folder.addButton('Deactivate all', ()=> this.deactivateAll())
-		this.folder.addButton('Copy effects', ()=> this.copyEffects())
-		this.folder.addButton('Past effects', ()=> this.pastEffects())
+		this.folder.addButton('Randomize	 (R)', ()=> this.randomizeParams())
+		this.folder.addButton('Deactivate all	 (D)', ()=> this.deactivateAll())
+		this.folder.addButton('Copy effects 	(Ctrl + C)', ()=> this.copyEffects())
+		this.folder.addButton('Past effects 	(Ctrl + V)', ()=> this.pastEffects())
 
 		for(let shaderName in this.shaderParameters) {
 			let shaderObject = this.shaderParameters[shaderName]
