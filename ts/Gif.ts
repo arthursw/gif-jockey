@@ -12,7 +12,7 @@ declare type GifJockey = {
 	webcam: Webcam
 	emptyThumbnails: ()=> void
 	setGif: (gif: Gif)=> void
-	playGif: (gif: Gif)=> void
+	playGifViewer: (gif: Gif)=> void
 	takeSnapshot: ()=> void
 	deselectAndCallback: (callback: ()=> void, delay?: number)=> void
 	deselectImages: ()=> void
@@ -29,6 +29,7 @@ export class Gif {
 	constructor(containerJ: any, id: number) {
 		this.containerJ = containerJ
 		this.imageIndex = 0
+		this.id = id
 	}
 
 	// setSize(imgJ: any) {
@@ -276,8 +277,6 @@ export class GifManager {
 		closeButtonJ.click( ()=> this.removeGif(currentGifID) )
 		duplicateButtonJ.click(()=> this.duplicateGif(currentGifID) )
 		playButtonJ.mousedown( (event: JQueryEventObject)=> {
-			$('#outputs').find('.gg-small-btn.play-btn').removeClass('playing')
-			playButtonJ.addClass('playing')
 			this.playGif(currentGifID)
 			event.stopPropagation()
 			return -1
@@ -295,7 +294,7 @@ export class GifManager {
 		outputJ.append(currentGifJ)
 
 		this.currentGif = new Gif(divJ, this.gifID)
-		this.gifs.set(this.gifID, this.currentGif)
+		this.gifs.set(this.currentGif.id, this.currentGif)
 
 		this.gifID++
 
@@ -330,7 +329,7 @@ export class GifManager {
 			clearInterval(this.autoGifInterval)
 			this.autoGifInterval = null
 		}
-		if(!this.currentGif.isEmpty()) {
+		if(this.currentGif == null || !this.currentGif.isEmpty()) {
 			this.addGif()
 		}
 		
@@ -431,11 +430,15 @@ export class GifManager {
 	deselectGif() {
 		$('#outputs').children().removeClass('gg-selected')
 		this.toggleThumbnails(false)
+		// this.currentGif = null
 	}
 
 	playGif(gifID: number) {
+		$('#outputs').find('.gg-small-btn.play-btn').removeClass('playing')
 		let gif = this.gifs.get(gifID)
-		this.gifJockey.playGif(gif)
+		gif.containerJ.find('.play-btn').addClass('playing')
+
+		this.gifJockey.playGifViewer(gif)
 	}
 
 	sortGifsStop = ()=> {

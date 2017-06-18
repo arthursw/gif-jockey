@@ -10386,6 +10386,7 @@ var Viewer;
     };
     window.setFilteredImage = setFilteredImage;
     let setGif = (gifJ) => {
+        $('#message').empty();
         $('#results').empty().append(gifJ);
     };
     window.setGif = setGif;

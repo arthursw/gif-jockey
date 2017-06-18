@@ -151,7 +151,11 @@ class GifJokey {
 		this.renderer = new Renderer(this.webcam, this.gui)
 		this.shaderManager = new ShaderManager(this.gui, this.renderer.camera, this.renderer.scene, this.renderer.renderer)
 		this.renderer.setShaderManager(this.shaderManager)
-		document.addEventListener('shaderChanged', ()=> this.updateFilteredImage())
+		document.addEventListener('shaderChanged', ()=> {
+			if(this.isImageSelected()) {
+				this.updateFilteredImage()
+			}
+		})
 		this.shaderManager.randomizeParams()
 		this.gifManager.addGif()
 	}
@@ -487,7 +491,7 @@ class GifJokey {
 		this.nextImage()
 	}
 
-	playGif(gif: Gif) {
+	playGifViewer(gif: Gif) {
 		if(this.viewer != null) {
 			(<any>this.viewer).setGif(gif.containerJ.find('img.filtered').clone())
 		}

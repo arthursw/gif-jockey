@@ -50,6 +50,7 @@ namespace Viewer {
 	(<any>window).setFilteredImage = setFilteredImage
 
 	let setGif = (gifJ:any)=> {
+		$('#message').empty()
 		$('#results').empty().append(gifJ)
 	}
 

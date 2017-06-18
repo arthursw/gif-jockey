@@ -1,5 +1,5 @@
 export class Webcam {
-	width = 320
+	width = 640
 	height = 0
 	streaming = false
 	video: HTMLVideoElement = null

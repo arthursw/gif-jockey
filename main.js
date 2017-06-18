@@ -56419,7 +56419,11 @@ class GifJokey {
         this.renderer = new Renderer_1.Renderer(this.webcam, this.gui);
         this.shaderManager = new ShaderManager_1.ShaderManager(this.gui, this.renderer.camera, this.renderer.scene, this.renderer.renderer);
         this.renderer.setShaderManager(this.shaderManager);
-        document.addEventListener('shaderChanged', () => this.updateFilteredImage());
+        document.addEventListener('shaderChanged', () => {
+            if (this.isImageSelected()) {
+                this.updateFilteredImage();
+            }
+        });
         this.shaderManager.randomizeParams();
         this.gifManager.addGif();
     }
@@ -56677,7 +56681,7 @@ class GifJokey {
         }
         this.nextImage();
     }
-    playGif(gif) {
+    playGifViewer(gif) {
         if (this.viewer != null) {
             this.viewer.setGif(gif.containerJ.find('img.filtered').clone());
         }
@@ -60965,6 +60969,7 @@ class Gif {
         this.id = -1;
         this.containerJ = containerJ;
         this.imageIndex = 0;
+        this.id = id;
     }
     // setSize(imgJ: any) {
     // 	this.containerJ.width(imgJ[0].naturalWidth)
@@ -61172,8 +61177,6 @@ class GifManager {
         closeButtonJ.click(() => this.removeGif(currentGifID));
         duplicateButtonJ.click(() => this.duplicateGif(currentGifID));
         playButtonJ.mousedown((event) => {
-            $('#outputs').find('.gg-small-btn.play-btn').removeClass('playing');
-            playButtonJ.addClass('playing');
             this.playGif(currentGifID);
             event.stopPropagation();
             return -1;
@@ -61188,7 +61191,7 @@ class GifManager {
         let outputJ = $('#outputs');
         outputJ.append(currentGifJ);
         this.currentGif = new Gif(divJ, this.gifID);
-        this.gifs.set(this.gifID, this.currentGif);
+        this.gifs.set(this.currentGif.id, this.currentGif);
         this.gifID++;
         currentGifJ.droppable({
             classes: {
@@ -61216,7 +61219,7 @@ class GifManager {
             clearInterval(this.autoGifInterval);
             this.autoGifInterval = null;
         }
-        if (!this.currentGif.isEmpty()) {
+        if (this.currentGif == null || !this.currentGif.isEmpty()) {
             this.addGif();
         }
         this.gifJockey.deselectAndCallback(() => {
@@ -61302,10 +61305,13 @@ class GifManager {
     deselectGif() {
         $('#outputs').children().removeClass('gg-selected');
         this.toggleThumbnails(false);
+        // this.currentGif = null
     }
     playGif(gifID) {
+        $('#outputs').find('.gg-small-btn.play-btn').removeClass('playing');
         let gif = this.gifs.get(gifID);
-        this.gifJockey.playGif(gif);
+        gif.containerJ.find('.play-btn').addClass('playing');
+        this.gifJockey.playGifViewer(gif);
     }
 }
 exports.GifManager = GifManager;
@@ -62388,7 +62394,7 @@ exports.StaticShader = {
 Object.defineProperty(exports, "__esModule", { value: true });
 class Webcam {
     constructor(callback, width = null) {
-        this.width = 320;
+        this.width = 640;
         this.height = 0;
         this.streaming = false;
         this.video = null;
