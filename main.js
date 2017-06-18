@@ -61960,7 +61960,7 @@ class ShaderManager {
         }
         let i = 0;
         for (let shader of this.shaders) {
-            shader.object.on = shaderIndices.indexOf(i) >= 0;
+            shader.object.on = shaderIndices.indexOf(i) >= 0 && shader.object.name != 'Kaleido';
             if (shader.object.on) {
                 shader.folder.open();
             }
