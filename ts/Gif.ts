@@ -436,7 +436,7 @@ export class GifManager {
 	playGif(gifID: number) {
 		$('#outputs').find('.gg-small-btn.play-btn').removeClass('playing')
 		let gif = this.gifs.get(gifID)
-		gif.containerJ.find('.play-btn').addClass('playing')
+		gif.containerJ.parent().find('.play-btn').addClass('playing')
 
 		this.gifJockey.playGifViewer(gif)
 	}

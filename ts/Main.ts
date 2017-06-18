@@ -69,8 +69,9 @@ class GifJokey {
 				return -1
 			}
 		})
+		let webcamWidth = location.hash.length > 0 ? parseInt(location.hash.substring(1)) : null
 
-	    this.createGUI()
+	    this.createGUI(webcamWidth)
 
 	    $('#gif-thumbnails .open-close-btn').mousedown((event:JQueryMouseEventObject)=> {
 	    	let outputsJ = $('#outputs')
@@ -100,14 +101,15 @@ class GifJokey {
 	    	event.stopPropagation()
 	    	return -1
 	    })
-
-	    this.webcam = new Webcam(()=>this.webcamLoaded())
-
+	    
+	    
+	    this.webcam = new Webcam(()=>this.webcamLoaded(), webcamWidth)
 
 	    // this.toggleGifThumbnails(this.showGifThumbnails)
 
 	    this.initializeClipboard()
 	}
+
 	
 	initializeClipboard() {
 
@@ -164,7 +166,7 @@ class GifJokey {
 		this.animate()
 	}
 
-	createGUI() {
+	createGUI(webcamWidth: number) {
 
 		this.gui = new GUI({ autoPlace: false, width: '100%' })
 
@@ -179,9 +181,11 @@ class GifJokey {
 		// this.folder.add(this, 'showGifThumbnails').name('Show Gifs').onChange((value: boolean)=> this.toggleGifThumbnails(value))
 
 		this.folder.addSlider('N images / GIF', this.gifManager.numberOfImages, 1, 10).onChange((value:number)=>this.gifManager.numberOfImages = value)
-		this.folder.addSlider('Webcam width', 320, 100, 1024).onChange((value)=> {
-			this.webcam.resizeVideo(value)
-			this.renderer.resize(this.webcam.width, this.webcam.height)
+		this.folder.addSlider('Webcam width', webcamWidth, 100, 1024).onChange((value)=> {
+			// this.webcam.resizeVideo(value)
+			// this.renderer.resize(this.webcam.width, this.webcam.height)
+			location.hash = ''+Math.round(value)
+			location.reload()
 		})
 
 		this.folder.add(this, 'showGIF').name('Show GIF').onChange(()=>{$('#result').toggle()})

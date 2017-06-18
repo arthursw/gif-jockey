@@ -9,7 +9,7 @@ export class Webcam {
 
 	constructor(callback: ()=>void, width: number = null) {
 		if(width) {
-			this.width = width
+			this.width = Math.max(100, Math.min(width, 2048))
 		}
 
 		// this.photo = document.getElementById('photo')

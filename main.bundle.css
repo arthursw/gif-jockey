@@ -81,10 +81,10 @@ ul.gg-list {
     border-color: #64b5f6; }
   #outputs li.gg-thumbnail.ui-state-default .gg-selection-rectangle {
     display: block;
-    border-color: yellow; }
+    border-color: #ff9800; }
   #outputs li.gg-thumbnail.ui-state-hover .gg-selection-rectangle {
     display: block;
-    border-color: green; }
+    border-color: #4caf50; }
 
 #effect {
   position: relative; }

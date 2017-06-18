@@ -56341,7 +56341,8 @@ class GifJokey {
                 return -1;
             }
         });
-        this.createGUI();
+        let webcamWidth = location.hash.length > 0 ? parseInt(location.hash.substring(1)) : null;
+        this.createGUI(webcamWidth);
         $('#gif-thumbnails .open-close-btn').mousedown((event) => {
             let outputsJ = $('#outputs');
             let visible = outputsJ.is(':visible');
@@ -56370,7 +56371,7 @@ class GifJokey {
             event.stopPropagation();
             return -1;
         });
-        this.webcam = new Webcam_1.Webcam(() => this.webcamLoaded());
+        this.webcam = new Webcam_1.Webcam(() => this.webcamLoaded(), webcamWidth);
         // this.toggleGifThumbnails(this.showGifThumbnails)
         this.initializeClipboard();
     }
@@ -56430,7 +56431,7 @@ class GifJokey {
     initialize() {
         this.animate();
     }
-    createGUI() {
+    createGUI(webcamWidth) {
         this.gui = new GUI_1.GUI({ autoPlace: false, width: '100%' });
         document.getElementById('gui').appendChild(this.gui.getDomElement());
         this.folder = this.gui.addFolder('General');
@@ -56439,9 +56440,11 @@ class GifJokey {
         this.folder.addButton('Create viewer', () => this.createViewer());
         // this.folder.add(this, 'showGifThumbnails').name('Show Gifs').onChange((value: boolean)=> this.toggleGifThumbnails(value))
         this.folder.addSlider('N images / GIF', this.gifManager.numberOfImages, 1, 10).onChange((value) => this.gifManager.numberOfImages = value);
-        this.folder.addSlider('Webcam width', 320, 100, 1024).onChange((value) => {
-            this.webcam.resizeVideo(value);
-            this.renderer.resize(this.webcam.width, this.webcam.height);
+        this.folder.addSlider('Webcam width', webcamWidth, 100, 1024).onChange((value) => {
+            // this.webcam.resizeVideo(value)
+            // this.renderer.resize(this.webcam.width, this.webcam.height)
+            location.hash = '' + Math.round(value);
+            location.reload();
         });
         this.folder.add(this, 'showGIF').name('Show GIF').onChange(() => { $('#result').toggle(); });
         this.folder.open();
@@ -61310,7 +61313,7 @@ class GifManager {
     playGif(gifID) {
         $('#outputs').find('.gg-small-btn.play-btn').removeClass('playing');
         let gif = this.gifs.get(gifID);
-        gif.containerJ.find('.play-btn').addClass('playing');
+        gif.containerJ.parent().find('.play-btn').addClass('playing');
         this.gifJockey.playGifViewer(gif);
     }
 }
@@ -62402,7 +62405,7 @@ class Webcam {
         this.context = null;
         this.photo = null;
         if (width) {
-            this.width = width;
+            this.width = Math.max(100, Math.min(width, 2048));
         }
         // this.photo = document.getElementById('photo')
         this.video = document.createElement('video');

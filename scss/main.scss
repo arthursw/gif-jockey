@@ -133,13 +133,13 @@ ul.gg-list {
 		&.ui-state-default {
 			.gg-selection-rectangle {
 				display: block;
-				border-color: yellow;
+				border-color: #ff9800;
 			}
 		}
 		&.ui-state-hover {
 			.gg-selection-rectangle {
 				display: block;
-				border-color: green;
+				border-color: #4caf50;
 			}
 		}
 	}
