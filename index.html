@@ -19,6 +19,13 @@
 
 	</head>
 	<body class="noselect">
+		<div id="loading" class="gg-hidden">
+			<div class="spinner">
+				<div class="double-bounce1"></div>
+				<div class="double-bounce2"></div>
+			</div>
+		</div>
+
 		<div id="main-container" class="gg-row">
 			
 			<div id="gui">
@@ -26,6 +33,10 @@
 					<img class="logo-img" alt="GJ-logo" src="GJ.png">
 					<h1>Gif Jokey</h1>
 				</div>
+
+				<ul id="arrow-menu">
+				</ul>
+
 			</div>
 
 			<div class="gg-row gg-grow">
@@ -71,8 +82,11 @@
 					
 				</div>
 
-				<div class="gg-row gg-wrap gg-grow">
+				<div class="gg-column gg-wrap gg-grow">
 				
+					<!-- <textarea id="speach" style="width: 100%; text-align: center; margin: auto;" rows="4" cols="50">
+					</textarea> -->
+
 					<div id="camera" class=""></div>
 					
 <!-- 					<div id="effect" class=""></div>				
@@ -89,6 +103,8 @@
 			  <source src="shutter.mp3" type="audio/mpeg">
 			  Your browser does not support the audio tag.
 			</audio>
+
+			<div id="errorMessage"></div>
 		</div>
 
 		<!-- <script src="node_modules/jquery/dist/jquery.min.js"></script> -->
@@ -123,7 +139,10 @@
 		<script src="lib/dat.gui.min.js"></script>
 		<!-- <script src="lib/jquery-ui-1.12.1.custom/jquery-ui.min.js"></script> -->
 		<!-- <script src="lib/webcam.min.js"></script> -->
-		<script src="lib/beatdetector.js"></script>
+		<!-- <script src="lib/beatdetector.js"></script> -->
+		<script src="lib/CanvasRecorder.js"></script>
+		<!-- <script src="https://cdn.WebRTC-Experiment.com/RecordRTC.js"></script> -->
+
 
 		<script src="main.js"></script>
 	</body>

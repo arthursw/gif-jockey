@@ -6,6 +6,8 @@ import { Webcam } from "./Webcam"
 import { ShaderManager } from "./ShaderManager"
 import { GUI } from "./GUI"
 
+declare var CanvasRecorder: any;
+
 export class Renderer {
 	camera: THREE.OrthographicCamera
 	scene: THREE.Scene
@@ -18,6 +20,9 @@ export class Renderer {
 	mesh: THREE.Mesh
 
 	webcam: Webcam
+
+	recorder: any
+	recording = false
 
 	constructor(webcam: Webcam, gui: GUI) {
 		let cameraJ = $('#camera')
@@ -33,6 +38,8 @@ export class Renderer {
 
 		this.renderer = new THREE.WebGLRenderer( { antialias: true, preserveDrawingBuffer: true } )
 		this.renderer.setSize( width, height )
+
+		this.recorder = new CanvasRecorder(this.renderer.domElement, 10000000)
 
 		let size = this.computeRendererSize(webcam, cameraJ)
 		// this.setCanvasSize(size.width, size.height)
@@ -51,6 +58,46 @@ export class Renderer {
 		this.centerOnRectangle(this.webcam.width, this.webcam.height)
 
 		setTimeout(()=>this.windowResize(), 0)
+	}
+
+	startStopVideo(takeSnapshotButton: any) {
+		if(this.recording) {
+			this.recorder.stop()
+			takeSnapshotButton.name('Take video (Spacebar)')
+			this.recorder.save()
+			this.recording = false
+
+			// this.recorder.stopRecording((audioURL)=> {
+			// 	// audio.src = audioURL;
+
+			// 	var recordedBlob = this.recorder.getBlob();
+			// 	this.recorder.getDataURL(function(dataURL) { 
+			// 		let url = dataURL;
+			// 		const a = document.createElement('a');
+			//         a.style.display = 'none';
+			//         a.href = url;
+   //      			const name = 'recording.webm';
+			//         a.download = name;
+			//         document.body.appendChild(a);
+			//         a.click();
+			//         setTimeout(() => {
+			//             document.body.removeChild(a);
+			//             window.URL.revokeObjectURL(url);
+			//         }, 100);
+			// 	});
+			// });
+
+		} else {
+			this.recorder.start(this.webcam.stream)
+			// this.recorder = RecordRTC(this.webcam.stream, {
+			// 	// type: 'audio'
+			// });
+
+			// this.recorder.startRecording();
+
+			this.recording = true
+			takeSnapshotButton.name('Stop video (Spacebar)')
+		}
 	}
 
 	resize(width: number, height: number) {

@@ -1,3 +1,4 @@
+import * as $ from 'jquery'
 import { GUI, Controller } from "./GUI"
 declare var stasilo: any
 
@@ -34,7 +35,8 @@ export class BPM {
 	}
 
 	isOnBeat() {
-		return this.isAutoBPM() && this.song.isOnBeat() && !this.pause
+		// return this.isAutoBPM() && this.song.isOnBeat() && !this.pause
+		return false
 	}
 
 	createGUI(gui: GUI) {
@@ -42,7 +44,7 @@ export class BPM {
 
 		this.bpmDetectionButton = this.folder.add(this, 'autoBPM').name('Auto BPM').onChange(()=> this.toggleBPMdetection())
 
-		this.tapButton = this.folder.addButton('Tap (Enter)', ()=> this.tap())
+		this.tapButton = this.folder.addButton('Tap (T)', ()=> this.tap())
 		this.bpmSlider = this.folder.addSlider('BPM', 120, 40, 250, 1).onChange((value)=>this.setBPMinterval(value, undefined, false))
 
 		this.bpmDetectionFolder = this.folder.addFolder('BPM detection settings')
@@ -55,10 +57,10 @@ export class BPM {
 			let visualizerFFTSize = Math.pow(2, sliders.visualizerFFTSize.getValue())
 			let passFreq = sliders.passFreq.getValue()
 
-			this.song = new stasilo.BeatDetector( {	sens: sens,
-								 				visualizerFFTSize: visualizerFFTSize, 
-												analyserFFTSize:   analyserFFTSize,
-												passFreq: passFreq })
+			// this.song = new stasilo.BeatDetector( {	sens: sens,
+			// 					 				visualizerFFTSize: visualizerFFTSize, 
+			// 									analyserFFTSize:   analyserFFTSize,
+			// 									passFreq: passFreq })
 		}
 
 		sliders.sensitivity = this.bpmDetectionFolder.addSlider('Sensitivity', 14, 1, 16, 1).onChange(onSliderChange)
@@ -114,6 +116,7 @@ export class BPM {
 		if(updateBpmSlider) {
 			this.tapButton.setName('Tapping' + (newBPM != null ? ' - Instant BPM: ' + newBPM.toFixed(2) : ''))
 			this.bpmSlider.setValueNoCallback(bpm)
+			$('li[data-name="BPM"]').find('.text').text('Tapping' + (newBPM != null ? ' - Instant BPM: ' + newBPM.toFixed(2) : ''))
 		}
 	}
 
@@ -122,7 +125,8 @@ export class BPM {
 			return
 		}
 		this.nTaps = 0
-		this.tapButton.setName('Tap (Enter)')
+		this.tapButton.setName('Tap (T)')
+		$('li[data-name="BPM"]').find('.text').text('BPM ' + this.averageBPM.toFixed(2))
 	}
 
 	tap() {
@@ -143,11 +147,12 @@ export class BPM {
 		if(this.nTaps == 1) {
 			this.lastTap = now
 			this.tapButton.setName('Tapping')
+			$('li[data-name="BPM"]').find('.text').text('Tapping BPM...')
 			return
 		}
 
 		let newBPM = 60 / ( (now - this.lastTap) / 1000 )
-		this.averageBPM = ( this.averageBPM * (this.nTaps - 1) + newBPM ) / this.nTaps
+		this.averageBPM = ( this.averageBPM * (this.nTaps - 2) + newBPM ) / (this.nTaps - 1)
 
 		console.log(this.averageBPM + ', ' + newBPM)
 		this.setBPMinterval(this.averageBPM, newBPM)

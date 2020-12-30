@@ -63,7 +63,7 @@
 /******/ 	__webpack_require__.p = "";
 /******/
 /******/ 	// Load entry module and return exports
-/******/ 	return __webpack_require__(__webpack_require__.s = 45);
+/******/ 	return __webpack_require__(__webpack_require__.s = 47);
 /******/ })
 /************************************************************************/
 /******/ ([
@@ -54782,1265 +54782,6 @@ return $.widget;
 /***/ (function(module, exports, __webpack_require__) {
 
 var __WEBPACK_AMD_DEFINE_FACTORY__, __WEBPACK_AMD_DEFINE_ARRAY__, __WEBPACK_AMD_DEFINE_RESULT__;/*!
- * jQuery UI Draggable 1.12.1
- * http://jqueryui.com
- *
- * Copyright jQuery Foundation and other contributors
- * Released under the MIT license.
- * http://jquery.org/license
- */
-
-//>>label: Draggable
-//>>group: Interactions
-//>>description: Enables dragging functionality for any element.
-//>>docs: http://api.jqueryui.com/draggable/
-//>>demos: http://jqueryui.com/draggable/
-//>>css.structure: ../../themes/base/draggable.css
-
-( function( factory ) {
-	if ( true ) {
-
-		// AMD. Register as an anonymous module.
-		!(__WEBPACK_AMD_DEFINE_ARRAY__ = [
-			__webpack_require__(1),
-			__webpack_require__(5),
-			__webpack_require__(28),
-			__webpack_require__(30),
-			__webpack_require__(31),
-			__webpack_require__(32),
-			__webpack_require__(33),
-			__webpack_require__(2),
-			__webpack_require__(3)
-		], __WEBPACK_AMD_DEFINE_FACTORY__ = (factory),
-				__WEBPACK_AMD_DEFINE_RESULT__ = (typeof __WEBPACK_AMD_DEFINE_FACTORY__ === 'function' ?
-				(__WEBPACK_AMD_DEFINE_FACTORY__.apply(exports, __WEBPACK_AMD_DEFINE_ARRAY__)) : __WEBPACK_AMD_DEFINE_FACTORY__),
-				__WEBPACK_AMD_DEFINE_RESULT__ !== undefined && (module.exports = __WEBPACK_AMD_DEFINE_RESULT__));
-	} else {
-
-		// Browser globals
-		factory( jQuery );
-	}
-}( function( $ ) {
-
-$.widget( "ui.draggable", $.ui.mouse, {
-	version: "1.12.1",
-	widgetEventPrefix: "drag",
-	options: {
-		addClasses: true,
-		appendTo: "parent",
-		axis: false,
-		connectToSortable: false,
-		containment: false,
-		cursor: "auto",
-		cursorAt: false,
-		grid: false,
-		handle: false,
-		helper: "original",
-		iframeFix: false,
-		opacity: false,
-		refreshPositions: false,
-		revert: false,
-		revertDuration: 500,
-		scope: "default",
-		scroll: true,
-		scrollSensitivity: 20,
-		scrollSpeed: 20,
-		snap: false,
-		snapMode: "both",
-		snapTolerance: 20,
-		stack: false,
-		zIndex: false,
-
-		// Callbacks
-		drag: null,
-		start: null,
-		stop: null
-	},
-	_create: function() {
-
-		if ( this.options.helper === "original" ) {
-			this._setPositionRelative();
-		}
-		if ( this.options.addClasses ) {
-			this._addClass( "ui-draggable" );
-		}
-		this._setHandleClassName();
-
-		this._mouseInit();
-	},
-
-	_setOption: function( key, value ) {
-		this._super( key, value );
-		if ( key === "handle" ) {
-			this._removeHandleClassName();
-			this._setHandleClassName();
-		}
-	},
-
-	_destroy: function() {
-		if ( ( this.helper || this.element ).is( ".ui-draggable-dragging" ) ) {
-			this.destroyOnClear = true;
-			return;
-		}
-		this._removeHandleClassName();
-		this._mouseDestroy();
-	},
-
-	_mouseCapture: function( event ) {
-		var o = this.options;
-
-		// Among others, prevent a drag on a resizable-handle
-		if ( this.helper || o.disabled ||
-				$( event.target ).closest( ".ui-resizable-handle" ).length > 0 ) {
-			return false;
-		}
-
-		//Quit if we're not on a valid handle
-		this.handle = this._getHandle( event );
-		if ( !this.handle ) {
-			return false;
-		}
-
-		this._blurActiveElement( event );
-
-		this._blockFrames( o.iframeFix === true ? "iframe" : o.iframeFix );
-
-		return true;
-
-	},
-
-	_blockFrames: function( selector ) {
-		this.iframeBlocks = this.document.find( selector ).map( function() {
-			var iframe = $( this );
-
-			return $( "<div>" )
-				.css( "position", "absolute" )
-				.appendTo( iframe.parent() )
-				.outerWidth( iframe.outerWidth() )
-				.outerHeight( iframe.outerHeight() )
-				.offset( iframe.offset() )[ 0 ];
-		} );
-	},
-
-	_unblockFrames: function() {
-		if ( this.iframeBlocks ) {
-			this.iframeBlocks.remove();
-			delete this.iframeBlocks;
-		}
-	},
-
-	_blurActiveElement: function( event ) {
-		var activeElement = $.ui.safeActiveElement( this.document[ 0 ] ),
-			target = $( event.target );
-
-		// Don't blur if the event occurred on an element that is within
-		// the currently focused element
-		// See #10527, #12472
-		if ( target.closest( activeElement ).length ) {
-			return;
-		}
-
-		// Blur any element that currently has focus, see #4261
-		$.ui.safeBlur( activeElement );
-	},
-
-	_mouseStart: function( event ) {
-
-		var o = this.options;
-
-		//Create and append the visible helper
-		this.helper = this._createHelper( event );
-
-		this._addClass( this.helper, "ui-draggable-dragging" );
-
-		//Cache the helper size
-		this._cacheHelperProportions();
-
-		//If ddmanager is used for droppables, set the global draggable
-		if ( $.ui.ddmanager ) {
-			$.ui.ddmanager.current = this;
-		}
-
-		/*
-		 * - Position generation -
-		 * This block generates everything position related - it's the core of draggables.
-		 */
-
-		//Cache the margins of the original element
-		this._cacheMargins();
-
-		//Store the helper's css position
-		this.cssPosition = this.helper.css( "position" );
-		this.scrollParent = this.helper.scrollParent( true );
-		this.offsetParent = this.helper.offsetParent();
-		this.hasFixedAncestor = this.helper.parents().filter( function() {
-				return $( this ).css( "position" ) === "fixed";
-			} ).length > 0;
-
-		//The element's absolute position on the page minus margins
-		this.positionAbs = this.element.offset();
-		this._refreshOffsets( event );
-
-		//Generate the original position
-		this.originalPosition = this.position = this._generatePosition( event, false );
-		this.originalPageX = event.pageX;
-		this.originalPageY = event.pageY;
-
-		//Adjust the mouse offset relative to the helper if "cursorAt" is supplied
-		( o.cursorAt && this._adjustOffsetFromHelper( o.cursorAt ) );
-
-		//Set a containment if given in the options
-		this._setContainment();
-
-		//Trigger event + callbacks
-		if ( this._trigger( "start", event ) === false ) {
-			this._clear();
-			return false;
-		}
-
-		//Recache the helper size
-		this._cacheHelperProportions();
-
-		//Prepare the droppable offsets
-		if ( $.ui.ddmanager && !o.dropBehaviour ) {
-			$.ui.ddmanager.prepareOffsets( this, event );
-		}
-
-		// Execute the drag once - this causes the helper not to be visible before getting its
-		// correct position
-		this._mouseDrag( event, true );
-
-		// If the ddmanager is used for droppables, inform the manager that dragging has started
-		// (see #5003)
-		if ( $.ui.ddmanager ) {
-			$.ui.ddmanager.dragStart( this, event );
-		}
-
-		return true;
-	},
-
-	_refreshOffsets: function( event ) {
-		this.offset = {
-			top: this.positionAbs.top - this.margins.top,
-			left: this.positionAbs.left - this.margins.left,
-			scroll: false,
-			parent: this._getParentOffset(),
-			relative: this._getRelativeOffset()
-		};
-
-		this.offset.click = {
-			left: event.pageX - this.offset.left,
-			top: event.pageY - this.offset.top
-		};
-	},
-
-	_mouseDrag: function( event, noPropagation ) {
-
-		// reset any necessary cached properties (see #5009)
-		if ( this.hasFixedAncestor ) {
-			this.offset.parent = this._getParentOffset();
-		}
-
-		//Compute the helpers position
-		this.position = this._generatePosition( event, true );
-		this.positionAbs = this._convertPositionTo( "absolute" );
-
-		//Call plugins and callbacks and use the resulting position if something is returned
-		if ( !noPropagation ) {
-			var ui = this._uiHash();
-			if ( this._trigger( "drag", event, ui ) === false ) {
-				this._mouseUp( new $.Event( "mouseup", event ) );
-				return false;
-			}
-			this.position = ui.position;
-		}
-
-		this.helper[ 0 ].style.left = this.position.left + "px";
-		this.helper[ 0 ].style.top = this.position.top + "px";
-
-		if ( $.ui.ddmanager ) {
-			$.ui.ddmanager.drag( this, event );
-		}
-
-		return false;
-	},
-
-	_mouseStop: function( event ) {
-
-		//If we are using droppables, inform the manager about the drop
-		var that = this,
-			dropped = false;
-		if ( $.ui.ddmanager && !this.options.dropBehaviour ) {
-			dropped = $.ui.ddmanager.drop( this, event );
-		}
-
-		//if a drop comes from outside (a sortable)
-		if ( this.dropped ) {
-			dropped = this.dropped;
-			this.dropped = false;
-		}
-
-		if ( ( this.options.revert === "invalid" && !dropped ) ||
-				( this.options.revert === "valid" && dropped ) ||
-				this.options.revert === true || ( $.isFunction( this.options.revert ) &&
-				this.options.revert.call( this.element, dropped ) )
-		) {
-			$( this.helper ).animate(
-				this.originalPosition,
-				parseInt( this.options.revertDuration, 10 ),
-				function() {
-					if ( that._trigger( "stop", event ) !== false ) {
-						that._clear();
-					}
-				}
-			);
-		} else {
-			if ( this._trigger( "stop", event ) !== false ) {
-				this._clear();
-			}
-		}
-
-		return false;
-	},
-
-	_mouseUp: function( event ) {
-		this._unblockFrames();
-
-		// If the ddmanager is used for droppables, inform the manager that dragging has stopped
-		// (see #5003)
-		if ( $.ui.ddmanager ) {
-			$.ui.ddmanager.dragStop( this, event );
-		}
-
-		// Only need to focus if the event occurred on the draggable itself, see #10527
-		if ( this.handleElement.is( event.target ) ) {
-
-			// The interaction is over; whether or not the click resulted in a drag,
-			// focus the element
-			this.element.trigger( "focus" );
-		}
-
-		return $.ui.mouse.prototype._mouseUp.call( this, event );
-	},
-
-	cancel: function() {
-
-		if ( this.helper.is( ".ui-draggable-dragging" ) ) {
-			this._mouseUp( new $.Event( "mouseup", { target: this.element[ 0 ] } ) );
-		} else {
-			this._clear();
-		}
-
-		return this;
-
-	},
-
-	_getHandle: function( event ) {
-		return this.options.handle ?
-			!!$( event.target ).closest( this.element.find( this.options.handle ) ).length :
-			true;
-	},
-
-	_setHandleClassName: function() {
-		this.handleElement = this.options.handle ?
-			this.element.find( this.options.handle ) : this.element;
-		this._addClass( this.handleElement, "ui-draggable-handle" );
-	},
-
-	_removeHandleClassName: function() {
-		this._removeClass( this.handleElement, "ui-draggable-handle" );
-	},
-
-	_createHelper: function( event ) {
-
-		var o = this.options,
-			helperIsFunction = $.isFunction( o.helper ),
-			helper = helperIsFunction ?
-				$( o.helper.apply( this.element[ 0 ], [ event ] ) ) :
-				( o.helper === "clone" ?
-					this.element.clone().removeAttr( "id" ) :
-					this.element );
-
-		if ( !helper.parents( "body" ).length ) {
-			helper.appendTo( ( o.appendTo === "parent" ?
-				this.element[ 0 ].parentNode :
-				o.appendTo ) );
-		}
-
-		// Http://bugs.jqueryui.com/ticket/9446
-		// a helper function can return the original element
-		// which wouldn't have been set to relative in _create
-		if ( helperIsFunction && helper[ 0 ] === this.element[ 0 ] ) {
-			this._setPositionRelative();
-		}
-
-		if ( helper[ 0 ] !== this.element[ 0 ] &&
-				!( /(fixed|absolute)/ ).test( helper.css( "position" ) ) ) {
-			helper.css( "position", "absolute" );
-		}
-
-		return helper;
-
-	},
-
-	_setPositionRelative: function() {
-		if ( !( /^(?:r|a|f)/ ).test( this.element.css( "position" ) ) ) {
-			this.element[ 0 ].style.position = "relative";
-		}
-	},
-
-	_adjustOffsetFromHelper: function( obj ) {
-		if ( typeof obj === "string" ) {
-			obj = obj.split( " " );
-		}
-		if ( $.isArray( obj ) ) {
-			obj = { left: +obj[ 0 ], top: +obj[ 1 ] || 0 };
-		}
-		if ( "left" in obj ) {
-			this.offset.click.left = obj.left + this.margins.left;
-		}
-		if ( "right" in obj ) {
-			this.offset.click.left = this.helperProportions.width - obj.right + this.margins.left;
-		}
-		if ( "top" in obj ) {
-			this.offset.click.top = obj.top + this.margins.top;
-		}
-		if ( "bottom" in obj ) {
-			this.offset.click.top = this.helperProportions.height - obj.bottom + this.margins.top;
-		}
-	},
-
-	_isRootNode: function( element ) {
-		return ( /(html|body)/i ).test( element.tagName ) || element === this.document[ 0 ];
-	},
-
-	_getParentOffset: function() {
-
-		//Get the offsetParent and cache its position
-		var po = this.offsetParent.offset(),
-			document = this.document[ 0 ];
-
-		// This is a special case where we need to modify a offset calculated on start, since the
-		// following happened:
-		// 1. The position of the helper is absolute, so it's position is calculated based on the
-		// next positioned parent
-		// 2. The actual offset parent is a child of the scroll parent, and the scroll parent isn't
-		// the document, which means that the scroll is included in the initial calculation of the
-		// offset of the parent, and never recalculated upon drag
-		if ( this.cssPosition === "absolute" && this.scrollParent[ 0 ] !== document &&
-				$.contains( this.scrollParent[ 0 ], this.offsetParent[ 0 ] ) ) {
-			po.left += this.scrollParent.scrollLeft();
-			po.top += this.scrollParent.scrollTop();
-		}
-
-		if ( this._isRootNode( this.offsetParent[ 0 ] ) ) {
-			po = { top: 0, left: 0 };
-		}
-
-		return {
-			top: po.top + ( parseInt( this.offsetParent.css( "borderTopWidth" ), 10 ) || 0 ),
-			left: po.left + ( parseInt( this.offsetParent.css( "borderLeftWidth" ), 10 ) || 0 )
-		};
-
-	},
-
-	_getRelativeOffset: function() {
-		if ( this.cssPosition !== "relative" ) {
-			return { top: 0, left: 0 };
-		}
-
-		var p = this.element.position(),
-			scrollIsRootNode = this._isRootNode( this.scrollParent[ 0 ] );
-
-		return {
-			top: p.top - ( parseInt( this.helper.css( "top" ), 10 ) || 0 ) +
-				( !scrollIsRootNode ? this.scrollParent.scrollTop() : 0 ),
-			left: p.left - ( parseInt( this.helper.css( "left" ), 10 ) || 0 ) +
-				( !scrollIsRootNode ? this.scrollParent.scrollLeft() : 0 )
-		};
-
-	},
-
-	_cacheMargins: function() {
-		this.margins = {
-			left: ( parseInt( this.element.css( "marginLeft" ), 10 ) || 0 ),
-			top: ( parseInt( this.element.css( "marginTop" ), 10 ) || 0 ),
-			right: ( parseInt( this.element.css( "marginRight" ), 10 ) || 0 ),
-			bottom: ( parseInt( this.element.css( "marginBottom" ), 10 ) || 0 )
-		};
-	},
-
-	_cacheHelperProportions: function() {
-		this.helperProportions = {
-			width: this.helper.outerWidth(),
-			height: this.helper.outerHeight()
-		};
-	},
-
-	_setContainment: function() {
-
-		var isUserScrollable, c, ce,
-			o = this.options,
-			document = this.document[ 0 ];
-
-		this.relativeContainer = null;
-
-		if ( !o.containment ) {
-			this.containment = null;
-			return;
-		}
-
-		if ( o.containment === "window" ) {
-			this.containment = [
-				$( window ).scrollLeft() - this.offset.relative.left - this.offset.parent.left,
-				$( window ).scrollTop() - this.offset.relative.top - this.offset.parent.top,
-				$( window ).scrollLeft() + $( window ).width() -
-					this.helperProportions.width - this.margins.left,
-				$( window ).scrollTop() +
-					( $( window ).height() || document.body.parentNode.scrollHeight ) -
-					this.helperProportions.height - this.margins.top
-			];
-			return;
-		}
-
-		if ( o.containment === "document" ) {
-			this.containment = [
-				0,
-				0,
-				$( document ).width() - this.helperProportions.width - this.margins.left,
-				( $( document ).height() || document.body.parentNode.scrollHeight ) -
-					this.helperProportions.height - this.margins.top
-			];
-			return;
-		}
-
-		if ( o.containment.constructor === Array ) {
-			this.containment = o.containment;
-			return;
-		}
-
-		if ( o.containment === "parent" ) {
-			o.containment = this.helper[ 0 ].parentNode;
-		}
-
-		c = $( o.containment );
-		ce = c[ 0 ];
-
-		if ( !ce ) {
-			return;
-		}
-
-		isUserScrollable = /(scroll|auto)/.test( c.css( "overflow" ) );
-
-		this.containment = [
-			( parseInt( c.css( "borderLeftWidth" ), 10 ) || 0 ) +
-				( parseInt( c.css( "paddingLeft" ), 10 ) || 0 ),
-			( parseInt( c.css( "borderTopWidth" ), 10 ) || 0 ) +
-				( parseInt( c.css( "paddingTop" ), 10 ) || 0 ),
-			( isUserScrollable ? Math.max( ce.scrollWidth, ce.offsetWidth ) : ce.offsetWidth ) -
-				( parseInt( c.css( "borderRightWidth" ), 10 ) || 0 ) -
-				( parseInt( c.css( "paddingRight" ), 10 ) || 0 ) -
-				this.helperProportions.width -
-				this.margins.left -
-				this.margins.right,
-			( isUserScrollable ? Math.max( ce.scrollHeight, ce.offsetHeight ) : ce.offsetHeight ) -
-				( parseInt( c.css( "borderBottomWidth" ), 10 ) || 0 ) -
-				( parseInt( c.css( "paddingBottom" ), 10 ) || 0 ) -
-				this.helperProportions.height -
-				this.margins.top -
-				this.margins.bottom
-		];
-		this.relativeContainer = c;
-	},
-
-	_convertPositionTo: function( d, pos ) {
-
-		if ( !pos ) {
-			pos = this.position;
-		}
-
-		var mod = d === "absolute" ? 1 : -1,
-			scrollIsRootNode = this._isRootNode( this.scrollParent[ 0 ] );
-
-		return {
-			top: (
-
-				// The absolute mouse position
-				pos.top	+
-
-				// Only for relative positioned nodes: Relative offset from element to offset parent
-				this.offset.relative.top * mod +
-
-				// The offsetParent's offset without borders (offset + border)
-				this.offset.parent.top * mod -
-				( ( this.cssPosition === "fixed" ?
-					-this.offset.scroll.top :
-					( scrollIsRootNode ? 0 : this.offset.scroll.top ) ) * mod )
-			),
-			left: (
-
-				// The absolute mouse position
-				pos.left +
-
-				// Only for relative positioned nodes: Relative offset from element to offset parent
-				this.offset.relative.left * mod +
-
-				// The offsetParent's offset without borders (offset + border)
-				this.offset.parent.left * mod	-
-				( ( this.cssPosition === "fixed" ?
-					-this.offset.scroll.left :
-					( scrollIsRootNode ? 0 : this.offset.scroll.left ) ) * mod )
-			)
-		};
-
-	},
-
-	_generatePosition: function( event, constrainPosition ) {
-
-		var containment, co, top, left,
-			o = this.options,
-			scrollIsRootNode = this._isRootNode( this.scrollParent[ 0 ] ),
-			pageX = event.pageX,
-			pageY = event.pageY;
-
-		// Cache the scroll
-		if ( !scrollIsRootNode || !this.offset.scroll ) {
-			this.offset.scroll = {
-				top: this.scrollParent.scrollTop(),
-				left: this.scrollParent.scrollLeft()
-			};
-		}
-
-		/*
-		 * - Position constraining -
-		 * Constrain the position to a mix of grid, containment.
-		 */
-
-		// If we are not dragging yet, we won't check for options
-		if ( constrainPosition ) {
-			if ( this.containment ) {
-				if ( this.relativeContainer ) {
-					co = this.relativeContainer.offset();
-					containment = [
-						this.containment[ 0 ] + co.left,
-						this.containment[ 1 ] + co.top,
-						this.containment[ 2 ] + co.left,
-						this.containment[ 3 ] + co.top
-					];
-				} else {
-					containment = this.containment;
-				}
-
-				if ( event.pageX - this.offset.click.left < containment[ 0 ] ) {
-					pageX = containment[ 0 ] + this.offset.click.left;
-				}
-				if ( event.pageY - this.offset.click.top < containment[ 1 ] ) {
-					pageY = containment[ 1 ] + this.offset.click.top;
-				}
-				if ( event.pageX - this.offset.click.left > containment[ 2 ] ) {
-					pageX = containment[ 2 ] + this.offset.click.left;
-				}
-				if ( event.pageY - this.offset.click.top > containment[ 3 ] ) {
-					pageY = containment[ 3 ] + this.offset.click.top;
-				}
-			}
-
-			if ( o.grid ) {
-
-				//Check for grid elements set to 0 to prevent divide by 0 error causing invalid
-				// argument errors in IE (see ticket #6950)
-				top = o.grid[ 1 ] ? this.originalPageY + Math.round( ( pageY -
-					this.originalPageY ) / o.grid[ 1 ] ) * o.grid[ 1 ] : this.originalPageY;
-				pageY = containment ? ( ( top - this.offset.click.top >= containment[ 1 ] ||
-					top - this.offset.click.top > containment[ 3 ] ) ?
-						top :
-						( ( top - this.offset.click.top >= containment[ 1 ] ) ?
-							top - o.grid[ 1 ] : top + o.grid[ 1 ] ) ) : top;
-
-				left = o.grid[ 0 ] ? this.originalPageX +
-					Math.round( ( pageX - this.originalPageX ) / o.grid[ 0 ] ) * o.grid[ 0 ] :
-					this.originalPageX;
-				pageX = containment ? ( ( left - this.offset.click.left >= containment[ 0 ] ||
-					left - this.offset.click.left > containment[ 2 ] ) ?
-						left :
-						( ( left - this.offset.click.left >= containment[ 0 ] ) ?
-							left - o.grid[ 0 ] : left + o.grid[ 0 ] ) ) : left;
-			}
-
-			if ( o.axis === "y" ) {
-				pageX = this.originalPageX;
-			}
-
-			if ( o.axis === "x" ) {
-				pageY = this.originalPageY;
-			}
-		}
-
-		return {
-			top: (
-
-				// The absolute mouse position
-				pageY -
-
-				// Click offset (relative to the element)
-				this.offset.click.top -
-
-				// Only for relative positioned nodes: Relative offset from element to offset parent
-				this.offset.relative.top -
-
-				// The offsetParent's offset without borders (offset + border)
-				this.offset.parent.top +
-				( this.cssPosition === "fixed" ?
-					-this.offset.scroll.top :
-					( scrollIsRootNode ? 0 : this.offset.scroll.top ) )
-			),
-			left: (
-
-				// The absolute mouse position
-				pageX -
-
-				// Click offset (relative to the element)
-				this.offset.click.left -
-
-				// Only for relative positioned nodes: Relative offset from element to offset parent
-				this.offset.relative.left -
-
-				// The offsetParent's offset without borders (offset + border)
-				this.offset.parent.left +
-				( this.cssPosition === "fixed" ?
-					-this.offset.scroll.left :
-					( scrollIsRootNode ? 0 : this.offset.scroll.left ) )
-			)
-		};
-
-	},
-
-	_clear: function() {
-		this._removeClass( this.helper, "ui-draggable-dragging" );
-		if ( this.helper[ 0 ] !== this.element[ 0 ] && !this.cancelHelperRemoval ) {
-			this.helper.remove();
-		}
-		this.helper = null;
-		this.cancelHelperRemoval = false;
-		if ( this.destroyOnClear ) {
-			this.destroy();
-		}
-	},
-
-	// From now on bulk stuff - mainly helpers
-
-	_trigger: function( type, event, ui ) {
-		ui = ui || this._uiHash();
-		$.ui.plugin.call( this, type, [ event, ui, this ], true );
-
-		// Absolute position and offset (see #6884 ) have to be recalculated after plugins
-		if ( /^(drag|start|stop)/.test( type ) ) {
-			this.positionAbs = this._convertPositionTo( "absolute" );
-			ui.offset = this.positionAbs;
-		}
-		return $.Widget.prototype._trigger.call( this, type, event, ui );
-	},
-
-	plugins: {},
-
-	_uiHash: function() {
-		return {
-			helper: this.helper,
-			position: this.position,
-			originalPosition: this.originalPosition,
-			offset: this.positionAbs
-		};
-	}
-
-} );
-
-$.ui.plugin.add( "draggable", "connectToSortable", {
-	start: function( event, ui, draggable ) {
-		var uiSortable = $.extend( {}, ui, {
-			item: draggable.element
-		} );
-
-		draggable.sortables = [];
-		$( draggable.options.connectToSortable ).each( function() {
-			var sortable = $( this ).sortable( "instance" );
-
-			if ( sortable && !sortable.options.disabled ) {
-				draggable.sortables.push( sortable );
-
-				// RefreshPositions is called at drag start to refresh the containerCache
-				// which is used in drag. This ensures it's initialized and synchronized
-				// with any changes that might have happened on the page since initialization.
-				sortable.refreshPositions();
-				sortable._trigger( "activate", event, uiSortable );
-			}
-		} );
-	},
-	stop: function( event, ui, draggable ) {
-		var uiSortable = $.extend( {}, ui, {
-			item: draggable.element
-		} );
-
-		draggable.cancelHelperRemoval = false;
-
-		$.each( draggable.sortables, function() {
-			var sortable = this;
-
-			if ( sortable.isOver ) {
-				sortable.isOver = 0;
-
-				// Allow this sortable to handle removing the helper
-				draggable.cancelHelperRemoval = true;
-				sortable.cancelHelperRemoval = false;
-
-				// Use _storedCSS To restore properties in the sortable,
-				// as this also handles revert (#9675) since the draggable
-				// may have modified them in unexpected ways (#8809)
-				sortable._storedCSS = {
-					position: sortable.placeholder.css( "position" ),
-					top: sortable.placeholder.css( "top" ),
-					left: sortable.placeholder.css( "left" )
-				};
-
-				sortable._mouseStop( event );
-
-				// Once drag has ended, the sortable should return to using
-				// its original helper, not the shared helper from draggable
-				sortable.options.helper = sortable.options._helper;
-			} else {
-
-				// Prevent this Sortable from removing the helper.
-				// However, don't set the draggable to remove the helper
-				// either as another connected Sortable may yet handle the removal.
-				sortable.cancelHelperRemoval = true;
-
-				sortable._trigger( "deactivate", event, uiSortable );
-			}
-		} );
-	},
-	drag: function( event, ui, draggable ) {
-		$.each( draggable.sortables, function() {
-			var innermostIntersecting = false,
-				sortable = this;
-
-			// Copy over variables that sortable's _intersectsWith uses
-			sortable.positionAbs = draggable.positionAbs;
-			sortable.helperProportions = draggable.helperProportions;
-			sortable.offset.click = draggable.offset.click;
-
-			if ( sortable._intersectsWith( sortable.containerCache ) ) {
-				innermostIntersecting = true;
-
-				$.each( draggable.sortables, function() {
-
-					// Copy over variables that sortable's _intersectsWith uses
-					this.positionAbs = draggable.positionAbs;
-					this.helperProportions = draggable.helperProportions;
-					this.offset.click = draggable.offset.click;
-
-					if ( this !== sortable &&
-							this._intersectsWith( this.containerCache ) &&
-							$.contains( sortable.element[ 0 ], this.element[ 0 ] ) ) {
-						innermostIntersecting = false;
-					}
-
-					return innermostIntersecting;
-				} );
-			}
-
-			if ( innermostIntersecting ) {
-
-				// If it intersects, we use a little isOver variable and set it once,
-				// so that the move-in stuff gets fired only once.
-				if ( !sortable.isOver ) {
-					sortable.isOver = 1;
-
-					// Store draggable's parent in case we need to reappend to it later.
-					draggable._parent = ui.helper.parent();
-
-					sortable.currentItem = ui.helper
-						.appendTo( sortable.element )
-						.data( "ui-sortable-item", true );
-
-					// Store helper option to later restore it
-					sortable.options._helper = sortable.options.helper;
-
-					sortable.options.helper = function() {
-						return ui.helper[ 0 ];
-					};
-
-					// Fire the start events of the sortable with our passed browser event,
-					// and our own helper (so it doesn't create a new one)
-					event.target = sortable.currentItem[ 0 ];
-					sortable._mouseCapture( event, true );
-					sortable._mouseStart( event, true, true );
-
-					// Because the browser event is way off the new appended portlet,
-					// modify necessary variables to reflect the changes
-					sortable.offset.click.top = draggable.offset.click.top;
-					sortable.offset.click.left = draggable.offset.click.left;
-					sortable.offset.parent.left -= draggable.offset.parent.left -
-						sortable.offset.parent.left;
-					sortable.offset.parent.top -= draggable.offset.parent.top -
-						sortable.offset.parent.top;
-
-					draggable._trigger( "toSortable", event );
-
-					// Inform draggable that the helper is in a valid drop zone,
-					// used solely in the revert option to handle "valid/invalid".
-					draggable.dropped = sortable.element;
-
-					// Need to refreshPositions of all sortables in the case that
-					// adding to one sortable changes the location of the other sortables (#9675)
-					$.each( draggable.sortables, function() {
-						this.refreshPositions();
-					} );
-
-					// Hack so receive/update callbacks work (mostly)
-					draggable.currentItem = draggable.element;
-					sortable.fromOutside = draggable;
-				}
-
-				if ( sortable.currentItem ) {
-					sortable._mouseDrag( event );
-
-					// Copy the sortable's position because the draggable's can potentially reflect
-					// a relative position, while sortable is always absolute, which the dragged
-					// element has now become. (#8809)
-					ui.position = sortable.position;
-				}
-			} else {
-
-				// If it doesn't intersect with the sortable, and it intersected before,
-				// we fake the drag stop of the sortable, but make sure it doesn't remove
-				// the helper by using cancelHelperRemoval.
-				if ( sortable.isOver ) {
-
-					sortable.isOver = 0;
-					sortable.cancelHelperRemoval = true;
-
-					// Calling sortable's mouseStop would trigger a revert,
-					// so revert must be temporarily false until after mouseStop is called.
-					sortable.options._revert = sortable.options.revert;
-					sortable.options.revert = false;
-
-					sortable._trigger( "out", event, sortable._uiHash( sortable ) );
-					sortable._mouseStop( event, true );
-
-					// Restore sortable behaviors that were modfied
-					// when the draggable entered the sortable area (#9481)
-					sortable.options.revert = sortable.options._revert;
-					sortable.options.helper = sortable.options._helper;
-
-					if ( sortable.placeholder ) {
-						sortable.placeholder.remove();
-					}
-
-					// Restore and recalculate the draggable's offset considering the sortable
-					// may have modified them in unexpected ways. (#8809, #10669)
-					ui.helper.appendTo( draggable._parent );
-					draggable._refreshOffsets( event );
-					ui.position = draggable._generatePosition( event, true );
-
-					draggable._trigger( "fromSortable", event );
-
-					// Inform draggable that the helper is no longer in a valid drop zone
-					draggable.dropped = false;
-
-					// Need to refreshPositions of all sortables just in case removing
-					// from one sortable changes the location of other sortables (#9675)
-					$.each( draggable.sortables, function() {
-						this.refreshPositions();
-					} );
-				}
-			}
-		} );
-	}
-} );
-
-$.ui.plugin.add( "draggable", "cursor", {
-	start: function( event, ui, instance ) {
-		var t = $( "body" ),
-			o = instance.options;
-
-		if ( t.css( "cursor" ) ) {
-			o._cursor = t.css( "cursor" );
-		}
-		t.css( "cursor", o.cursor );
-	},
-	stop: function( event, ui, instance ) {
-		var o = instance.options;
-		if ( o._cursor ) {
-			$( "body" ).css( "cursor", o._cursor );
-		}
-	}
-} );
-
-$.ui.plugin.add( "draggable", "opacity", {
-	start: function( event, ui, instance ) {
-		var t = $( ui.helper ),
-			o = instance.options;
-		if ( t.css( "opacity" ) ) {
-			o._opacity = t.css( "opacity" );
-		}
-		t.css( "opacity", o.opacity );
-	},
-	stop: function( event, ui, instance ) {
-		var o = instance.options;
-		if ( o._opacity ) {
-			$( ui.helper ).css( "opacity", o._opacity );
-		}
-	}
-} );
-
-$.ui.plugin.add( "draggable", "scroll", {
-	start: function( event, ui, i ) {
-		if ( !i.scrollParentNotHidden ) {
-			i.scrollParentNotHidden = i.helper.scrollParent( false );
-		}
-
-		if ( i.scrollParentNotHidden[ 0 ] !== i.document[ 0 ] &&
-				i.scrollParentNotHidden[ 0 ].tagName !== "HTML" ) {
-			i.overflowOffset = i.scrollParentNotHidden.offset();
-		}
-	},
-	drag: function( event, ui, i  ) {
-
-		var o = i.options,
-			scrolled = false,
-			scrollParent = i.scrollParentNotHidden[ 0 ],
-			document = i.document[ 0 ];
-
-		if ( scrollParent !== document && scrollParent.tagName !== "HTML" ) {
-			if ( !o.axis || o.axis !== "x" ) {
-				if ( ( i.overflowOffset.top + scrollParent.offsetHeight ) - event.pageY <
-						o.scrollSensitivity ) {
-					scrollParent.scrollTop = scrolled = scrollParent.scrollTop + o.scrollSpeed;
-				} else if ( event.pageY - i.overflowOffset.top < o.scrollSensitivity ) {
-					scrollParent.scrollTop = scrolled = scrollParent.scrollTop - o.scrollSpeed;
-				}
-			}
-
-			if ( !o.axis || o.axis !== "y" ) {
-				if ( ( i.overflowOffset.left + scrollParent.offsetWidth ) - event.pageX <
-						o.scrollSensitivity ) {
-					scrollParent.scrollLeft = scrolled = scrollParent.scrollLeft + o.scrollSpeed;
-				} else if ( event.pageX - i.overflowOffset.left < o.scrollSensitivity ) {
-					scrollParent.scrollLeft = scrolled = scrollParent.scrollLeft - o.scrollSpeed;
-				}
-			}
-
-		} else {
-
-			if ( !o.axis || o.axis !== "x" ) {
-				if ( event.pageY - $( document ).scrollTop() < o.scrollSensitivity ) {
-					scrolled = $( document ).scrollTop( $( document ).scrollTop() - o.scrollSpeed );
-				} else if ( $( window ).height() - ( event.pageY - $( document ).scrollTop() ) <
-						o.scrollSensitivity ) {
-					scrolled = $( document ).scrollTop( $( document ).scrollTop() + o.scrollSpeed );
-				}
-			}
-
-			if ( !o.axis || o.axis !== "y" ) {
-				if ( event.pageX - $( document ).scrollLeft() < o.scrollSensitivity ) {
-					scrolled = $( document ).scrollLeft(
-						$( document ).scrollLeft() - o.scrollSpeed
-					);
-				} else if ( $( window ).width() - ( event.pageX - $( document ).scrollLeft() ) <
-						o.scrollSensitivity ) {
-					scrolled = $( document ).scrollLeft(
-						$( document ).scrollLeft() + o.scrollSpeed
-					);
-				}
-			}
-
-		}
-
-		if ( scrolled !== false && $.ui.ddmanager && !o.dropBehaviour ) {
-			$.ui.ddmanager.prepareOffsets( i, event );
-		}
-
-	}
-} );
-
-$.ui.plugin.add( "draggable", "snap", {
-	start: function( event, ui, i ) {
-
-		var o = i.options;
-
-		i.snapElements = [];
-
-		$( o.snap.constructor !== String ? ( o.snap.items || ":data(ui-draggable)" ) : o.snap )
-			.each( function() {
-				var $t = $( this ),
-					$o = $t.offset();
-				if ( this !== i.element[ 0 ] ) {
-					i.snapElements.push( {
-						item: this,
-						width: $t.outerWidth(), height: $t.outerHeight(),
-						top: $o.top, left: $o.left
-					} );
-				}
-			} );
-
-	},
-	drag: function( event, ui, inst ) {
-
-		var ts, bs, ls, rs, l, r, t, b, i, first,
-			o = inst.options,
-			d = o.snapTolerance,
-			x1 = ui.offset.left, x2 = x1 + inst.helperProportions.width,
-			y1 = ui.offset.top, y2 = y1 + inst.helperProportions.height;
-
-		for ( i = inst.snapElements.length - 1; i >= 0; i-- ) {
-
-			l = inst.snapElements[ i ].left - inst.margins.left;
-			r = l + inst.snapElements[ i ].width;
-			t = inst.snapElements[ i ].top - inst.margins.top;
-			b = t + inst.snapElements[ i ].height;
-
-			if ( x2 < l - d || x1 > r + d || y2 < t - d || y1 > b + d ||
-					!$.contains( inst.snapElements[ i ].item.ownerDocument,
-					inst.snapElements[ i ].item ) ) {
-				if ( inst.snapElements[ i ].snapping ) {
-					( inst.options.snap.release &&
-						inst.options.snap.release.call(
-							inst.element,
-							event,
-							$.extend( inst._uiHash(), { snapItem: inst.snapElements[ i ].item } )
-						) );
-				}
-				inst.snapElements[ i ].snapping = false;
-				continue;
-			}
-
-			if ( o.snapMode !== "inner" ) {
-				ts = Math.abs( t - y2 ) <= d;
-				bs = Math.abs( b - y1 ) <= d;
-				ls = Math.abs( l - x2 ) <= d;
-				rs = Math.abs( r - x1 ) <= d;
-				if ( ts ) {
-					ui.position.top = inst._convertPositionTo( "relative", {
-						top: t - inst.helperProportions.height,
-						left: 0
-					} ).top;
-				}
-				if ( bs ) {
-					ui.position.top = inst._convertPositionTo( "relative", {
-						top: b,
-						left: 0
-					} ).top;
-				}
-				if ( ls ) {
-					ui.position.left = inst._convertPositionTo( "relative", {
-						top: 0,
-						left: l - inst.helperProportions.width
-					} ).left;
-				}
-				if ( rs ) {
-					ui.position.left = inst._convertPositionTo( "relative", {
-						top: 0,
-						left: r
-					} ).left;
-				}
-			}
-
-			first = ( ts || bs || ls || rs );
-
-			if ( o.snapMode !== "outer" ) {
-				ts = Math.abs( t - y1 ) <= d;
-				bs = Math.abs( b - y2 ) <= d;
-				ls = Math.abs( l - x1 ) <= d;
-				rs = Math.abs( r - x2 ) <= d;
-				if ( ts ) {
-					ui.position.top = inst._convertPositionTo( "relative", {
-						top: t,
-						left: 0
-					} ).top;
-				}
-				if ( bs ) {
-					ui.position.top = inst._convertPositionTo( "relative", {
-						top: b - inst.helperProportions.height,
-						left: 0
-					} ).top;
-				}
-				if ( ls ) {
-					ui.position.left = inst._convertPositionTo( "relative", {
-						top: 0,
-						left: l
-					} ).left;
-				}
-				if ( rs ) {
-					ui.position.left = inst._convertPositionTo( "relative", {
-						top: 0,
-						left: r - inst.helperProportions.width
-					} ).left;
-				}
-			}
-
-			if ( !inst.snapElements[ i ].snapping && ( ts || bs || ls || rs || first ) ) {
-				( inst.options.snap.snap &&
-					inst.options.snap.snap.call(
-						inst.element,
-						event,
-						$.extend( inst._uiHash(), {
-							snapItem: inst.snapElements[ i ].item
-						} ) ) );
-			}
-			inst.snapElements[ i ].snapping = ( ts || bs || ls || rs || first );
-
-		}
-
-	}
-} );
-
-$.ui.plugin.add( "draggable", "stack", {
-	start: function( event, ui, instance ) {
-		var min,
-			o = instance.options,
-			group = $.makeArray( $( o.stack ) ).sort( function( a, b ) {
-				return ( parseInt( $( a ).css( "zIndex" ), 10 ) || 0 ) -
-					( parseInt( $( b ).css( "zIndex" ), 10 ) || 0 );
-			} );
-
-		if ( !group.length ) { return; }
-
-		min = parseInt( $( group[ 0 ] ).css( "zIndex" ), 10 ) || 0;
-		$( group ).each( function( i ) {
-			$( this ).css( "zIndex", min + i );
-		} );
-		this.css( "zIndex", ( min + group.length ) );
-	}
-} );
-
-$.ui.plugin.add( "draggable", "zIndex", {
-	start: function( event, ui, instance ) {
-		var t = $( ui.helper ),
-			o = instance.options;
-
-		if ( t.css( "zIndex" ) ) {
-			o._zIndex = t.css( "zIndex" );
-		}
-		t.css( "zIndex", o.zIndex );
-	},
-	stop: function( event, ui, instance ) {
-		var o = instance.options;
-
-		if ( o._zIndex ) {
-			$( ui.helper ).css( "zIndex", o._zIndex );
-		}
-	}
-} );
-
-return $.ui.draggable;
-
-} ) );
-
-
-/***/ }),
-/* 5 */
-/***/ (function(module, exports, __webpack_require__) {
-
-var __WEBPACK_AMD_DEFINE_FACTORY__, __WEBPACK_AMD_DEFINE_ARRAY__, __WEBPACK_AMD_DEFINE_RESULT__;/*!
  * jQuery UI Mouse 1.12.1
  * http://jqueryui.com
  *
@@ -56060,7 +54801,7 @@ var __WEBPACK_AMD_DEFINE_FACTORY__, __WEBPACK_AMD_DEFINE_ARRAY__, __WEBPACK_AMD_
 		// AMD. Register as an anonymous module.
 		!(__WEBPACK_AMD_DEFINE_ARRAY__ = [
 			__webpack_require__(1),
-			__webpack_require__(29),
+			__webpack_require__(6),
 			__webpack_require__(2),
 			__webpack_require__(3)
 		], __WEBPACK_AMD_DEFINE_FACTORY__ = (factory),
@@ -56272,14 +55013,140 @@ return $.widget( "ui.mouse", {
 
 
 /***/ }),
+/* 5 */
+/***/ (function(module, exports, __webpack_require__) {
+
+var __WEBPACK_AMD_DEFINE_FACTORY__, __WEBPACK_AMD_DEFINE_ARRAY__, __WEBPACK_AMD_DEFINE_RESULT__;/*!
+ * jQuery UI :data 1.12.1
+ * http://jqueryui.com
+ *
+ * Copyright jQuery Foundation and other contributors
+ * Released under the MIT license.
+ * http://jquery.org/license
+ */
+
+//>>label: :data Selector
+//>>group: Core
+//>>description: Selects elements which have data stored under the specified key.
+//>>docs: http://api.jqueryui.com/data-selector/
+
+( function( factory ) {
+	if ( true ) {
+
+		// AMD. Register as an anonymous module.
+		!(__WEBPACK_AMD_DEFINE_ARRAY__ = [ __webpack_require__(1), __webpack_require__(2) ], __WEBPACK_AMD_DEFINE_FACTORY__ = (factory),
+				__WEBPACK_AMD_DEFINE_RESULT__ = (typeof __WEBPACK_AMD_DEFINE_FACTORY__ === 'function' ?
+				(__WEBPACK_AMD_DEFINE_FACTORY__.apply(exports, __WEBPACK_AMD_DEFINE_ARRAY__)) : __WEBPACK_AMD_DEFINE_FACTORY__),
+				__WEBPACK_AMD_DEFINE_RESULT__ !== undefined && (module.exports = __WEBPACK_AMD_DEFINE_RESULT__));
+	} else {
+
+		// Browser globals
+		factory( jQuery );
+	}
+} ( function( $ ) {
+return $.extend( $.expr[ ":" ], {
+	data: $.expr.createPseudo ?
+		$.expr.createPseudo( function( dataName ) {
+			return function( elem ) {
+				return !!$.data( elem, dataName );
+			};
+		} ) :
+
+		// Support: jQuery <1.8
+		function( elem, i, match ) {
+			return !!$.data( elem, match[ 3 ] );
+		}
+} );
+} ) );
+
+
+/***/ }),
 /* 6 */
+/***/ (function(module, exports, __webpack_require__) {
+
+var __WEBPACK_AMD_DEFINE_FACTORY__, __WEBPACK_AMD_DEFINE_ARRAY__, __WEBPACK_AMD_DEFINE_RESULT__;( function( factory ) {
+	if ( true ) {
+
+		// AMD. Register as an anonymous module.
+		!(__WEBPACK_AMD_DEFINE_ARRAY__ = [ __webpack_require__(1), __webpack_require__(2) ], __WEBPACK_AMD_DEFINE_FACTORY__ = (factory),
+				__WEBPACK_AMD_DEFINE_RESULT__ = (typeof __WEBPACK_AMD_DEFINE_FACTORY__ === 'function' ?
+				(__WEBPACK_AMD_DEFINE_FACTORY__.apply(exports, __WEBPACK_AMD_DEFINE_ARRAY__)) : __WEBPACK_AMD_DEFINE_FACTORY__),
+				__WEBPACK_AMD_DEFINE_RESULT__ !== undefined && (module.exports = __WEBPACK_AMD_DEFINE_RESULT__));
+	} else {
+
+		// Browser globals
+		factory( jQuery );
+	}
+} ( function( $ ) {
+
+// This file is deprecated
+return $.ui.ie = !!/msie [\w.]+/.exec( navigator.userAgent.toLowerCase() );
+} ) );
+
+
+/***/ }),
+/* 7 */
+/***/ (function(module, exports, __webpack_require__) {
+
+var __WEBPACK_AMD_DEFINE_FACTORY__, __WEBPACK_AMD_DEFINE_ARRAY__, __WEBPACK_AMD_DEFINE_RESULT__;/*!
+ * jQuery UI Scroll Parent 1.12.1
+ * http://jqueryui.com
+ *
+ * Copyright jQuery Foundation and other contributors
+ * Released under the MIT license.
+ * http://jquery.org/license
+ */
+
+//>>label: scrollParent
+//>>group: Core
+//>>description: Get the closest ancestor element that is scrollable.
+//>>docs: http://api.jqueryui.com/scrollParent/
+
+( function( factory ) {
+	if ( true ) {
+
+		// AMD. Register as an anonymous module.
+		!(__WEBPACK_AMD_DEFINE_ARRAY__ = [ __webpack_require__(1), __webpack_require__(2) ], __WEBPACK_AMD_DEFINE_FACTORY__ = (factory),
+				__WEBPACK_AMD_DEFINE_RESULT__ = (typeof __WEBPACK_AMD_DEFINE_FACTORY__ === 'function' ?
+				(__WEBPACK_AMD_DEFINE_FACTORY__.apply(exports, __WEBPACK_AMD_DEFINE_ARRAY__)) : __WEBPACK_AMD_DEFINE_FACTORY__),
+				__WEBPACK_AMD_DEFINE_RESULT__ !== undefined && (module.exports = __WEBPACK_AMD_DEFINE_RESULT__));
+	} else {
+
+		// Browser globals
+		factory( jQuery );
+	}
+} ( function( $ ) {
+
+return $.fn.scrollParent = function( includeHidden ) {
+	var position = this.css( "position" ),
+		excludeStaticParent = position === "absolute",
+		overflowRegex = includeHidden ? /(auto|scroll|hidden)/ : /(auto|scroll)/,
+		scrollParent = this.parents().filter( function() {
+			var parent = $( this );
+			if ( excludeStaticParent && parent.css( "position" ) === "static" ) {
+				return false;
+			}
+			return overflowRegex.test( parent.css( "overflow" ) + parent.css( "overflow-y" ) +
+				parent.css( "overflow-x" ) );
+		} ).eq( 0 );
+
+	return position === "fixed" || !scrollParent.length ?
+		$( this[ 0 ].ownerDocument || document ) :
+		scrollParent;
+};
+
+} ) );
+
+
+/***/ }),
+/* 8 */
 /***/ (function(module, exports) {
 
 // removed by extract-text-webpack-plugin
 
 /***/ }),
-/* 7 */,
-/* 8 */
+/* 9 */,
+/* 10 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -56287,15 +55154,16 @@ return $.widget( "ui.mouse", {
 Object.defineProperty(exports, "__esModule", { value: true });
 const $ = __webpack_require__(1);
 // import '../lib/jquery-ui-1.12.1.custom/jquery-ui'
-__webpack_require__(48);
-__webpack_require__(34);
-__webpack_require__(47);
-const GUI_1 = __webpack_require__(36);
-const Webcam_1 = __webpack_require__(44);
-const Renderer_1 = __webpack_require__(38);
-const ShaderManager_1 = __webpack_require__(39);
-const Gif_1 = __webpack_require__(37);
-const BPM_1 = __webpack_require__(35);
+__webpack_require__(30);
+__webpack_require__(35);
+__webpack_require__(36);
+const GUI_1 = __webpack_require__(38);
+const Webcam_1 = __webpack_require__(46);
+const Renderer_1 = __webpack_require__(40);
+const ShaderManager_1 = __webpack_require__(41);
+const Gif_1 = __webpack_require__(39);
+const BPM_1 = __webpack_require__(37);
+const ArrowMenu_1 = __webpack_require__(49);
 // import { FilterManager } from "./Filters"
 let ctrlKey = 17;
 let cmdKey = 91;
@@ -56311,12 +55179,26 @@ class GifJokey {
         this.webcam = null;
         this.renderer = null;
         this.shaderManager = null;
+        this.mode = 'gif';
+        this.takeSnapshotButton = null;
+        this.keyboardModeButton = null;
+        this.videoModeButton = null;
         this.guiWasFocusedWhenPressedEnter = false;
         this.showGifThumbnails = false;
         this.showGIF = true;
         this.ctrlDown = false;
+        this.loadingTimeoutID = null;
         this.previousIsOnBeat = false;
         console.log("Gif Grave");
+        // $("#speach").on('change keyup paste', ()=> {
+        // 	let speach = $("#speach").val()
+        // 	console.log(speach)
+        // 	localStorage.setItem('gg-speach', speach)
+        // })
+        // let speach = localStorage.getItem('gg-speach')
+        // if(speach) {
+        // 	$("#speach").val(speach)
+        // }
         $("#camera").click(() => this.deselectImages());
         $("#gif-thumbnails").mousedown((event) => {
             if (!$.contains($('#outputs')[0], event.target) && !$.contains($('#thumbnails')[0], event.target)) {
@@ -56378,6 +55260,31 @@ class GifJokey {
         // this.toggleGifThumbnails(this.showGifThumbnails)
         this.initializeClipboard();
     }
+    startLoadingAnimation(callback = null) {
+        $('#loading').removeClass('hidden');
+        clearTimeout(this.loadingTimeoutID);
+        this.loadingTimeoutID = setTimeout(() => {
+            $('#loading').addClass('loading');
+            if (callback != null) {
+                setTimeout(() => {
+                    // TODO: catch error if any to remove loading animation (comment next line and uncomment following lines)
+                    callback();
+                    // try {
+                    // 	callback()
+                    // } catch(e) {
+                    // 	this.stopLoadingAnimation()
+                    // 	console.error(e.message)
+                    // 	throw e
+                    // }
+                }, 400);
+            }
+        }, 100);
+    }
+    stopLoadingAnimation() {
+        $('#loading').removeClass('loading');
+        clearTimeout(this.loadingTimeoutID);
+        this.loadingTimeoutID = setTimeout(() => $('#loading').addClass('hidden'), 1000);
+    }
     initializeClipboard() {
         $(document).keydown((e) => {
             if (e.keyCode == ctrlKey || e.keyCode == cmdKey) {
@@ -56396,11 +55303,16 @@ class GifJokey {
         });
     }
     onKeyDown(event) {
-        if (event.keyCode == 32) {
-            this.deselectAndTakeSnapshot();
-            event.preventDefault();
+        if (String.fromCharCode(event.keyCode) == 'K') {
+            this.disableKeyboardMode();
         }
-        else if (event.keyCode == 13) {
+        if (event.keyCode == 32) {
+            if (!($(event.target).is('input') || $(event.target).is('textarea'))) {
+                this.deselectAndTakeSnapshot();
+                event.preventDefault();
+            }
+        }
+        else if (String.fromCharCode(event.keyCode) == 'T') {
             // Ignore if one of the dat.gui item is focused
             if (!this.gui.isFocused()) {
                 this.bpm.tap();
@@ -56422,6 +55334,7 @@ class GifJokey {
     webcamLoaded() {
         this.renderer = new Renderer_1.Renderer(this.webcam, this.gui);
         this.shaderManager = new ShaderManager_1.ShaderManager(this.gui, this.renderer.camera, this.renderer.scene, this.renderer.renderer);
+        this.arrowMenu = ArrowMenu_1.initializeArrowMenu(this.shaderManager, this);
         this.renderer.setShaderManager(this.shaderManager);
         document.addEventListener('shaderChanged', () => {
             if (this.isImageSelected()) {
@@ -56434,11 +55347,33 @@ class GifJokey {
     initialize() {
         this.animate();
     }
+    toggleVideoMode() {
+        if (this.mode == 'gif') {
+            this.mode = 'video';
+            this.videoModeButton.name('Gif mode');
+            this.takeSnapshotButton.name('Take video (Spacebar)');
+        }
+        else {
+            this.mode = 'gif';
+            this.videoModeButton.name('Video mode');
+            this.takeSnapshotButton.name('Take snapshot (Spacebar)');
+        }
+    }
+    enableKeyboardMode() {
+        $('#gui .dg.main').hide();
+        $('#gif-thumbnails').hide();
+    }
+    disableKeyboardMode() {
+        $('#gui .dg.main').show();
+        $('#gif-thumbnails').show();
+    }
     createGUI() {
         this.gui = new GUI_1.GUI({ autoPlace: false, width: '100%' });
         document.getElementById('gui').appendChild(this.gui.getDomElement());
         this.folder = this.gui.addFolder('General');
-        this.folder.addButton('Take snapshot (Spacebar)', () => this.deselectAndTakeSnapshot());
+        this.takeSnapshotButton = this.folder.addButton('Take snapshot (Spacebar)', () => this.deselectAndTakeSnapshot());
+        this.keyboardModeButton = this.folder.addButton('Keyboard mode', () => this.enableKeyboardMode());
+        this.videoModeButton = this.folder.addButton('Video mode', () => this.toggleVideoMode());
         // this.folder.addFileSelectorButton('Upload image', 'image/*', (event:any)=> this.uploadImage(event))
         this.folder.addButton('Create viewer', () => this.createViewer());
         // this.folder.add(this, 'showGifThumbnails').name('Show Gifs').onChange((value: boolean)=> this.toggleGifThumbnails(value))
@@ -56578,7 +55513,14 @@ class GifJokey {
         this.updateFilteredImage(imageJ);
     }
     deselectAndTakeSnapshot() {
-        this.deselectAndCallback(() => this.takeSnapshot());
+        this.deselectAndCallback(() => {
+            if (this.mode == 'gif') {
+                this.takeSnapshot();
+            }
+            else {
+                this.renderer.startStopVideo(this.takeSnapshotButton);
+            }
+        });
     }
     deselectAndCallback(callback, delay = 250) {
         if (this.isImageSelected()) {
@@ -56705,8 +55647,8 @@ document.addEventListener("DOMContentLoaded", function (event) {
 
 
 /***/ }),
-/* 9 */,
-/* 10 */
+/* 11 */,
+/* 12 */
 /***/ (function(module, exports, __webpack_require__) {
 
 var __WEBPACK_AMD_DEFINE_ARRAY__, __WEBPACK_AMD_DEFINE_RESULT__;/*Copyrights for code authored by Yahoo Inc. is licensed under the following terms:
@@ -58429,7 +57371,7 @@ API = function (utils, error, defaultOptions, isSupported, isWebCamGIFSupported,
 }(typeof window !== "undefined" ? window : {}, typeof document !== "undefined" ? document : { createElement: function() {} }, typeof window !== "undefined" ? window.navigator : {}));
 
 /***/ }),
-/* 11 */
+/* 13 */
 /***/ (function(module, exports, __webpack_require__) {
 
 /*** IMPORTS FROM imports-loader ***/
@@ -58506,7 +57448,7 @@ module.exports = THREE.BleachBypassShader;
 
 
 /***/ }),
-/* 12 */
+/* 14 */
 /***/ (function(module, exports, __webpack_require__) {
 
 /*** IMPORTS FROM imports-loader ***/
@@ -58577,7 +57519,7 @@ module.exports = THREE.BrightnessContrastShader;
 
 
 /***/ }),
-/* 13 */
+/* 15 */
 /***/ (function(module, exports, __webpack_require__) {
 
 /*** IMPORTS FROM imports-loader ***/
@@ -58639,7 +57581,7 @@ module.exports = THREE.ColorifyShader;
 
 
 /***/ }),
-/* 14 */
+/* 16 */
 /***/ (function(module, exports, __webpack_require__) {
 
 /*** IMPORTS FROM imports-loader ***/
@@ -58698,7 +57640,7 @@ module.exports = THREE.CopyShader;
 
 
 /***/ }),
-/* 15 */
+/* 17 */
 /***/ (function(module, exports, __webpack_require__) {
 
 /*** IMPORTS FROM imports-loader ***/
@@ -58779,7 +57721,7 @@ module.exports = THREE.DotScreenShader;
 
 
 /***/ }),
-/* 16 */
+/* 18 */
 /***/ (function(module, exports, __webpack_require__) {
 
 /*** IMPORTS FROM imports-loader ***/
@@ -58865,7 +57807,7 @@ module.exports = THREE.EdgeShader2;
 
 
 /***/ }),
-/* 17 */
+/* 19 */
 /***/ (function(module, exports, __webpack_require__) {
 
 /*** IMPORTS FROM imports-loader ***/
@@ -59054,7 +57996,7 @@ module.exports = THREE.EffectComposer;
 
 
 /***/ }),
-/* 18 */
+/* 20 */
 /***/ (function(module, exports, __webpack_require__) {
 
 /*** IMPORTS FROM imports-loader ***/
@@ -59171,7 +58113,7 @@ module.exports = THREE.FilmShader;
 
 
 /***/ }),
-/* 19 */
+/* 21 */
 /***/ (function(module, exports, __webpack_require__) {
 
 /*** IMPORTS FROM imports-loader ***/
@@ -59253,80 +58195,8 @@ module.exports = THREE.HueSaturationShader;
 
 
 /***/ }),
-/* 20 */
-/***/ (function(module, exports, __webpack_require__) {
-
-/*** IMPORTS FROM imports-loader ***/
-var THREE = __webpack_require__(0);
-
-/**
- * @author felixturner / http://airtight.cc/
- *
- * Kaleidoscope Shader
- * Radial reflection around center point
- * Ported from: http://pixelshaders.com/editor/
- * by Toby Schachman / http://tobyschachman.com/
- *
- * sides: number of reflections
- * angle: initial angle in radians
- */
-
-THREE.KaleidoShader = {
-
-	uniforms: {
-
-		"tDiffuse": { value: null },
-		"sides":    { value: 6.0 },
-		"angle":    { value: 0.0 }
-
-	},
-
-	vertexShader: [
-
-		"varying vec2 vUv;",
-
-		"void main() {",
-
-			"vUv = uv;",
-			"gl_Position = projectionMatrix * modelViewMatrix * vec4( position, 1.0 );",
-
-		"}"
-
-	].join( "\n" ),
-
-	fragmentShader: [
-
-		"uniform sampler2D tDiffuse;",
-		"uniform float sides;",
-		"uniform float angle;",
-		
-		"varying vec2 vUv;",
-
-		"void main() {",
-
-			"vec2 p = vUv - 0.5;",
-			"float r = length(p);",
-			"float a = atan(p.y, p.x) + angle;",
-			"float tau = 2. * 3.1416 ;",
-			"a = mod(a, tau/sides);",
-			"a = abs(a - tau/sides/2.) ;",
-			"p = r * vec2(cos(a), sin(a));",
-			"vec4 color = texture2D(tDiffuse, p + 0.5);",
-			"gl_FragColor = color;",
-
-		"}"
-
-	].join( "\n" )
-
-};
-
-
-/*** EXPORTS FROM exports-loader ***/
-module.exports = THREE.KaleidoShader;
-
-
-/***/ }),
-/* 21 */
+/* 22 */,
+/* 23 */
 /***/ (function(module, exports, __webpack_require__) {
 
 /*** IMPORTS FROM imports-loader ***/
@@ -59436,7 +58306,7 @@ module.exports = THREE.MaskPass;
 
 
 /***/ }),
-/* 22 */
+/* 24 */
 /***/ (function(module, exports, __webpack_require__) {
 
 /*** IMPORTS FROM imports-loader ***/
@@ -59507,7 +58377,7 @@ module.exports = THREE.MirrorShader;
 
 
 /***/ }),
-/* 23 */
+/* 25 */
 /***/ (function(module, exports, __webpack_require__) {
 
 /*** IMPORTS FROM imports-loader ***/
@@ -59576,7 +58446,7 @@ module.exports = THREE.RGBShiftShader;
 
 
 /***/ }),
-/* 24 */
+/* 26 */
 /***/ (function(module, exports, __webpack_require__) {
 
 /*** IMPORTS FROM imports-loader ***/
@@ -59652,7 +58522,7 @@ module.exports = THREE.RenderPass;
 
 
 /***/ }),
-/* 25 */
+/* 27 */
 /***/ (function(module, exports, __webpack_require__) {
 
 /*** IMPORTS FROM imports-loader ***/
@@ -59719,7 +58589,7 @@ module.exports = THREE.SepiaShader;
 
 
 /***/ }),
-/* 26 */
+/* 28 */
 /***/ (function(module, exports, __webpack_require__) {
 
 /*** IMPORTS FROM imports-loader ***/
@@ -59799,7 +58669,7 @@ module.exports = THREE.ShaderPass;
 
 
 /***/ }),
-/* 27 */
+/* 29 */
 /***/ (function(module, exports, __webpack_require__) {
 
 /*** IMPORTS FROM imports-loader ***/
@@ -59875,11 +58745,11 @@ module.exports = THREE.VignetteShader;
 
 
 /***/ }),
-/* 28 */
+/* 30 */
 /***/ (function(module, exports, __webpack_require__) {
 
 var __WEBPACK_AMD_DEFINE_FACTORY__, __WEBPACK_AMD_DEFINE_ARRAY__, __WEBPACK_AMD_DEFINE_RESULT__;/*!
- * jQuery UI :data 1.12.1
+ * jQuery UI Disable Selection 1.12.1
  * http://jqueryui.com
  *
  * Copyright jQuery Foundation and other contributors
@@ -59887,11 +58757,12 @@ var __WEBPACK_AMD_DEFINE_FACTORY__, __WEBPACK_AMD_DEFINE_ARRAY__, __WEBPACK_AMD_
  * http://jquery.org/license
  */
 
-//>>label: :data Selector
+//>>label: disableSelection
 //>>group: Core
-//>>description: Selects elements which have data stored under the specified key.
-//>>docs: http://api.jqueryui.com/data-selector/
+//>>description: Disable selection of text content within the set of matched elements.
+//>>docs: http://api.jqueryui.com/disableSelection/
 
+// This file is deprecated
 ( function( factory ) {
 	if ( true ) {
 
@@ -59906,48 +58777,30 @@ var __WEBPACK_AMD_DEFINE_FACTORY__, __WEBPACK_AMD_DEFINE_ARRAY__, __WEBPACK_AMD_
 		factory( jQuery );
 	}
 } ( function( $ ) {
-return $.extend( $.expr[ ":" ], {
-	data: $.expr.createPseudo ?
-		$.expr.createPseudo( function( dataName ) {
-			return function( elem ) {
-				return !!$.data( elem, dataName );
-			};
-		} ) :
 
-		// Support: jQuery <1.8
-		function( elem, i, match ) {
-			return !!$.data( elem, match[ 3 ] );
-		}
-} );
-} ) );
+return $.fn.extend( {
+	disableSelection: ( function() {
+		var eventType = "onselectstart" in document.createElement( "div" ) ?
+			"selectstart" :
+			"mousedown";
 
+		return function() {
+			return this.on( eventType + ".ui-disableSelection", function( event ) {
+				event.preventDefault();
+			} );
+		};
+	} )(),
 
-/***/ }),
-/* 29 */
-/***/ (function(module, exports, __webpack_require__) {
-
-var __WEBPACK_AMD_DEFINE_FACTORY__, __WEBPACK_AMD_DEFINE_ARRAY__, __WEBPACK_AMD_DEFINE_RESULT__;( function( factory ) {
-	if ( true ) {
-
-		// AMD. Register as an anonymous module.
-		!(__WEBPACK_AMD_DEFINE_ARRAY__ = [ __webpack_require__(1), __webpack_require__(2) ], __WEBPACK_AMD_DEFINE_FACTORY__ = (factory),
-				__WEBPACK_AMD_DEFINE_RESULT__ = (typeof __WEBPACK_AMD_DEFINE_FACTORY__ === 'function' ?
-				(__WEBPACK_AMD_DEFINE_FACTORY__.apply(exports, __WEBPACK_AMD_DEFINE_ARRAY__)) : __WEBPACK_AMD_DEFINE_FACTORY__),
-				__WEBPACK_AMD_DEFINE_RESULT__ !== undefined && (module.exports = __WEBPACK_AMD_DEFINE_RESULT__));
-	} else {
-
-		// Browser globals
-		factory( jQuery );
+	enableSelection: function() {
+		return this.off( ".ui-disableSelection" );
 	}
-} ( function( $ ) {
+} );
 
-// This file is deprecated
-return $.ui.ie = !!/msie [\w.]+/.exec( navigator.userAgent.toLowerCase() );
 } ) );
 
 
 /***/ }),
-/* 30 */
+/* 31 */
 /***/ (function(module, exports, __webpack_require__) {
 
 var __WEBPACK_AMD_DEFINE_FACTORY__, __WEBPACK_AMD_DEFINE_ARRAY__, __WEBPACK_AMD_DEFINE_RESULT__;( function( factory ) {
@@ -60000,7 +58853,7 @@ return $.ui.plugin = {
 
 
 /***/ }),
-/* 31 */
+/* 32 */
 /***/ (function(module, exports, __webpack_require__) {
 
 var __WEBPACK_AMD_DEFINE_FACTORY__, __WEBPACK_AMD_DEFINE_ARRAY__, __WEBPACK_AMD_DEFINE_RESULT__;( function( factory ) {
@@ -60049,7 +58902,7 @@ return $.ui.safeActiveElement = function( document ) {
 
 
 /***/ }),
-/* 32 */
+/* 33 */
 /***/ (function(module, exports, __webpack_require__) {
 
 var __WEBPACK_AMD_DEFINE_FACTORY__, __WEBPACK_AMD_DEFINE_ARRAY__, __WEBPACK_AMD_DEFINE_RESULT__;( function( factory ) {
@@ -60079,11 +58932,11 @@ return $.ui.safeBlur = function( element ) {
 
 
 /***/ }),
-/* 33 */
+/* 34 */
 /***/ (function(module, exports, __webpack_require__) {
 
 var __WEBPACK_AMD_DEFINE_FACTORY__, __WEBPACK_AMD_DEFINE_ARRAY__, __WEBPACK_AMD_DEFINE_RESULT__;/*!
- * jQuery UI Scroll Parent 1.12.1
+ * jQuery UI Draggable 1.12.1
  * http://jqueryui.com
  *
  * Copyright jQuery Foundation and other contributors
@@ -60091,16 +58944,28 @@ var __WEBPACK_AMD_DEFINE_FACTORY__, __WEBPACK_AMD_DEFINE_ARRAY__, __WEBPACK_AMD_
  * http://jquery.org/license
  */
 
-//>>label: scrollParent
-//>>group: Core
-//>>description: Get the closest ancestor element that is scrollable.
-//>>docs: http://api.jqueryui.com/scrollParent/
+//>>label: Draggable
+//>>group: Interactions
+//>>description: Enables dragging functionality for any element.
+//>>docs: http://api.jqueryui.com/draggable/
+//>>demos: http://jqueryui.com/draggable/
+//>>css.structure: ../../themes/base/draggable.css
 
 ( function( factory ) {
 	if ( true ) {
 
 		// AMD. Register as an anonymous module.
-		!(__WEBPACK_AMD_DEFINE_ARRAY__ = [ __webpack_require__(1), __webpack_require__(2) ], __WEBPACK_AMD_DEFINE_FACTORY__ = (factory),
+		!(__WEBPACK_AMD_DEFINE_ARRAY__ = [
+			__webpack_require__(1),
+			__webpack_require__(4),
+			__webpack_require__(5),
+			__webpack_require__(31),
+			__webpack_require__(32),
+			__webpack_require__(33),
+			__webpack_require__(7),
+			__webpack_require__(2),
+			__webpack_require__(3)
+		], __WEBPACK_AMD_DEFINE_FACTORY__ = (factory),
 				__WEBPACK_AMD_DEFINE_RESULT__ = (typeof __WEBPACK_AMD_DEFINE_FACTORY__ === 'function' ?
 				(__WEBPACK_AMD_DEFINE_FACTORY__.apply(exports, __WEBPACK_AMD_DEFINE_ARRAY__)) : __WEBPACK_AMD_DEFINE_FACTORY__),
 				__WEBPACK_AMD_DEFINE_RESULT__ !== undefined && (module.exports = __WEBPACK_AMD_DEFINE_RESULT__));
@@ -60109,31 +58974,1224 @@ var __WEBPACK_AMD_DEFINE_FACTORY__, __WEBPACK_AMD_DEFINE_ARRAY__, __WEBPACK_AMD_
 		// Browser globals
 		factory( jQuery );
 	}
-} ( function( $ ) {
+}( function( $ ) {
 
-return $.fn.scrollParent = function( includeHidden ) {
-	var position = this.css( "position" ),
-		excludeStaticParent = position === "absolute",
-		overflowRegex = includeHidden ? /(auto|scroll|hidden)/ : /(auto|scroll)/,
-		scrollParent = this.parents().filter( function() {
-			var parent = $( this );
-			if ( excludeStaticParent && parent.css( "position" ) === "static" ) {
+$.widget( "ui.draggable", $.ui.mouse, {
+	version: "1.12.1",
+	widgetEventPrefix: "drag",
+	options: {
+		addClasses: true,
+		appendTo: "parent",
+		axis: false,
+		connectToSortable: false,
+		containment: false,
+		cursor: "auto",
+		cursorAt: false,
+		grid: false,
+		handle: false,
+		helper: "original",
+		iframeFix: false,
+		opacity: false,
+		refreshPositions: false,
+		revert: false,
+		revertDuration: 500,
+		scope: "default",
+		scroll: true,
+		scrollSensitivity: 20,
+		scrollSpeed: 20,
+		snap: false,
+		snapMode: "both",
+		snapTolerance: 20,
+		stack: false,
+		zIndex: false,
+
+		// Callbacks
+		drag: null,
+		start: null,
+		stop: null
+	},
+	_create: function() {
+
+		if ( this.options.helper === "original" ) {
+			this._setPositionRelative();
+		}
+		if ( this.options.addClasses ) {
+			this._addClass( "ui-draggable" );
+		}
+		this._setHandleClassName();
+
+		this._mouseInit();
+	},
+
+	_setOption: function( key, value ) {
+		this._super( key, value );
+		if ( key === "handle" ) {
+			this._removeHandleClassName();
+			this._setHandleClassName();
+		}
+	},
+
+	_destroy: function() {
+		if ( ( this.helper || this.element ).is( ".ui-draggable-dragging" ) ) {
+			this.destroyOnClear = true;
+			return;
+		}
+		this._removeHandleClassName();
+		this._mouseDestroy();
+	},
+
+	_mouseCapture: function( event ) {
+		var o = this.options;
+
+		// Among others, prevent a drag on a resizable-handle
+		if ( this.helper || o.disabled ||
+				$( event.target ).closest( ".ui-resizable-handle" ).length > 0 ) {
+			return false;
+		}
+
+		//Quit if we're not on a valid handle
+		this.handle = this._getHandle( event );
+		if ( !this.handle ) {
+			return false;
+		}
+
+		this._blurActiveElement( event );
+
+		this._blockFrames( o.iframeFix === true ? "iframe" : o.iframeFix );
+
+		return true;
+
+	},
+
+	_blockFrames: function( selector ) {
+		this.iframeBlocks = this.document.find( selector ).map( function() {
+			var iframe = $( this );
+
+			return $( "<div>" )
+				.css( "position", "absolute" )
+				.appendTo( iframe.parent() )
+				.outerWidth( iframe.outerWidth() )
+				.outerHeight( iframe.outerHeight() )
+				.offset( iframe.offset() )[ 0 ];
+		} );
+	},
+
+	_unblockFrames: function() {
+		if ( this.iframeBlocks ) {
+			this.iframeBlocks.remove();
+			delete this.iframeBlocks;
+		}
+	},
+
+	_blurActiveElement: function( event ) {
+		var activeElement = $.ui.safeActiveElement( this.document[ 0 ] ),
+			target = $( event.target );
+
+		// Don't blur if the event occurred on an element that is within
+		// the currently focused element
+		// See #10527, #12472
+		if ( target.closest( activeElement ).length ) {
+			return;
+		}
+
+		// Blur any element that currently has focus, see #4261
+		$.ui.safeBlur( activeElement );
+	},
+
+	_mouseStart: function( event ) {
+
+		var o = this.options;
+
+		//Create and append the visible helper
+		this.helper = this._createHelper( event );
+
+		this._addClass( this.helper, "ui-draggable-dragging" );
+
+		//Cache the helper size
+		this._cacheHelperProportions();
+
+		//If ddmanager is used for droppables, set the global draggable
+		if ( $.ui.ddmanager ) {
+			$.ui.ddmanager.current = this;
+		}
+
+		/*
+		 * - Position generation -
+		 * This block generates everything position related - it's the core of draggables.
+		 */
+
+		//Cache the margins of the original element
+		this._cacheMargins();
+
+		//Store the helper's css position
+		this.cssPosition = this.helper.css( "position" );
+		this.scrollParent = this.helper.scrollParent( true );
+		this.offsetParent = this.helper.offsetParent();
+		this.hasFixedAncestor = this.helper.parents().filter( function() {
+				return $( this ).css( "position" ) === "fixed";
+			} ).length > 0;
+
+		//The element's absolute position on the page minus margins
+		this.positionAbs = this.element.offset();
+		this._refreshOffsets( event );
+
+		//Generate the original position
+		this.originalPosition = this.position = this._generatePosition( event, false );
+		this.originalPageX = event.pageX;
+		this.originalPageY = event.pageY;
+
+		//Adjust the mouse offset relative to the helper if "cursorAt" is supplied
+		( o.cursorAt && this._adjustOffsetFromHelper( o.cursorAt ) );
+
+		//Set a containment if given in the options
+		this._setContainment();
+
+		//Trigger event + callbacks
+		if ( this._trigger( "start", event ) === false ) {
+			this._clear();
+			return false;
+		}
+
+		//Recache the helper size
+		this._cacheHelperProportions();
+
+		//Prepare the droppable offsets
+		if ( $.ui.ddmanager && !o.dropBehaviour ) {
+			$.ui.ddmanager.prepareOffsets( this, event );
+		}
+
+		// Execute the drag once - this causes the helper not to be visible before getting its
+		// correct position
+		this._mouseDrag( event, true );
+
+		// If the ddmanager is used for droppables, inform the manager that dragging has started
+		// (see #5003)
+		if ( $.ui.ddmanager ) {
+			$.ui.ddmanager.dragStart( this, event );
+		}
+
+		return true;
+	},
+
+	_refreshOffsets: function( event ) {
+		this.offset = {
+			top: this.positionAbs.top - this.margins.top,
+			left: this.positionAbs.left - this.margins.left,
+			scroll: false,
+			parent: this._getParentOffset(),
+			relative: this._getRelativeOffset()
+		};
+
+		this.offset.click = {
+			left: event.pageX - this.offset.left,
+			top: event.pageY - this.offset.top
+		};
+	},
+
+	_mouseDrag: function( event, noPropagation ) {
+
+		// reset any necessary cached properties (see #5009)
+		if ( this.hasFixedAncestor ) {
+			this.offset.parent = this._getParentOffset();
+		}
+
+		//Compute the helpers position
+		this.position = this._generatePosition( event, true );
+		this.positionAbs = this._convertPositionTo( "absolute" );
+
+		//Call plugins and callbacks and use the resulting position if something is returned
+		if ( !noPropagation ) {
+			var ui = this._uiHash();
+			if ( this._trigger( "drag", event, ui ) === false ) {
+				this._mouseUp( new $.Event( "mouseup", event ) );
 				return false;
 			}
-			return overflowRegex.test( parent.css( "overflow" ) + parent.css( "overflow-y" ) +
-				parent.css( "overflow-x" ) );
-		} ).eq( 0 );
+			this.position = ui.position;
+		}
 
-	return position === "fixed" || !scrollParent.length ?
-		$( this[ 0 ].ownerDocument || document ) :
-		scrollParent;
-};
+		this.helper[ 0 ].style.left = this.position.left + "px";
+		this.helper[ 0 ].style.top = this.position.top + "px";
+
+		if ( $.ui.ddmanager ) {
+			$.ui.ddmanager.drag( this, event );
+		}
+
+		return false;
+	},
+
+	_mouseStop: function( event ) {
+
+		//If we are using droppables, inform the manager about the drop
+		var that = this,
+			dropped = false;
+		if ( $.ui.ddmanager && !this.options.dropBehaviour ) {
+			dropped = $.ui.ddmanager.drop( this, event );
+		}
+
+		//if a drop comes from outside (a sortable)
+		if ( this.dropped ) {
+			dropped = this.dropped;
+			this.dropped = false;
+		}
+
+		if ( ( this.options.revert === "invalid" && !dropped ) ||
+				( this.options.revert === "valid" && dropped ) ||
+				this.options.revert === true || ( $.isFunction( this.options.revert ) &&
+				this.options.revert.call( this.element, dropped ) )
+		) {
+			$( this.helper ).animate(
+				this.originalPosition,
+				parseInt( this.options.revertDuration, 10 ),
+				function() {
+					if ( that._trigger( "stop", event ) !== false ) {
+						that._clear();
+					}
+				}
+			);
+		} else {
+			if ( this._trigger( "stop", event ) !== false ) {
+				this._clear();
+			}
+		}
+
+		return false;
+	},
+
+	_mouseUp: function( event ) {
+		this._unblockFrames();
+
+		// If the ddmanager is used for droppables, inform the manager that dragging has stopped
+		// (see #5003)
+		if ( $.ui.ddmanager ) {
+			$.ui.ddmanager.dragStop( this, event );
+		}
+
+		// Only need to focus if the event occurred on the draggable itself, see #10527
+		if ( this.handleElement.is( event.target ) ) {
+
+			// The interaction is over; whether or not the click resulted in a drag,
+			// focus the element
+			this.element.trigger( "focus" );
+		}
+
+		return $.ui.mouse.prototype._mouseUp.call( this, event );
+	},
+
+	cancel: function() {
+
+		if ( this.helper.is( ".ui-draggable-dragging" ) ) {
+			this._mouseUp( new $.Event( "mouseup", { target: this.element[ 0 ] } ) );
+		} else {
+			this._clear();
+		}
+
+		return this;
+
+	},
+
+	_getHandle: function( event ) {
+		return this.options.handle ?
+			!!$( event.target ).closest( this.element.find( this.options.handle ) ).length :
+			true;
+	},
+
+	_setHandleClassName: function() {
+		this.handleElement = this.options.handle ?
+			this.element.find( this.options.handle ) : this.element;
+		this._addClass( this.handleElement, "ui-draggable-handle" );
+	},
+
+	_removeHandleClassName: function() {
+		this._removeClass( this.handleElement, "ui-draggable-handle" );
+	},
+
+	_createHelper: function( event ) {
+
+		var o = this.options,
+			helperIsFunction = $.isFunction( o.helper ),
+			helper = helperIsFunction ?
+				$( o.helper.apply( this.element[ 0 ], [ event ] ) ) :
+				( o.helper === "clone" ?
+					this.element.clone().removeAttr( "id" ) :
+					this.element );
+
+		if ( !helper.parents( "body" ).length ) {
+			helper.appendTo( ( o.appendTo === "parent" ?
+				this.element[ 0 ].parentNode :
+				o.appendTo ) );
+		}
+
+		// Http://bugs.jqueryui.com/ticket/9446
+		// a helper function can return the original element
+		// which wouldn't have been set to relative in _create
+		if ( helperIsFunction && helper[ 0 ] === this.element[ 0 ] ) {
+			this._setPositionRelative();
+		}
+
+		if ( helper[ 0 ] !== this.element[ 0 ] &&
+				!( /(fixed|absolute)/ ).test( helper.css( "position" ) ) ) {
+			helper.css( "position", "absolute" );
+		}
+
+		return helper;
+
+	},
+
+	_setPositionRelative: function() {
+		if ( !( /^(?:r|a|f)/ ).test( this.element.css( "position" ) ) ) {
+			this.element[ 0 ].style.position = "relative";
+		}
+	},
+
+	_adjustOffsetFromHelper: function( obj ) {
+		if ( typeof obj === "string" ) {
+			obj = obj.split( " " );
+		}
+		if ( $.isArray( obj ) ) {
+			obj = { left: +obj[ 0 ], top: +obj[ 1 ] || 0 };
+		}
+		if ( "left" in obj ) {
+			this.offset.click.left = obj.left + this.margins.left;
+		}
+		if ( "right" in obj ) {
+			this.offset.click.left = this.helperProportions.width - obj.right + this.margins.left;
+		}
+		if ( "top" in obj ) {
+			this.offset.click.top = obj.top + this.margins.top;
+		}
+		if ( "bottom" in obj ) {
+			this.offset.click.top = this.helperProportions.height - obj.bottom + this.margins.top;
+		}
+	},
+
+	_isRootNode: function( element ) {
+		return ( /(html|body)/i ).test( element.tagName ) || element === this.document[ 0 ];
+	},
+
+	_getParentOffset: function() {
+
+		//Get the offsetParent and cache its position
+		var po = this.offsetParent.offset(),
+			document = this.document[ 0 ];
+
+		// This is a special case where we need to modify a offset calculated on start, since the
+		// following happened:
+		// 1. The position of the helper is absolute, so it's position is calculated based on the
+		// next positioned parent
+		// 2. The actual offset parent is a child of the scroll parent, and the scroll parent isn't
+		// the document, which means that the scroll is included in the initial calculation of the
+		// offset of the parent, and never recalculated upon drag
+		if ( this.cssPosition === "absolute" && this.scrollParent[ 0 ] !== document &&
+				$.contains( this.scrollParent[ 0 ], this.offsetParent[ 0 ] ) ) {
+			po.left += this.scrollParent.scrollLeft();
+			po.top += this.scrollParent.scrollTop();
+		}
+
+		if ( this._isRootNode( this.offsetParent[ 0 ] ) ) {
+			po = { top: 0, left: 0 };
+		}
+
+		return {
+			top: po.top + ( parseInt( this.offsetParent.css( "borderTopWidth" ), 10 ) || 0 ),
+			left: po.left + ( parseInt( this.offsetParent.css( "borderLeftWidth" ), 10 ) || 0 )
+		};
+
+	},
+
+	_getRelativeOffset: function() {
+		if ( this.cssPosition !== "relative" ) {
+			return { top: 0, left: 0 };
+		}
+
+		var p = this.element.position(),
+			scrollIsRootNode = this._isRootNode( this.scrollParent[ 0 ] );
+
+		return {
+			top: p.top - ( parseInt( this.helper.css( "top" ), 10 ) || 0 ) +
+				( !scrollIsRootNode ? this.scrollParent.scrollTop() : 0 ),
+			left: p.left - ( parseInt( this.helper.css( "left" ), 10 ) || 0 ) +
+				( !scrollIsRootNode ? this.scrollParent.scrollLeft() : 0 )
+		};
+
+	},
+
+	_cacheMargins: function() {
+		this.margins = {
+			left: ( parseInt( this.element.css( "marginLeft" ), 10 ) || 0 ),
+			top: ( parseInt( this.element.css( "marginTop" ), 10 ) || 0 ),
+			right: ( parseInt( this.element.css( "marginRight" ), 10 ) || 0 ),
+			bottom: ( parseInt( this.element.css( "marginBottom" ), 10 ) || 0 )
+		};
+	},
+
+	_cacheHelperProportions: function() {
+		this.helperProportions = {
+			width: this.helper.outerWidth(),
+			height: this.helper.outerHeight()
+		};
+	},
+
+	_setContainment: function() {
+
+		var isUserScrollable, c, ce,
+			o = this.options,
+			document = this.document[ 0 ];
+
+		this.relativeContainer = null;
+
+		if ( !o.containment ) {
+			this.containment = null;
+			return;
+		}
+
+		if ( o.containment === "window" ) {
+			this.containment = [
+				$( window ).scrollLeft() - this.offset.relative.left - this.offset.parent.left,
+				$( window ).scrollTop() - this.offset.relative.top - this.offset.parent.top,
+				$( window ).scrollLeft() + $( window ).width() -
+					this.helperProportions.width - this.margins.left,
+				$( window ).scrollTop() +
+					( $( window ).height() || document.body.parentNode.scrollHeight ) -
+					this.helperProportions.height - this.margins.top
+			];
+			return;
+		}
+
+		if ( o.containment === "document" ) {
+			this.containment = [
+				0,
+				0,
+				$( document ).width() - this.helperProportions.width - this.margins.left,
+				( $( document ).height() || document.body.parentNode.scrollHeight ) -
+					this.helperProportions.height - this.margins.top
+			];
+			return;
+		}
+
+		if ( o.containment.constructor === Array ) {
+			this.containment = o.containment;
+			return;
+		}
+
+		if ( o.containment === "parent" ) {
+			o.containment = this.helper[ 0 ].parentNode;
+		}
+
+		c = $( o.containment );
+		ce = c[ 0 ];
+
+		if ( !ce ) {
+			return;
+		}
+
+		isUserScrollable = /(scroll|auto)/.test( c.css( "overflow" ) );
+
+		this.containment = [
+			( parseInt( c.css( "borderLeftWidth" ), 10 ) || 0 ) +
+				( parseInt( c.css( "paddingLeft" ), 10 ) || 0 ),
+			( parseInt( c.css( "borderTopWidth" ), 10 ) || 0 ) +
+				( parseInt( c.css( "paddingTop" ), 10 ) || 0 ),
+			( isUserScrollable ? Math.max( ce.scrollWidth, ce.offsetWidth ) : ce.offsetWidth ) -
+				( parseInt( c.css( "borderRightWidth" ), 10 ) || 0 ) -
+				( parseInt( c.css( "paddingRight" ), 10 ) || 0 ) -
+				this.helperProportions.width -
+				this.margins.left -
+				this.margins.right,
+			( isUserScrollable ? Math.max( ce.scrollHeight, ce.offsetHeight ) : ce.offsetHeight ) -
+				( parseInt( c.css( "borderBottomWidth" ), 10 ) || 0 ) -
+				( parseInt( c.css( "paddingBottom" ), 10 ) || 0 ) -
+				this.helperProportions.height -
+				this.margins.top -
+				this.margins.bottom
+		];
+		this.relativeContainer = c;
+	},
+
+	_convertPositionTo: function( d, pos ) {
+
+		if ( !pos ) {
+			pos = this.position;
+		}
+
+		var mod = d === "absolute" ? 1 : -1,
+			scrollIsRootNode = this._isRootNode( this.scrollParent[ 0 ] );
+
+		return {
+			top: (
+
+				// The absolute mouse position
+				pos.top	+
+
+				// Only for relative positioned nodes: Relative offset from element to offset parent
+				this.offset.relative.top * mod +
+
+				// The offsetParent's offset without borders (offset + border)
+				this.offset.parent.top * mod -
+				( ( this.cssPosition === "fixed" ?
+					-this.offset.scroll.top :
+					( scrollIsRootNode ? 0 : this.offset.scroll.top ) ) * mod )
+			),
+			left: (
+
+				// The absolute mouse position
+				pos.left +
+
+				// Only for relative positioned nodes: Relative offset from element to offset parent
+				this.offset.relative.left * mod +
+
+				// The offsetParent's offset without borders (offset + border)
+				this.offset.parent.left * mod	-
+				( ( this.cssPosition === "fixed" ?
+					-this.offset.scroll.left :
+					( scrollIsRootNode ? 0 : this.offset.scroll.left ) ) * mod )
+			)
+		};
+
+	},
+
+	_generatePosition: function( event, constrainPosition ) {
+
+		var containment, co, top, left,
+			o = this.options,
+			scrollIsRootNode = this._isRootNode( this.scrollParent[ 0 ] ),
+			pageX = event.pageX,
+			pageY = event.pageY;
+
+		// Cache the scroll
+		if ( !scrollIsRootNode || !this.offset.scroll ) {
+			this.offset.scroll = {
+				top: this.scrollParent.scrollTop(),
+				left: this.scrollParent.scrollLeft()
+			};
+		}
+
+		/*
+		 * - Position constraining -
+		 * Constrain the position to a mix of grid, containment.
+		 */
+
+		// If we are not dragging yet, we won't check for options
+		if ( constrainPosition ) {
+			if ( this.containment ) {
+				if ( this.relativeContainer ) {
+					co = this.relativeContainer.offset();
+					containment = [
+						this.containment[ 0 ] + co.left,
+						this.containment[ 1 ] + co.top,
+						this.containment[ 2 ] + co.left,
+						this.containment[ 3 ] + co.top
+					];
+				} else {
+					containment = this.containment;
+				}
+
+				if ( event.pageX - this.offset.click.left < containment[ 0 ] ) {
+					pageX = containment[ 0 ] + this.offset.click.left;
+				}
+				if ( event.pageY - this.offset.click.top < containment[ 1 ] ) {
+					pageY = containment[ 1 ] + this.offset.click.top;
+				}
+				if ( event.pageX - this.offset.click.left > containment[ 2 ] ) {
+					pageX = containment[ 2 ] + this.offset.click.left;
+				}
+				if ( event.pageY - this.offset.click.top > containment[ 3 ] ) {
+					pageY = containment[ 3 ] + this.offset.click.top;
+				}
+			}
+
+			if ( o.grid ) {
+
+				//Check for grid elements set to 0 to prevent divide by 0 error causing invalid
+				// argument errors in IE (see ticket #6950)
+				top = o.grid[ 1 ] ? this.originalPageY + Math.round( ( pageY -
+					this.originalPageY ) / o.grid[ 1 ] ) * o.grid[ 1 ] : this.originalPageY;
+				pageY = containment ? ( ( top - this.offset.click.top >= containment[ 1 ] ||
+					top - this.offset.click.top > containment[ 3 ] ) ?
+						top :
+						( ( top - this.offset.click.top >= containment[ 1 ] ) ?
+							top - o.grid[ 1 ] : top + o.grid[ 1 ] ) ) : top;
+
+				left = o.grid[ 0 ] ? this.originalPageX +
+					Math.round( ( pageX - this.originalPageX ) / o.grid[ 0 ] ) * o.grid[ 0 ] :
+					this.originalPageX;
+				pageX = containment ? ( ( left - this.offset.click.left >= containment[ 0 ] ||
+					left - this.offset.click.left > containment[ 2 ] ) ?
+						left :
+						( ( left - this.offset.click.left >= containment[ 0 ] ) ?
+							left - o.grid[ 0 ] : left + o.grid[ 0 ] ) ) : left;
+			}
+
+			if ( o.axis === "y" ) {
+				pageX = this.originalPageX;
+			}
+
+			if ( o.axis === "x" ) {
+				pageY = this.originalPageY;
+			}
+		}
+
+		return {
+			top: (
+
+				// The absolute mouse position
+				pageY -
+
+				// Click offset (relative to the element)
+				this.offset.click.top -
+
+				// Only for relative positioned nodes: Relative offset from element to offset parent
+				this.offset.relative.top -
+
+				// The offsetParent's offset without borders (offset + border)
+				this.offset.parent.top +
+				( this.cssPosition === "fixed" ?
+					-this.offset.scroll.top :
+					( scrollIsRootNode ? 0 : this.offset.scroll.top ) )
+			),
+			left: (
+
+				// The absolute mouse position
+				pageX -
+
+				// Click offset (relative to the element)
+				this.offset.click.left -
+
+				// Only for relative positioned nodes: Relative offset from element to offset parent
+				this.offset.relative.left -
+
+				// The offsetParent's offset without borders (offset + border)
+				this.offset.parent.left +
+				( this.cssPosition === "fixed" ?
+					-this.offset.scroll.left :
+					( scrollIsRootNode ? 0 : this.offset.scroll.left ) )
+			)
+		};
+
+	},
+
+	_clear: function() {
+		this._removeClass( this.helper, "ui-draggable-dragging" );
+		if ( this.helper[ 0 ] !== this.element[ 0 ] && !this.cancelHelperRemoval ) {
+			this.helper.remove();
+		}
+		this.helper = null;
+		this.cancelHelperRemoval = false;
+		if ( this.destroyOnClear ) {
+			this.destroy();
+		}
+	},
+
+	// From now on bulk stuff - mainly helpers
+
+	_trigger: function( type, event, ui ) {
+		ui = ui || this._uiHash();
+		$.ui.plugin.call( this, type, [ event, ui, this ], true );
+
+		// Absolute position and offset (see #6884 ) have to be recalculated after plugins
+		if ( /^(drag|start|stop)/.test( type ) ) {
+			this.positionAbs = this._convertPositionTo( "absolute" );
+			ui.offset = this.positionAbs;
+		}
+		return $.Widget.prototype._trigger.call( this, type, event, ui );
+	},
+
+	plugins: {},
+
+	_uiHash: function() {
+		return {
+			helper: this.helper,
+			position: this.position,
+			originalPosition: this.originalPosition,
+			offset: this.positionAbs
+		};
+	}
+
+} );
+
+$.ui.plugin.add( "draggable", "connectToSortable", {
+	start: function( event, ui, draggable ) {
+		var uiSortable = $.extend( {}, ui, {
+			item: draggable.element
+		} );
+
+		draggable.sortables = [];
+		$( draggable.options.connectToSortable ).each( function() {
+			var sortable = $( this ).sortable( "instance" );
+
+			if ( sortable && !sortable.options.disabled ) {
+				draggable.sortables.push( sortable );
+
+				// RefreshPositions is called at drag start to refresh the containerCache
+				// which is used in drag. This ensures it's initialized and synchronized
+				// with any changes that might have happened on the page since initialization.
+				sortable.refreshPositions();
+				sortable._trigger( "activate", event, uiSortable );
+			}
+		} );
+	},
+	stop: function( event, ui, draggable ) {
+		var uiSortable = $.extend( {}, ui, {
+			item: draggable.element
+		} );
+
+		draggable.cancelHelperRemoval = false;
+
+		$.each( draggable.sortables, function() {
+			var sortable = this;
+
+			if ( sortable.isOver ) {
+				sortable.isOver = 0;
+
+				// Allow this sortable to handle removing the helper
+				draggable.cancelHelperRemoval = true;
+				sortable.cancelHelperRemoval = false;
+
+				// Use _storedCSS To restore properties in the sortable,
+				// as this also handles revert (#9675) since the draggable
+				// may have modified them in unexpected ways (#8809)
+				sortable._storedCSS = {
+					position: sortable.placeholder.css( "position" ),
+					top: sortable.placeholder.css( "top" ),
+					left: sortable.placeholder.css( "left" )
+				};
+
+				sortable._mouseStop( event );
+
+				// Once drag has ended, the sortable should return to using
+				// its original helper, not the shared helper from draggable
+				sortable.options.helper = sortable.options._helper;
+			} else {
+
+				// Prevent this Sortable from removing the helper.
+				// However, don't set the draggable to remove the helper
+				// either as another connected Sortable may yet handle the removal.
+				sortable.cancelHelperRemoval = true;
+
+				sortable._trigger( "deactivate", event, uiSortable );
+			}
+		} );
+	},
+	drag: function( event, ui, draggable ) {
+		$.each( draggable.sortables, function() {
+			var innermostIntersecting = false,
+				sortable = this;
+
+			// Copy over variables that sortable's _intersectsWith uses
+			sortable.positionAbs = draggable.positionAbs;
+			sortable.helperProportions = draggable.helperProportions;
+			sortable.offset.click = draggable.offset.click;
+
+			if ( sortable._intersectsWith( sortable.containerCache ) ) {
+				innermostIntersecting = true;
+
+				$.each( draggable.sortables, function() {
+
+					// Copy over variables that sortable's _intersectsWith uses
+					this.positionAbs = draggable.positionAbs;
+					this.helperProportions = draggable.helperProportions;
+					this.offset.click = draggable.offset.click;
+
+					if ( this !== sortable &&
+							this._intersectsWith( this.containerCache ) &&
+							$.contains( sortable.element[ 0 ], this.element[ 0 ] ) ) {
+						innermostIntersecting = false;
+					}
+
+					return innermostIntersecting;
+				} );
+			}
+
+			if ( innermostIntersecting ) {
+
+				// If it intersects, we use a little isOver variable and set it once,
+				// so that the move-in stuff gets fired only once.
+				if ( !sortable.isOver ) {
+					sortable.isOver = 1;
+
+					// Store draggable's parent in case we need to reappend to it later.
+					draggable._parent = ui.helper.parent();
+
+					sortable.currentItem = ui.helper
+						.appendTo( sortable.element )
+						.data( "ui-sortable-item", true );
+
+					// Store helper option to later restore it
+					sortable.options._helper = sortable.options.helper;
+
+					sortable.options.helper = function() {
+						return ui.helper[ 0 ];
+					};
+
+					// Fire the start events of the sortable with our passed browser event,
+					// and our own helper (so it doesn't create a new one)
+					event.target = sortable.currentItem[ 0 ];
+					sortable._mouseCapture( event, true );
+					sortable._mouseStart( event, true, true );
+
+					// Because the browser event is way off the new appended portlet,
+					// modify necessary variables to reflect the changes
+					sortable.offset.click.top = draggable.offset.click.top;
+					sortable.offset.click.left = draggable.offset.click.left;
+					sortable.offset.parent.left -= draggable.offset.parent.left -
+						sortable.offset.parent.left;
+					sortable.offset.parent.top -= draggable.offset.parent.top -
+						sortable.offset.parent.top;
+
+					draggable._trigger( "toSortable", event );
+
+					// Inform draggable that the helper is in a valid drop zone,
+					// used solely in the revert option to handle "valid/invalid".
+					draggable.dropped = sortable.element;
+
+					// Need to refreshPositions of all sortables in the case that
+					// adding to one sortable changes the location of the other sortables (#9675)
+					$.each( draggable.sortables, function() {
+						this.refreshPositions();
+					} );
+
+					// Hack so receive/update callbacks work (mostly)
+					draggable.currentItem = draggable.element;
+					sortable.fromOutside = draggable;
+				}
+
+				if ( sortable.currentItem ) {
+					sortable._mouseDrag( event );
+
+					// Copy the sortable's position because the draggable's can potentially reflect
+					// a relative position, while sortable is always absolute, which the dragged
+					// element has now become. (#8809)
+					ui.position = sortable.position;
+				}
+			} else {
+
+				// If it doesn't intersect with the sortable, and it intersected before,
+				// we fake the drag stop of the sortable, but make sure it doesn't remove
+				// the helper by using cancelHelperRemoval.
+				if ( sortable.isOver ) {
+
+					sortable.isOver = 0;
+					sortable.cancelHelperRemoval = true;
+
+					// Calling sortable's mouseStop would trigger a revert,
+					// so revert must be temporarily false until after mouseStop is called.
+					sortable.options._revert = sortable.options.revert;
+					sortable.options.revert = false;
+
+					sortable._trigger( "out", event, sortable._uiHash( sortable ) );
+					sortable._mouseStop( event, true );
+
+					// Restore sortable behaviors that were modfied
+					// when the draggable entered the sortable area (#9481)
+					sortable.options.revert = sortable.options._revert;
+					sortable.options.helper = sortable.options._helper;
+
+					if ( sortable.placeholder ) {
+						sortable.placeholder.remove();
+					}
+
+					// Restore and recalculate the draggable's offset considering the sortable
+					// may have modified them in unexpected ways. (#8809, #10669)
+					ui.helper.appendTo( draggable._parent );
+					draggable._refreshOffsets( event );
+					ui.position = draggable._generatePosition( event, true );
+
+					draggable._trigger( "fromSortable", event );
+
+					// Inform draggable that the helper is no longer in a valid drop zone
+					draggable.dropped = false;
+
+					// Need to refreshPositions of all sortables just in case removing
+					// from one sortable changes the location of other sortables (#9675)
+					$.each( draggable.sortables, function() {
+						this.refreshPositions();
+					} );
+				}
+			}
+		} );
+	}
+} );
+
+$.ui.plugin.add( "draggable", "cursor", {
+	start: function( event, ui, instance ) {
+		var t = $( "body" ),
+			o = instance.options;
+
+		if ( t.css( "cursor" ) ) {
+			o._cursor = t.css( "cursor" );
+		}
+		t.css( "cursor", o.cursor );
+	},
+	stop: function( event, ui, instance ) {
+		var o = instance.options;
+		if ( o._cursor ) {
+			$( "body" ).css( "cursor", o._cursor );
+		}
+	}
+} );
+
+$.ui.plugin.add( "draggable", "opacity", {
+	start: function( event, ui, instance ) {
+		var t = $( ui.helper ),
+			o = instance.options;
+		if ( t.css( "opacity" ) ) {
+			o._opacity = t.css( "opacity" );
+		}
+		t.css( "opacity", o.opacity );
+	},
+	stop: function( event, ui, instance ) {
+		var o = instance.options;
+		if ( o._opacity ) {
+			$( ui.helper ).css( "opacity", o._opacity );
+		}
+	}
+} );
+
+$.ui.plugin.add( "draggable", "scroll", {
+	start: function( event, ui, i ) {
+		if ( !i.scrollParentNotHidden ) {
+			i.scrollParentNotHidden = i.helper.scrollParent( false );
+		}
+
+		if ( i.scrollParentNotHidden[ 0 ] !== i.document[ 0 ] &&
+				i.scrollParentNotHidden[ 0 ].tagName !== "HTML" ) {
+			i.overflowOffset = i.scrollParentNotHidden.offset();
+		}
+	},
+	drag: function( event, ui, i  ) {
+
+		var o = i.options,
+			scrolled = false,
+			scrollParent = i.scrollParentNotHidden[ 0 ],
+			document = i.document[ 0 ];
+
+		if ( scrollParent !== document && scrollParent.tagName !== "HTML" ) {
+			if ( !o.axis || o.axis !== "x" ) {
+				if ( ( i.overflowOffset.top + scrollParent.offsetHeight ) - event.pageY <
+						o.scrollSensitivity ) {
+					scrollParent.scrollTop = scrolled = scrollParent.scrollTop + o.scrollSpeed;
+				} else if ( event.pageY - i.overflowOffset.top < o.scrollSensitivity ) {
+					scrollParent.scrollTop = scrolled = scrollParent.scrollTop - o.scrollSpeed;
+				}
+			}
+
+			if ( !o.axis || o.axis !== "y" ) {
+				if ( ( i.overflowOffset.left + scrollParent.offsetWidth ) - event.pageX <
+						o.scrollSensitivity ) {
+					scrollParent.scrollLeft = scrolled = scrollParent.scrollLeft + o.scrollSpeed;
+				} else if ( event.pageX - i.overflowOffset.left < o.scrollSensitivity ) {
+					scrollParent.scrollLeft = scrolled = scrollParent.scrollLeft - o.scrollSpeed;
+				}
+			}
+
+		} else {
+
+			if ( !o.axis || o.axis !== "x" ) {
+				if ( event.pageY - $( document ).scrollTop() < o.scrollSensitivity ) {
+					scrolled = $( document ).scrollTop( $( document ).scrollTop() - o.scrollSpeed );
+				} else if ( $( window ).height() - ( event.pageY - $( document ).scrollTop() ) <
+						o.scrollSensitivity ) {
+					scrolled = $( document ).scrollTop( $( document ).scrollTop() + o.scrollSpeed );
+				}
+			}
+
+			if ( !o.axis || o.axis !== "y" ) {
+				if ( event.pageX - $( document ).scrollLeft() < o.scrollSensitivity ) {
+					scrolled = $( document ).scrollLeft(
+						$( document ).scrollLeft() - o.scrollSpeed
+					);
+				} else if ( $( window ).width() - ( event.pageX - $( document ).scrollLeft() ) <
+						o.scrollSensitivity ) {
+					scrolled = $( document ).scrollLeft(
+						$( document ).scrollLeft() + o.scrollSpeed
+					);
+				}
+			}
+
+		}
+
+		if ( scrolled !== false && $.ui.ddmanager && !o.dropBehaviour ) {
+			$.ui.ddmanager.prepareOffsets( i, event );
+		}
+
+	}
+} );
+
+$.ui.plugin.add( "draggable", "snap", {
+	start: function( event, ui, i ) {
+
+		var o = i.options;
+
+		i.snapElements = [];
+
+		$( o.snap.constructor !== String ? ( o.snap.items || ":data(ui-draggable)" ) : o.snap )
+			.each( function() {
+				var $t = $( this ),
+					$o = $t.offset();
+				if ( this !== i.element[ 0 ] ) {
+					i.snapElements.push( {
+						item: this,
+						width: $t.outerWidth(), height: $t.outerHeight(),
+						top: $o.top, left: $o.left
+					} );
+				}
+			} );
+
+	},
+	drag: function( event, ui, inst ) {
+
+		var ts, bs, ls, rs, l, r, t, b, i, first,
+			o = inst.options,
+			d = o.snapTolerance,
+			x1 = ui.offset.left, x2 = x1 + inst.helperProportions.width,
+			y1 = ui.offset.top, y2 = y1 + inst.helperProportions.height;
+
+		for ( i = inst.snapElements.length - 1; i >= 0; i-- ) {
+
+			l = inst.snapElements[ i ].left - inst.margins.left;
+			r = l + inst.snapElements[ i ].width;
+			t = inst.snapElements[ i ].top - inst.margins.top;
+			b = t + inst.snapElements[ i ].height;
+
+			if ( x2 < l - d || x1 > r + d || y2 < t - d || y1 > b + d ||
+					!$.contains( inst.snapElements[ i ].item.ownerDocument,
+					inst.snapElements[ i ].item ) ) {
+				if ( inst.snapElements[ i ].snapping ) {
+					( inst.options.snap.release &&
+						inst.options.snap.release.call(
+							inst.element,
+							event,
+							$.extend( inst._uiHash(), { snapItem: inst.snapElements[ i ].item } )
+						) );
+				}
+				inst.snapElements[ i ].snapping = false;
+				continue;
+			}
+
+			if ( o.snapMode !== "inner" ) {
+				ts = Math.abs( t - y2 ) <= d;
+				bs = Math.abs( b - y1 ) <= d;
+				ls = Math.abs( l - x2 ) <= d;
+				rs = Math.abs( r - x1 ) <= d;
+				if ( ts ) {
+					ui.position.top = inst._convertPositionTo( "relative", {
+						top: t - inst.helperProportions.height,
+						left: 0
+					} ).top;
+				}
+				if ( bs ) {
+					ui.position.top = inst._convertPositionTo( "relative", {
+						top: b,
+						left: 0
+					} ).top;
+				}
+				if ( ls ) {
+					ui.position.left = inst._convertPositionTo( "relative", {
+						top: 0,
+						left: l - inst.helperProportions.width
+					} ).left;
+				}
+				if ( rs ) {
+					ui.position.left = inst._convertPositionTo( "relative", {
+						top: 0,
+						left: r
+					} ).left;
+				}
+			}
+
+			first = ( ts || bs || ls || rs );
+
+			if ( o.snapMode !== "outer" ) {
+				ts = Math.abs( t - y1 ) <= d;
+				bs = Math.abs( b - y2 ) <= d;
+				ls = Math.abs( l - x1 ) <= d;
+				rs = Math.abs( r - x2 ) <= d;
+				if ( ts ) {
+					ui.position.top = inst._convertPositionTo( "relative", {
+						top: t,
+						left: 0
+					} ).top;
+				}
+				if ( bs ) {
+					ui.position.top = inst._convertPositionTo( "relative", {
+						top: b - inst.helperProportions.height,
+						left: 0
+					} ).top;
+				}
+				if ( ls ) {
+					ui.position.left = inst._convertPositionTo( "relative", {
+						top: 0,
+						left: l
+					} ).left;
+				}
+				if ( rs ) {
+					ui.position.left = inst._convertPositionTo( "relative", {
+						top: 0,
+						left: r - inst.helperProportions.width
+					} ).left;
+				}
+			}
+
+			if ( !inst.snapElements[ i ].snapping && ( ts || bs || ls || rs || first ) ) {
+				( inst.options.snap.snap &&
+					inst.options.snap.snap.call(
+						inst.element,
+						event,
+						$.extend( inst._uiHash(), {
+							snapItem: inst.snapElements[ i ].item
+						} ) ) );
+			}
+			inst.snapElements[ i ].snapping = ( ts || bs || ls || rs || first );
+
+		}
+
+	}
+} );
+
+$.ui.plugin.add( "draggable", "stack", {
+	start: function( event, ui, instance ) {
+		var min,
+			o = instance.options,
+			group = $.makeArray( $( o.stack ) ).sort( function( a, b ) {
+				return ( parseInt( $( a ).css( "zIndex" ), 10 ) || 0 ) -
+					( parseInt( $( b ).css( "zIndex" ), 10 ) || 0 );
+			} );
+
+		if ( !group.length ) { return; }
+
+		min = parseInt( $( group[ 0 ] ).css( "zIndex" ), 10 ) || 0;
+		$( group ).each( function( i ) {
+			$( this ).css( "zIndex", min + i );
+		} );
+		this.css( "zIndex", ( min + group.length ) );
+	}
+} );
+
+$.ui.plugin.add( "draggable", "zIndex", {
+	start: function( event, ui, instance ) {
+		var t = $( ui.helper ),
+			o = instance.options;
+
+		if ( t.css( "zIndex" ) ) {
+			o._zIndex = t.css( "zIndex" );
+		}
+		t.css( "zIndex", o.zIndex );
+	},
+	stop: function( event, ui, instance ) {
+		var o = instance.options;
+
+		if ( o._zIndex ) {
+			$( ui.helper ).css( "zIndex", o._zIndex );
+		}
+	}
+} );
+
+return $.ui.draggable;
 
 } ) );
 
 
 /***/ }),
-/* 34 */
+/* 35 */
 /***/ (function(module, exports, __webpack_require__) {
 
 var __WEBPACK_AMD_DEFINE_FACTORY__, __WEBPACK_AMD_DEFINE_ARRAY__, __WEBPACK_AMD_DEFINE_RESULT__;/*!
@@ -60157,8 +60215,8 @@ var __WEBPACK_AMD_DEFINE_FACTORY__, __WEBPACK_AMD_DEFINE_ARRAY__, __WEBPACK_AMD_
 		// AMD. Register as an anonymous module.
 		!(__WEBPACK_AMD_DEFINE_ARRAY__ = [
 			__webpack_require__(1),
+			__webpack_require__(34),
 			__webpack_require__(4),
-			__webpack_require__(5),
 			__webpack_require__(2),
 			__webpack_require__(3)
 		], __WEBPACK_AMD_DEFINE_FACTORY__ = (factory),
@@ -60639,1868 +60697,7 @@ return $.ui.droppable;
 
 
 /***/ }),
-/* 35 */
-/***/ (function(module, exports, __webpack_require__) {
-
-"use strict";
-
-Object.defineProperty(exports, "__esModule", { value: true });
-class BPM {
-    constructor(gifJockey) {
-        this.tapButton = null;
-        this.pause = false;
-        this.lastTap = Date.now();
-        this.nTaps = 0;
-        this.MaxTapTime = 3000;
-        this.averageBPM = 120;
-        this.tapIntervalID = null;
-        this.tapTimeoutID = null;
-        this.song = null;
-        this.bpmDetectionFolder = null;
-        this.bpmDetectionButton = null;
-        this.autoBPM = false;
-        this.gifJockey = gifJockey;
-    }
-    isAutoBPM() {
-        return this.song != null && this.autoBPM;
-    }
-    isOnBeat() {
-        return this.isAutoBPM() && this.song.isOnBeat() && !this.pause;
-    }
-    createGUI(gui) {
-        this.folder = gui.addFolder('BPM');
-        this.bpmDetectionButton = this.folder.add(this, 'autoBPM').name('Auto BPM').onChange(() => this.toggleBPMdetection());
-        this.tapButton = this.folder.addButton('Tap (Enter)', () => this.tap());
-        this.bpmSlider = this.folder.addSlider('BPM', 120, 40, 250, 1).onChange((value) => this.setBPMinterval(value, undefined, false));
-        this.bpmDetectionFolder = this.folder.addFolder('BPM detection settings');
-        let sliders = { sensitivity: null, analyserFFTSize: null, passFreq: null, visualizerFFTSize: null };
-        let onSliderChange = () => {
-            let sens = sliders.sensitivity.getValue();
-            let analyserFFTSize = Math.pow(2, sliders.analyserFFTSize.getValue());
-            let visualizerFFTSize = Math.pow(2, sliders.visualizerFFTSize.getValue());
-            let passFreq = sliders.passFreq.getValue();
-            this.song = new stasilo.BeatDetector({ sens: sens,
-                visualizerFFTSize: visualizerFFTSize,
-                analyserFFTSize: analyserFFTSize,
-                passFreq: passFreq });
-        };
-        sliders.sensitivity = this.bpmDetectionFolder.addSlider('Sensitivity', 14, 1, 16, 1).onChange(onSliderChange);
-        sliders.analyserFFTSize = this.bpmDetectionFolder.addSlider('Analyser FFT Size', 14, 5, 15, 1).onChange(onSliderChange);
-        sliders.passFreq = this.bpmDetectionFolder.addSlider('Bandpass Filter Frequency', 600, 1, 10000, 1).onChange(onSliderChange);
-        sliders.visualizerFFTSize = this.bpmDetectionFolder.addSlider('Visualizer FFT Size', 7, 5, 15, 1).onChange(onSliderChange);
-        this.folder.add(this, 'pause').name('Pause').onChange((value) => { this.gifJockey.shaderManager.pause = value; });
-        onSliderChange();
-        // start
-        this.toggleBPMdetection();
-    }
-    toggleBPMdetection() {
-        // this.autoBPM = !this.autoBPM
-        // this.bpmDetectionButton.setName(this.autoBPM ? 'Manual BPM' : 'Auto BPM')
-        this.tapButton.setVisibility(!this.autoBPM);
-        this.bpmSlider.setVisibility(!this.autoBPM);
-        this.bpmDetectionFolder.setVisibility(this.autoBPM);
-        if (this.autoBPM) {
-            this.stopBPMinterval();
-        }
-        else if (this.tapIntervalID == null) {
-            this.tapIntervalID = setInterval(() => this.onInterval(), this.getInterval());
-        }
-    }
-    stopBPMinterval() {
-        if (this.tapIntervalID != null) {
-            clearInterval(this.tapIntervalID);
-            this.tapIntervalID = null;
-        }
-    }
-    onInterval() {
-        if (this.pause) {
-            return;
-        }
-        this.gifJockey.nextImage();
-    }
-    getInterval(bpm = this.averageBPM) {
-        return 1 / (bpm / 60 / 1000);
-    }
-    setBPMinterval(bpm, newBPM = null, updateBpmSlider = true) {
-        this.averageBPM = bpm;
-        this.stopBPMinterval();
-        let delay = this.getInterval(bpm);
-        this.gifJockey.nextImage();
-        this.tapIntervalID = setInterval(() => this.onInterval(), delay);
-        if (updateBpmSlider) {
-            this.tapButton.setName('Tapping' + (newBPM != null ? ' - Instant BPM: ' + newBPM.toFixed(2) : ''));
-            this.bpmSlider.setValueNoCallback(bpm);
-        }
-    }
-    stopTap() {
-        if (this.isAutoBPM()) {
-            return;
-        }
-        this.nTaps = 0;
-        this.tapButton.setName('Tap (Enter)');
-    }
-    tap() {
-        if (this.isAutoBPM()) {
-            return;
-        }
-        this.nTaps++;
-        let now = Date.now();
-        if (this.tapTimeoutID != null) {
-            clearTimeout(this.tapTimeoutID);
-        }
-        this.tapTimeoutID = setTimeout(() => this.stopTap(), this.MaxTapTime);
-        if (this.nTaps == 1) {
-            this.lastTap = now;
-            this.tapButton.setName('Tapping');
-            return;
-        }
-        let newBPM = 60 / ((now - this.lastTap) / 1000);
-        this.averageBPM = (this.averageBPM * (this.nTaps - 1) + newBPM) / this.nTaps;
-        console.log(this.averageBPM + ', ' + newBPM);
-        this.setBPMinterval(this.averageBPM, newBPM);
-        this.lastTap = now;
-    }
-}
-exports.BPM = BPM;
-
-
-/***/ }),
 /* 36 */
-/***/ (function(module, exports, __webpack_require__) {
-
-"use strict";
-
-Object.defineProperty(exports, "__esModule", { value: true });
-const $ = __webpack_require__(1);
-class Controller {
-    constructor(controller) {
-        this.controller = controller;
-    }
-    getDomElement() {
-        return this.controller.domElement;
-    }
-    getParentDomElement() {
-        return this.getDomElement().parentElement.parentElement;
-    }
-    hide() {
-        $(this.getParentDomElement()).hide();
-    }
-    show() {
-        $(this.getParentDomElement()).show();
-    }
-    setVisibility(visible) {
-        if (visible) {
-            this.show();
-        }
-        else {
-            this.hide();
-        }
-    }
-    remove() {
-        this.controller.remove();
-    }
-    contains(element) {
-        return $.contains(this.getParentDomElement(), element);
-    }
-    getProperty() {
-        return this.controller.property;
-    }
-    getName() {
-        return this.controller.property;
-    }
-    getValue() {
-        return this.controller.object[this.controller.property];
-    }
-    onChange(callback) {
-        this.controller.onChange(callback);
-        return this;
-    }
-    onFinishChange(callback) {
-        this.controller.onFinishChange(callback);
-        return this;
-    }
-    setValue(value) {
-        this.controller.setValue(value);
-        return this;
-    }
-    setValueNoCallback(value) {
-        this.controller.object[this.controller.property] = value;
-        this.controller.updateDisplay();
-        return this;
-    }
-    max(value) {
-        this.controller.max(value);
-        return this;
-    }
-    min(value) {
-        this.controller.min(value);
-        return this;
-    }
-    step(value) {
-        this.controller.step(value);
-        return this;
-    }
-    updateDisplay() {
-        this.controller.updateDisplay();
-        return this;
-    }
-    options(options) {
-        return this.controller.options(options);
-    }
-    listen() {
-        this.controller.listen();
-        return this;
-    }
-    setName(name) {
-        $(this.controller.domElement.parentElement).find('span.property-name').html(name);
-        return this;
-    }
-    name(name) {
-        this.controller.name(name);
-        return this;
-    }
-}
-exports.Controller = Controller;
-class GUI {
-    constructor(options = null, folder = null) {
-        this.gui = folder != null ? folder : new dat.GUI(options);
-    }
-    getDomElement() {
-        return this.gui.domElement;
-    }
-    hide() {
-        $(this.getDomElement()).hide();
-    }
-    show() {
-        $(this.getDomElement()).show();
-    }
-    setVisibility(visible) {
-        if (visible) {
-            this.show();
-        }
-        else {
-            this.hide();
-        }
-    }
-    add(object, propertyName, minOrArray = null, max = null) {
-        return new Controller(this.gui.add(object, propertyName, minOrArray, max));
-    }
-    addColor(object, propertyName) {
-        return new Controller(this.gui.addColor(object, propertyName));
-    }
-    addButton(name, callback, object = {}) {
-        let nameNoSpaces = name.replace(/\s+/g, '');
-        object[nameNoSpaces] = callback;
-        let controller = new Controller(this.gui.add(object, nameNoSpaces));
-        if (name != nameNoSpaces) {
-            controller.setName(name);
-        }
-        return controller;
-    }
-    addToggleButton(name, toggledName, object = {}, propertyName = '_toggled', callback = null) {
-        let defaultValue = object[propertyName];
-        let controller = null;
-        let newCallback = () => {
-            object[propertyName] = !object[propertyName];
-            controller.setName(object[propertyName] == defaultValue ? name : toggledName);
-            if (callback != null) {
-                callback.apply(object, [object[propertyName]]);
-            }
-        };
-        controller = this.addButton(name, newCallback, object);
-        return controller;
-    }
-    addFileSelectorButton(name, fileType, callback) {
-        let divJ = $("<input data-name='file-selector' type='file' class='form-control' name='file[]'  accept='" + fileType + "'/>");
-        let button = this.addButton(name, () => divJ.click());
-        $(button.getDomElement()).append(divJ);
-        divJ.hide();
-        divJ.change(callback);
-        return button;
-    }
-    addSlider(name, value, min, max, step = null) {
-        let object = {};
-        let nameNoSpaces = name.replace(/\s+/g, '');
-        object[nameNoSpaces] = value;
-        let slider = this.add(object, nameNoSpaces, min, max);
-        if (name != nameNoSpaces) {
-            slider.setName(name);
-        }
-        if (step != null) {
-            slider.step(step);
-        }
-        return slider;
-    }
-    addSelect(name, choices, defaultChoice) {
-        let object = {};
-        let nameNoSpaces = name.replace(/\s+/g, '');
-        object[nameNoSpaces] = defaultChoice;
-        let controller = this.add(object, nameNoSpaces, choices);
-        if (name != nameNoSpaces) {
-            controller.setName(name);
-        }
-        return controller;
-    }
-    addFolder(name) {
-        return new GUI(null, this.gui.addFolder(name));
-    }
-    getControllers() {
-        return this.gui.__controllers;
-    }
-    open() {
-        this.gui.open();
-        return this;
-    }
-    close() {
-        this.gui.close();
-        return this;
-    }
-    isFocused() {
-        return $('.dg.main').find(document.activeElement).length > 0;
-    }
-}
-exports.GUI = GUI;
-
-
-/***/ }),
-/* 37 */
-/***/ (function(module, exports, __webpack_require__) {
-
-"use strict";
-
-Object.defineProperty(exports, "__esModule", { value: true });
-const $ = __webpack_require__(1);
-const gifshot = __webpack_require__(10);
-class Gif {
-    constructor(containerJ, id) {
-        this.hasPreview = false;
-        this.nImages = 0;
-        this.id = -1;
-        this.containerJ = containerJ;
-        this.imageIndex = 0;
-        this.id = id;
-    }
-    // setSize(imgJ: any) {
-    // 	this.containerJ.width(imgJ[0].naturalWidth)
-    // 	this.containerJ.height(imgJ[0].naturalHeight)
-    // }
-    getImageContainerJ(name) {
-        return this.containerJ.find('div[data-name="' + name + '"]');
-    }
-    getImageJ(name) {
-        return this.containerJ.find('img[data-name="' + name + '"]');
-    }
-    getFilteredImagesJ() {
-        return this.containerJ.find('img.filtered');
-    }
-    getFirstImageJ() {
-        return this.containerJ.find('img.original').first();
-    }
-    containsImage(name) {
-        return this.getImageContainerJ(name).length > 0;
-    }
-    getNumberOfImages() {
-        return this.nImages;
-    }
-    isEmpty() {
-        return this.nImages == 0;
-    }
-    addCopy(originalImageJ, filteredImageJ, imageID) {
-        let originalJ = originalImageJ.clone();
-        originalJ.attr('data-name', 'img-' + imageID);
-        let filteredJ = filteredImageJ.clone();
-        filteredJ.attr('data-name', 'img-' + imageID);
-        this.addImage(originalJ, filteredJ);
-    }
-    addImage(originalImageJ, filteredImageJ = null) {
-        this.nImages++;
-        this.containerJ.find('.gg-placeholder').remove();
-        let divJ = $('<div class="gg-image-container">');
-        divJ.attr('data-name', originalImageJ.attr('data-name'));
-        divJ.append(originalImageJ.addClass('gg-hidden original'));
-        if (filteredImageJ != null) {
-            divJ.append(filteredImageJ);
-        }
-        this.containerJ.append(divJ);
-    }
-    setFilteredImage(imageName, resultJ) {
-        let originalImageJ = this.getImageJ(imageName);
-        originalImageJ.siblings('.filtered').remove();
-        resultJ.insertBefore(originalImageJ);
-        // resultJ.css({width: '100%'})
-    }
-    replaceImage(oldImageName, newImageJ) {
-        // newImageJ.css({width: '100%'})
-        this.getImageJ(oldImageName).replaceWith(newImageJ);
-    }
-    removeImage(imageName) {
-        this.nImages--;
-        this.getImageContainerJ(imageName).remove();
-    }
-    nextImage() {
-        let imagesJ = this.containerJ.children();
-        this.imageIndex++;
-        if (this.imageIndex >= imagesJ.length) {
-            this.imageIndex = 0;
-        }
-        // avoid to use hide() / show() because it affects the size of dom element in chrome which is a problem with the thumbnail scrollbar
-        // imagesJ.css({opacity: 0})
-        // $(imagesJ[this.imageIndex]).css({opacity: 1})
-        imagesJ.hide();
-        $(imagesJ[this.imageIndex]).show();
-    }
-    sortImages(imageNames) {
-        let imageContainersJ = this.containerJ.children();
-        for (let imageName of imageNames) {
-            let imageContainerJ = this.containerJ.children('div[data-name="' + imageName + '"]');
-            this.containerJ.append(imageContainerJ);
-        }
-    }
-    getImagePairsJ() {
-        let imagePairsJ = [];
-        for (let child of this.containerJ.children()) {
-            imagePairsJ.push($(child).find('img').clone());
-        }
-        return imagePairsJ;
-    }
-    setGif(gif) {
-        this.empty();
-        let imagePairsJ = gif.getImagePairsJ();
-        for (let imagePairJ of imagePairsJ) {
-            this.addImage(imagePairJ.filter('.original'), imagePairJ.filter('.filtered'));
-        }
-    }
-    empty() {
-        this.containerJ.empty();
-        this.nImages = 0;
-    }
-    preview(save = false) {
-        let imagesJ = this.getFilteredImagesJ().toArray();
-        if (imagesJ.length == 0) {
-            return;
-        }
-        let width = imagesJ[0].naturalWidth;
-        let height = imagesJ[0].naturalHeight;
-        let interval = Gif.gifManager.gifJockey.bpm.getInterval() / 1000;
-        gifshot.createGIF({
-            gifWidth: width,
-            gifHeight: height,
-            interval: interval,
-            images: imagesJ,
-            sampleInterval: Gif.gifManager.gifQuality
-        }, (obj) => {
-            if (!obj.error) {
-                var image = obj.image, animatedImage = document.createElement('img');
-                animatedImage.src = image;
-                let aJ = $('<a download="gif.gif" href="' + image + '">');
-                aJ.append(animatedImage);
-                $('#gif-result').empty().append(aJ);
-                this.hasPreview = true;
-                if (save) {
-                    aJ[0].click();
-                }
-            }
-        });
-    }
-}
-exports.Gif = Gif;
-class GifManager {
-    constructor(gifJockey) {
-        this.gifID = 0;
-        this.gifs = new Map();
-        this.currentGif = null;
-        this.gifQuality = 10;
-        this.numberOfImages = 4;
-        this.nSnapshots = 0;
-        this.autoGifInterval = -1;
-        this.getGifContainer = () => {
-            return this.currentGif.containerJ.parentUntil('li.gg-thumbnail');
-        };
-        this.sortGifsStop = () => {
-        };
-        this.gifJockey = gifJockey;
-        Gif.gifManager = this;
-        // this.toggleThumbnails(false)
-    }
-    createGUI(gui) {
-        let folder = gui.addFolder('Export GIF');
-        folder.addSlider('Gif degradation', this.gifQuality, 1, 5000, 1).onChange((value) => { this.gifQuality = value; });
-        folder.addButton('Save gif', () => this.currentGif.preview(true));
-        // gui.addButton('Save gif', ()=> {
-        // 	if(!this.currentGif.hasPreview) {
-        // 		this.currentGif.preview(true)
-        // 	} else {
-        // 		let linkJ = $('#result').find('a')
-        // 		linkJ[0].click()
-        // 	}
-        // })
-        this.gif = new Gif($('#result'), this.gifID++);
-    }
-    removeImage(imageName) {
-        this.gif.removeImage(imageName);
-        this.currentGif.removeImage(imageName);
-    }
-    addImage(imgJ) {
-        if (this.gifs.size == 0) {
-            this.addGif();
-        }
-        this.gif.addImage(imgJ.clone());
-        this.currentGif.addImage(imgJ.clone());
-    }
-    setFilteredImage(imageName, resultJ) {
-        this.gif.setFilteredImage(imageName, resultJ.clone());
-        this.currentGif.setFilteredImage(imageName, resultJ.clone());
-    }
-    nextImage() {
-        this.gif.nextImage();
-        for (let [gifName, gif] of this.gifs) {
-            gif.nextImage();
-        }
-    }
-    sortImages(imageNames) {
-        this.gif.sortImages(imageNames);
-        this.currentGif.sortImages(imageNames);
-    }
-    addGif() {
-        this.gifJockey.deselectImages();
-        this.gifJockey.emptyThumbnails();
-        this.gif.empty();
-        let currentGifJ = $('<li class="gg-thumbnail" data-name="gif-' + this.gifID + '">');
-        let closeButtonJ = $('<button type="button" class="gg-small-btn close-btn">');
-        let closeSpanJ = $('<span class="ui-icon ui-icon-closethick">');
-        let playButtonJ = $('<button type="button" class="gg-small-btn play-btn">');
-        let playSpanJ = $('<span class="ui-icon ui-icon-play">');
-        let duplicateButtonJ = $('<button type="button" class="gg-small-btn duplicate-btn">');
-        let duplicateButtonIconJ = $('<span class="ui-icon ui-icon-plusthick">');
-        duplicateButtonJ.append(duplicateButtonIconJ);
-        let divJ = $('<div class="gg-thumbnail-container">');
-        let selectionRectangleJ = $('<div class="gg-selection-rectangle">');
-        closeButtonJ.append(closeSpanJ);
-        playButtonJ.append(playSpanJ);
-        currentGifJ.append(selectionRectangleJ);
-        currentGifJ.append(divJ);
-        currentGifJ.append(closeButtonJ);
-        currentGifJ.append(duplicateButtonJ);
-        currentGifJ.append(playButtonJ);
-        let currentGifID = this.gifID;
-        closeButtonJ.click(() => this.removeGif(currentGifID));
-        duplicateButtonJ.click(() => this.duplicateGif(currentGifID));
-        playButtonJ.mousedown((event) => {
-            this.playGif(currentGifID);
-            event.stopPropagation();
-            return -1;
-        });
-        currentGifJ.mousedown((event) => {
-            this.selectGif(currentGifID);
-        });
-        let width = $('#outputs').width();
-        let ratio = this.gifJockey.webcam.height / this.gifJockey.webcam.width;
-        let height = width * ratio;
-        currentGifJ.css({ width: width, height: height });
-        let outputJ = $('#outputs');
-        outputJ.append(currentGifJ);
-        this.currentGif = new Gif(divJ, this.gifID);
-        this.gifs.set(this.currentGif.id, this.currentGif);
-        this.gifID++;
-        currentGifJ.droppable({
-            classes: {
-                "ui-droppable-hover": "ui-state-hover",
-                "ui-droppable-active": "ui-state-default"
-            },
-            drop: (event, ui) => {
-                let originalJ = ui.helper.find('img.original');
-                let filteredJ = ui.helper.find('img.filtered');
-                let gif = this.gifs.get(currentGifID);
-                // Ignore if the gif already contains the image:
-                if (gif.containsImage(originalJ.attr('data-name'))) {
-                    return;
-                }
-                gif.addCopy(originalJ, filteredJ, this.gifJockey.imageID++);
-            }
-        });
-        // outputsJ.sortable(({ stop: ()=> this.gifManager.sortGifsStop(), connectWith: '#thumbnails', receive: function( event: any, ui: any ) {
-        // 	if(ui.sender.is('#thumbnails')) {
-        // 	}
-        // } }))
-    }
-    createAutoGif() {
-        if (this.autoGifInterval != null) {
-            clearInterval(this.autoGifInterval);
-            this.autoGifInterval = null;
-        }
-        if (this.currentGif == null || !this.currentGif.isEmpty()) {
-            this.addGif();
-        }
-        this.gifJockey.deselectAndCallback(() => {
-            this.nSnapshots = 0;
-            this.autoGifInterval = setInterval(() => {
-                this.gifJockey.takeSnapshot();
-                this.nSnapshots++;
-                if (this.nSnapshots == this.numberOfImages) {
-                    clearInterval(this.autoGifInterval);
-                    this.autoGifInterval = null;
-                }
-            }, this.gifJockey.bpm.getInterval());
-        });
-    }
-    removeGif(gifID) {
-        $('#outputs').find('[data-name="gif-' + gifID + '"]').remove();
-        $('#thumbnails').empty();
-        this.gifs.delete(gifID);
-        if (this.currentGif != null && this.currentGif.id == gifID) {
-            this.currentGif = null;
-        }
-    }
-    duplicateGif(gifID) {
-        let gif = this.gifs.get(gifID);
-        this.addGif();
-        let imagePairsJ = gif.getImagePairsJ();
-        for (let imagePairJ of imagePairsJ) {
-            let originalImageJ = imagePairJ.filter('.original');
-            let filteredImageJ = imagePairJ.filter('.filtered');
-            this.currentGif.addCopy(originalImageJ, filteredImageJ, this.gifJockey.imageID++);
-        }
-    }
-    toggleThumbnails(show) {
-        let thumbnailsJ = $('#thumbnails-container');
-        let thumbnailsVisible = thumbnailsJ.is(':visible');
-        if (show && !thumbnailsVisible) {
-            thumbnailsJ.show();
-            document.dispatchEvent(new Event('cameraResized'));
-        }
-        else if (!show && thumbnailsVisible) {
-            thumbnailsJ.hide();
-            document.dispatchEvent(new Event('cameraResized'));
-        }
-        // let resultJ = $('#result')
-        // let resultVisible = resultJ.is(':visible')
-        // if(show && !resultVisible) {
-        // 	resultJ.show()
-        // } else if (!show && resultVisible) {
-        // 	resultJ.hide()
-        // }
-    }
-    selectGif(gifID) {
-        let gifsToSelectJ = $('#outputs').children("[data-name='gif-" + gifID + "']");
-        if (gifsToSelectJ.length == 0) {
-            this.toggleThumbnails(false);
-            return;
-        }
-        let gifsAlreadySelected = gifsToSelectJ.hasClass('gg-selected');
-        if (gifsAlreadySelected) {
-            return;
-        }
-        $('#outputs').children().removeClass('gg-selected');
-        gifsToSelectJ.addClass('gg-selected');
-        this.currentGif = this.gifs.get(gifID);
-        this.gif.setGif(this.currentGif);
-        this.gifJockey.setGif(this.currentGif);
-        this.toggleThumbnails(true);
-    }
-    // Select parent gif when select an image 
-    selectImage(imageName) {
-        if (this.currentGif != null && this.currentGif.getImageJ(imageName).length > 0) {
-            return;
-        }
-        else {
-            for (let [gifID, gif] of this.gifs) {
-                if (gif.getImageJ(imageName).length > 0) {
-                    this.selectGif(gifID);
-                    return;
-                }
-            }
-        }
-    }
-    deselectGif() {
-        $('#outputs').children().removeClass('gg-selected');
-        this.toggleThumbnails(false);
-        // this.currentGif = null
-    }
-    playGif(gifID) {
-        $('#outputs').find('.gg-small-btn.play-btn').removeClass('playing');
-        let gif = this.gifs.get(gifID);
-        gif.containerJ.parent().find('.play-btn').addClass('playing');
-        this.gifJockey.playGifViewer(gif);
-    }
-}
-exports.GifManager = GifManager;
-
-
-/***/ }),
-/* 38 */
-/***/ (function(module, exports, __webpack_require__) {
-
-"use strict";
-
-Object.defineProperty(exports, "__esModule", { value: true });
-const $ = __webpack_require__(1);
-const THREE = __webpack_require__(0);
-class Renderer {
-    constructor(webcam, gui) {
-        let cameraJ = $('#camera');
-        this.webcam = webcam;
-        let width = webcam.width;
-        let height = webcam.height;
-        this.camera = new THREE.OrthographicCamera(width / -2, width / 2, height / 2, height / -2, 1, 1000);
-        this.scene = new THREE.Scene();
-        this.renderer = new THREE.WebGLRenderer({ antialias: true, preserveDrawingBuffer: true });
-        this.renderer.setSize(width, height);
-        let size = this.computeRendererSize(webcam, cameraJ);
-        // this.setCanvasSize(size.width, size.height)
-        let container = document.getElementById('camera');
-        container.appendChild(this.renderer.domElement);
-        this.displayVideo();
-        this.camera.position.z = 5;
-        window.addEventListener('resize', () => this.windowResize(), false);
-        document.addEventListener('cameraResized', () => this.windowResize());
-        requestAnimationFrame(() => this.render());
-        this.centerOnRectangle(this.webcam.width, this.webcam.height);
-        setTimeout(() => this.windowResize(), 0);
-    }
-    resize(width, height) {
-        this.camera.left = width / -2;
-        this.camera.right = width / 2;
-        this.camera.top = height / 2;
-        this.camera.bottom = height / -2;
-        this.camera.updateProjectionMatrix();
-        this.renderer.setSize(width, height);
-        console.log('Renderer: set size: ' + width + ', ' + height);
-        this.displayVideo();
-        this.windowResize();
-    }
-    displayVideo() {
-        if (this.shaderManager != null) {
-            this.shaderManager.pause = false;
-        }
-        this.setContent(this.webcam.video);
-    }
-    displayImage(content) {
-        if (this.shaderManager != null) {
-            this.shaderManager.pause = true;
-        }
-        this.setContent(content);
-    }
-    setContent(content) {
-        console.log('Renderer: set content: ' + content.width + ', ' + content.height);
-        this.texture = new THREE.Texture(content);
-        this.material = new THREE.MeshBasicMaterial({ map: this.texture });
-        this.texture.minFilter = THREE.LinearFilter;
-        this.texture.magFilter = THREE.LinearFilter;
-        let geometry = new THREE.PlaneGeometry(content.width, content.height);
-        if (this.mesh != null) {
-            this.scene.remove(this.mesh);
-        }
-        this.mesh = new THREE.Mesh(geometry, this.material);
-        this.scene.add(this.mesh);
-    }
-    setShaderManager(shaderManager) {
-        this.shaderManager = shaderManager;
-    }
-    getDomElement() {
-        return this.renderer.domElement;
-    }
-    getFilteredImage() {
-        // this.shaderManager.animate()
-        let canvas = this.getDomElement();
-        let result = new Image();
-        result.src = canvas.toDataURL();
-        return { image: result, shaderParameters: this.shaderManager.getShaderParameters() };
-    }
-    computeRendererSize(webcam, cameraJ) {
-        let cameraWidth = cameraJ.width();
-        let cameraHeight = cameraJ.height();
-        let cameraRatio = cameraWidth / cameraHeight;
-        let webcamRatio = webcam.width / webcam.height;
-        let width = null;
-        let height = null;
-        if (cameraRatio < webcamRatio) {
-            width = cameraWidth;
-            height = cameraWidth / webcamRatio;
-        }
-        else {
-            width = cameraHeight * webcamRatio;
-            height = cameraHeight;
-        }
-        return { width: width, height: height };
-    }
-    setCanvasSize(width, height) {
-        $(this.renderer.domElement).css({ width: '' + width + 'px', height: '' + height + 'px' });
-    }
-    centerOnRectangle(width, height) {
-        let margin = 0;
-        let ratio = Math.max((width + margin) / this.renderer.getSize().width, (height + margin) / this.renderer.getSize().height);
-        this.camera.zoom = 1 / ratio;
-        this.camera.updateProjectionMatrix();
-    }
-    windowResize() {
-        let cameraJ = $('#camera');
-        let size = this.computeRendererSize(this.webcam, cameraJ);
-        this.setCanvasSize(size.width, size.height);
-    }
-    render() {
-        requestAnimationFrame(() => this.render());
-        if (this.webcam.streaming) {
-            this.texture.needsUpdate = true;
-        }
-        this.shaderManager.animate();
-        // this.renderer.render( this.scene, this.camera )
-    }
-}
-exports.Renderer = Renderer;
-
-
-/***/ }),
-/* 39 */
-/***/ (function(module, exports, __webpack_require__) {
-
-"use strict";
-
-Object.defineProperty(exports, "__esModule", { value: true });
-const THREE = __webpack_require__(0);
-// <script src='node_modules/three/examples/js/postprocessing/EffectComposer.js'></script>
-// <script src='node_modules/three/examples/js/postprocessing/RenderPass.js'></script>
-// <script src='node_modules/three/examples/js/postprocessing/ShaderPass.js'></script>
-// <script src='node_modules/three/examples/js/postprocessing/MaskPass.js'></script> 
-// <script src='node_modules/three/examples/js/shaders/CopyShader.js'></script>
-// <script src='node_modules/three/examples/js/shaders/BleachBypassShader.js'></script>
-// <script src='node_modules/three/examples/js/shaders/BrightnessContrastShader.js'></script>
-// <script src='node_modules/three/examples/js/shaders/ColorifyShader.js'></script>
-// <script src='node_modules/three/examples/js/shaders/DotScreenShader.js'></script>
-// <script src='node_modules/three/examples/js/shaders/EdgeShader2.js'></script> 
-// <script src='node_modules/three/examples/js/shaders/KaleidoShader.js'></script>
-// <script src='node_modules/three/examples/js/shaders/MirrorShader.js'></script>
-// <script src='node_modules/three/examples/js/shaders/SepiaShader.js'></script>
-// <script src='node_modules/three/examples/js/shaders/VignetteShader.js'></script>
-// <script src='node_modules/three/examples/js/shaders/FilmShader.js'></script>
-// <script src='node_modules/three/examples/js/shaders/RGBShiftShader.js'></script> 
-__webpack_require__(17);
-__webpack_require__(24);
-__webpack_require__(26);
-__webpack_require__(21);
-__webpack_require__(14);
-__webpack_require__(11);
-__webpack_require__(12);
-__webpack_require__(13);
-__webpack_require__(15);
-__webpack_require__(16);
-__webpack_require__(20);
-__webpack_require__(22);
-__webpack_require__(25);
-__webpack_require__(27);
-__webpack_require__(18);
-__webpack_require__(23);
-__webpack_require__(19);
-const BadTV_1 = __webpack_require__(40);
-const Static_1 = __webpack_require__(43);
-const Film_1 = __webpack_require__(42);
-const DotMatrix_1 = __webpack_require__(41);
-class ShaderManager {
-    constructor(gui, camera, scene, renderer) {
-        this.shaderParameters = {
-            badTV: {
-                name: 'Bad TV',
-                shader: BadTV_1.BadTVShader,
-                on: true,
-                time: true,
-                parameters: {
-                    distortion: {
-                        name: 'Thick distrotion',
-                        value: 3.0,
-                        min: 0.1,
-                        max: 20,
-                        randomMin: 0.1,
-                        randomMax: 3,
-                        step: 0.1
-                    },
-                    distortion2: {
-                        name: 'Fine distrotion',
-                        value: 1.0,
-                        min: 0.1,
-                        max: 20,
-                        randomMin: 0.1,
-                        randomMax: 7,
-                        step: 0.1
-                    },
-                    speed: {
-                        name: 'Distrotion speed',
-                        value: 0.3,
-                        min: 0,
-                        max: 1,
-                        randomMin: 0,
-                        randomMax: 4,
-                        step: 0.01
-                    },
-                    rollSpeed: {
-                        name: 'Roll speed',
-                        value: 0.1,
-                        min: 0,
-                        max: 1,
-                        randomMin: 0,
-                        randomMax: 0.2,
-                        step: 0.01
-                    }
-                }
-            },
-            static: {
-                name: 'Static',
-                shader: Static_1.StaticShader,
-                on: true,
-                time: true,
-                parameters: {
-                    amount: {
-                        name: 'Amount',
-                        value: 0.5,
-                        min: 0,
-                        max: 1,
-                        randomMin: 0,
-                        randomMax: 0.2,
-                        step: 0.01
-                    },
-                    size: {
-                        name: 'Size',
-                        value: 4,
-                        min: 1,
-                        max: 100,
-                        randomMin: 1,
-                        randomMax: 20,
-                        step: 1
-                    }
-                }
-            },
-            rgbShift: {
-                name: 'RGB Shift',
-                shader: THREE.RGBShiftShader,
-                on: true,
-                parameters: {
-                    amount: {
-                        name: 'Amount',
-                        value: 0.005,
-                        min: 0,
-                        max: 0.1,
-                        randomMin: 0,
-                        randomMax: 0.03,
-                        step: 0.01
-                    },
-                    angle: {
-                        name: 'Angle',
-                        value: 180,
-                        min: 0,
-                        max: 360,
-                        step: 1,
-                        getValue: (value) => 2 * Math.PI * value / 360
-                    }
-                }
-            },
-            scanLine: {
-                name: 'Scanlines',
-                shader: Film_1.FilmShader,
-                on: true,
-                time: true,
-                parameters: {
-                    sCount: {
-                        name: 'Count',
-                        value: 800,
-                        min: 50,
-                        max: 10000,
-                        step: 1
-                    },
-                    sIntensity: {
-                        name: 'S intensity',
-                        value: 0.9,
-                        min: 0,
-                        max: 2,
-                        step: 0.1
-                    },
-                    nIntensity: {
-                        name: 'N intensity',
-                        value: 0.4,
-                        min: 0,
-                        max: 2,
-                        step: 0.1
-                    }
-                }
-            },
-            bleach: {
-                name: 'Bleach',
-                shader: THREE.BleachBypassShader,
-                on: false,
-                parameters: {
-                    opacity: {
-                        name: 'Opacity',
-                        value: 1,
-                        min: 0,
-                        max: 10,
-                        randomMin: 0,
-                        randomMax: 1.7,
-                        step: 0.1
-                    }
-                }
-            },
-            brightnessContrast: {
-                name: 'Brightness & Contrast',
-                shader: THREE.BrightnessContrastShader,
-                on: false,
-                parameters: {
-                    brightness: {
-                        name: 'Brightness',
-                        value: 0.25,
-                        min: 0,
-                        max: 1,
-                        randomMin: 0,
-                        randomMax: 0.2,
-                        step: 0.01
-                    },
-                    contrast: {
-                        name: 'Contrast',
-                        value: 0.7,
-                        min: 0,
-                        max: 1,
-                        step: 0.01
-                    }
-                }
-            },
-            colorify: {
-                name: 'Colorify',
-                shader: THREE.ColorifyShader,
-                on: false,
-                parameters: {
-                    color: {
-                        name: 'Color',
-                        type: 'color',
-                        value: '#FFEE44'
-                    }
-                }
-            },
-            dotScreen: {
-                name: 'Dot Screen',
-                shader: THREE.DotScreenShader,
-                on: false,
-                parameters: {
-                    tSize: {
-                        name: 'Size',
-                        value: 256,
-                        min: 2,
-                        max: 1024,
-                        randomMin: 256,
-                        randomMax: 512,
-                        step: 1,
-                        getValue: (value) => new THREE.Vector2(value, value)
-                    },
-                    angle: {
-                        name: 'Angle',
-                        value: 180,
-                        min: 0,
-                        max: 360,
-                        step: 1,
-                        getValue: (value) => 2 * Math.PI * value / 360
-                    },
-                    scale: {
-                        name: 'Scale',
-                        value: 1,
-                        min: 0.1,
-                        max: 10,
-                        randomMin: 1,
-                        randomMax: 1,
-                        step: 0.01
-                    }
-                }
-            },
-            dotMatrix: {
-                name: 'Dot Matrix',
-                shader: DotMatrix_1.DotMatrix,
-                on: false,
-                parameters: {
-                    sharpness: {
-                        name: 'Sharpness',
-                        value: 0.7,
-                        min: 0,
-                        max: 1,
-                        step: 0.01
-                    },
-                    gridSize: {
-                        name: 'Grid Size',
-                        value: 10,
-                        min: 0,
-                        max: 200,
-                        randomMin: 50,
-                        randomMax: 200,
-                        step: 1
-                    },
-                    dotSize: {
-                        name: 'Dot Size',
-                        value: 0.1,
-                        min: 0,
-                        max: 1,
-                        randomMin: 0,
-                        randomMax: 0.5,
-                        step: 0.1
-                    }
-                }
-            },
-            edgeShader: {
-                name: 'Edge',
-                shader: THREE.EdgeShader2,
-                on: false,
-                parameters: {
-                    aspect: {
-                        name: 'Aspect',
-                        value: 512,
-                        min: 2,
-                        max: 1024,
-                        randomMin: 300,
-                        randomMax: 512,
-                        step: 1,
-                        getValue: (value) => new THREE.Vector2(value, value)
-                    }
-                }
-            },
-            // verticalTiltShift: {
-            // 	name: 'Tilt Shift',
-            // 	shader: (<any>THREE).VerticalTiltShiftShader,
-            // 	on: false,
-            // 	parameters: {
-            // 		v: {
-            // 			name: 'Amount',
-            // 			value: 1 / 512,
-            // 			min: 2,
-            // 			max: 1024,
-            // 			step: 1
-            // 		},
-            // 		r: {
-            // 			name: 'position',
-            // 			value: 0.5,
-            // 			min: 0,
-            // 			max: 1,
-            // 			step: 0.01
-            // 		}
-            // 	}
-            // },
-            hueSaturation: {
-                name: 'Hue & Saturation',
-                shader: THREE.HueSaturationShader,
-                on: false,
-                parameters: {
-                    hue: {
-                        name: 'Hue',
-                        value: 0,
-                        min: -1,
-                        max: 1,
-                        step: 0.01
-                    },
-                    saturation: {
-                        name: 'Saturation',
-                        value: 0,
-                        min: -1,
-                        max: 1,
-                        step: 0.01
-                    }
-                }
-            },
-            kaleido: {
-                name: 'Kaleido',
-                shader: THREE.KaleidoShader,
-                on: false,
-                parameters: {
-                    sides: {
-                        name: 'Sides',
-                        value: 6,
-                        min: 1,
-                        max: 12,
-                        step: 1
-                    },
-                    angle: {
-                        name: 'Angle',
-                        value: 180,
-                        min: 0,
-                        max: 360,
-                        step: 1,
-                        getValue: (value) => 2 * Math.PI * value / 360
-                    }
-                }
-            },
-            mirror: {
-                name: 'Mirror',
-                shader: THREE.MirrorShader,
-                on: false,
-                parameters: {
-                    side: {
-                        name: 'Side',
-                        value: 1,
-                        min: 0,
-                        max: 3,
-                        step: 1
-                    }
-                }
-            },
-            sepiaShader: {
-                name: 'Sepia',
-                shader: THREE.SepiaShader,
-                on: false,
-                parameters: {
-                    amount: {
-                        name: 'Amount',
-                        value: 1,
-                        min: 0,
-                        max: 1,
-                        step: 0.01
-                    }
-                }
-            },
-            vignetteShader: {
-                name: 'Vignette',
-                shader: THREE.VignetteShader,
-                on: false,
-                parameters: {
-                    offset: {
-                        name: 'Offset',
-                        value: 1,
-                        min: 0,
-                        max: 1,
-                        step: 0.01
-                    },
-                    darkness: {
-                        name: 'Darkness',
-                        value: 1,
-                        min: 0,
-                        max: 2,
-                        step: 0.01
-                    }
-                }
-            }
-        };
-        this.shaderChangedTimeout = null;
-        this.pause = false;
-        this.shaders = new Array();
-        this.shaderTime = 0;
-        this.camera = camera;
-        this.scene = scene;
-        this.renderer = renderer;
-        this.renderPass = new THREE.RenderPass(scene, camera);
-        let onParamsChange = () => this.onParamsChange();
-        let onToggleShaders = () => this.onToggleShaders();
-        this.folder = gui.addFolder('Effects');
-        this.folder.open();
-        this.folder.addButton('Randomize	 (R)', () => this.randomizeParams());
-        this.folder.addButton('Deactivate all	 (D)', () => this.deactivateAll());
-        this.folder.addButton('Copy effects 	(Ctrl + C)', () => this.copyEffects());
-        this.folder.addButton('Past effects 	(Ctrl + V)', () => this.pastEffects());
-        for (let shaderName in this.shaderParameters) {
-            let shaderObject = this.shaderParameters[shaderName];
-            let folder = this.folder.addFolder(shaderObject.name);
-            this.shaders.push({ pass: new THREE.ShaderPass(shaderObject.shader), object: shaderObject, folder: folder });
-            folder.add(shaderObject, 'on').name('On').onChange(onToggleShaders);
-            for (let propertyName in shaderObject.parameters) {
-                let propertiesObject = shaderObject.parameters[propertyName];
-                if (propertiesObject.type != null && propertiesObject.type == 'color') {
-                    folder.addColor(propertiesObject, 'value').onChange(onParamsChange);
-                }
-                else {
-                    folder.add(propertiesObject, 'value', propertiesObject.min, propertiesObject.max).step(propertiesObject.step).setName(propertiesObject.name).onChange(onParamsChange);
-                }
-            }
-            folder.open();
-        }
-        this.copyPass = new THREE.ShaderPass(THREE.CopyShader);
-        this.onParamsChange(false);
-        this.onToggleShaders();
-    }
-    deactivateAll() {
-        for (let shader of this.shaders) {
-            shader.object.on = false;
-            shader.folder.getControllers()[0].updateDisplay();
-            shader.folder.close();
-        }
-        this.onToggleShaders();
-    }
-    onToggleShaders(dispatchEvent = true) {
-        //Add Shader Passes to Composer
-        //order is important 
-        this.composer = new THREE.EffectComposer(this.renderer);
-        this.composer.addPass(this.renderPass);
-        for (let shader of this.shaders) {
-            if (shader.object.on) {
-                this.composer.addPass(shader.pass);
-            }
-        }
-        this.composer.addPass(this.copyPass);
-        this.copyPass.renderToScreen = true;
-        if (dispatchEvent) {
-            this.dispatchChange();
-        }
-    }
-    dispatchChange() {
-        if (this.shaderChangedTimeout != null) {
-            clearTimeout(this.shaderChangedTimeout);
-        }
-        this.shaderChangedTimeout = setTimeout(() => document.dispatchEvent(new Event('shaderChanged')), 250);
-    }
-    onParamsChange(dispatchEvent = true) {
-        for (let shader of this.shaders) {
-            for (let propertyName in shader.object.parameters) {
-                let propertiesObject = shader.object.parameters[propertyName];
-                shader.pass.uniforms[propertyName].value = propertiesObject.getValue != null ?
-                    propertiesObject.getValue(propertiesObject.value) :
-                    propertiesObject.type != null && propertiesObject.type == 'color' ?
-                        new THREE.Color(propertiesObject.value) : propertiesObject.value;
-            }
-        }
-        if (dispatchEvent) {
-            this.dispatchChange();
-        }
-    }
-    getRandomOnInterval(min, max) {
-        return min + (max - min) * Math.random();
-    }
-    getRandomColor() {
-        return '#' + Math.random().toString(16).substr(2, 6);
-    }
-    randomizeParams() {
-        let shaderIndices = [];
-        let nShadersToPick = 3;
-        for (let i = 0; i < nShadersToPick; i++) {
-            let shaderIndex = Math.floor(Math.random() * this.shaders.length);
-            shaderIndices.push(shaderIndex);
-        }
-        let i = 0;
-        for (let shader of this.shaders) {
-            shader.object.on = shaderIndices.indexOf(i) >= 0 && shader.object.name != 'Kaleido';
-            if (shader.object.on) {
-                shader.folder.open();
-            }
-            else {
-                shader.folder.close();
-            }
-            for (let propertyName in shader.object.parameters) {
-                let propertiesObject = shader.object.parameters[propertyName];
-                propertiesObject.value = propertiesObject.type == 'color' ?
-                    this.getRandomColor() :
-                    this.getRandomOnInterval(propertiesObject.randomMin != null ? Math.max(propertiesObject.randomMin, propertiesObject.min) : propertiesObject.min, propertiesObject.randomMax != null ? Math.min(propertiesObject.randomMax, propertiesObject.max) : propertiesObject.max);
-            }
-            for (let controller of shader.folder.getControllers()) {
-                controller.updateDisplay();
-            }
-            i++;
-        }
-        this.onToggleShaders(false);
-        this.onParamsChange();
-    }
-    getShaderParameters() {
-        let json = {};
-        for (let shader of this.shaders) {
-            let parameters = {};
-            for (let propertyName in shader.object.parameters) {
-                let propertiesObject = shader.object.parameters[propertyName];
-                parameters[propertyName] = propertiesObject.value;
-            }
-            json[shader.object.name] = { parameters: parameters, on: shader.object.on, time: this.shaderTime };
-        }
-        return json;
-    }
-    setShaderParameters(json) {
-        for (let shader of this.shaders) {
-            let parameters = json[shader.object.name].parameters;
-            let on = json[shader.object.name].on;
-            shader.object.on = on;
-            if (on) {
-                shader.folder.open();
-            }
-            else {
-                shader.folder.close();
-            }
-            for (let propertyName in shader.object.parameters) {
-                shader.object.parameters[propertyName].value = parameters[propertyName];
-            }
-            this.shaderTime = json[shader.object.name].time;
-            for (let controller of shader.folder.getControllers()) {
-                controller.updateDisplay();
-            }
-        }
-        this.onToggleShaders(false);
-        this.onParamsChange(false);
-    }
-    copyEffects() {
-        this.clipboard = this.getShaderParameters();
-    }
-    pastEffects() {
-        this.setShaderParameters(this.clipboard);
-        this.dispatchChange();
-    }
-    animate() {
-        if (!this.pause) {
-            this.shaderTime += 0.1;
-        }
-        for (let shader of this.shaders) {
-            if (shader.object.time) {
-                shader.pass.uniforms['time'].value = this.shaderTime;
-            }
-        }
-        this.composer.render(0.1);
-    }
-}
-exports.ShaderManager = ShaderManager;
-
-
-/***/ }),
-/* 40 */
-/***/ (function(module, exports, __webpack_require__) {
-
-"use strict";
-
-Object.defineProperty(exports, "__esModule", { value: true });
-/**
- * @author Felix Turner / www.airtight.cc / @felixturner
- *
- * Bad TV Shader
- * Simulates a bad TV via horizontal distortion and vertical roll
- * Uses Ashima WebGl Noise: https://github.com/ashima/webgl-noise
- *
- * Uniforms:
- * time: steadily increasing float passed in
- * distortion: amount of thick distortion
- * distortion2: amount of fine grain distortion
- * speed: distortion vertical travel speed
- * rollSpeed: vertical roll speed
- *
- * The MIT License
- *
- * Copyright (c) Felix Turner
- *
- * Permission is hereby granted, free of charge, to any person obtaining a copy
- * of this software and associated documentation files (the "Software"), to deal
- * in the Software without restriction, including without limitation the rights
- * to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
- * copies of the Software, and to permit persons to whom the Software is
- * furnished to do so, subject to the following conditions:
- *
- * The above copyright notice and this permission notice shall be included in
- * all copies or substantial portions of the Software.
- *
- * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
- * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
- * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
- * AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
- * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
- * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
- * THE SOFTWARE.
- *
- */
-exports.BadTVShader = {
-    uniforms: {
-        "tDiffuse": { type: "t", value: null },
-        "time": { type: "f", value: 0.0 },
-        "distortion": { type: "f", value: 3.0 },
-        "distortion2": { type: "f", value: 5.0 },
-        "speed": { type: "f", value: 0.2 },
-        "rollSpeed": { type: "f", value: 0.1 },
-    },
-    vertexShader: [
-        "varying vec2 vUv;",
-        "void main() {",
-        "vUv = uv;",
-        "gl_Position = projectionMatrix * modelViewMatrix * vec4( position, 1.0 );",
-        "}"
-    ].join("\n"),
-    fragmentShader: [
-        "uniform sampler2D tDiffuse;",
-        "uniform float time;",
-        "uniform float distortion;",
-        "uniform float distortion2;",
-        "uniform float speed;",
-        "uniform float rollSpeed;",
-        "varying vec2 vUv;",
-        // Start Ashima 2D Simplex Noise
-        "vec3 mod289(vec3 x) {",
-        "  return x - floor(x * (1.0 / 289.0)) * 289.0;",
-        "}",
-        "vec2 mod289(vec2 x) {",
-        "  return x - floor(x * (1.0 / 289.0)) * 289.0;",
-        "}",
-        "vec3 permute(vec3 x) {",
-        "  return mod289(((x*34.0)+1.0)*x);",
-        "}",
-        "float snoise(vec2 v)",
-        "  {",
-        "  const vec4 C = vec4(0.211324865405187,  // (3.0-sqrt(3.0))/6.0",
-        "                      0.366025403784439,  // 0.5*(sqrt(3.0)-1.0)",
-        "                     -0.577350269189626,  // -1.0 + 2.0 * C.x",
-        "                      0.024390243902439); // 1.0 / 41.0",
-        "  vec2 i  = floor(v + dot(v, C.yy) );",
-        "  vec2 x0 = v -   i + dot(i, C.xx);",
-        "  vec2 i1;",
-        "  i1 = (x0.x > x0.y) ? vec2(1.0, 0.0) : vec2(0.0, 1.0);",
-        "  vec4 x12 = x0.xyxy + C.xxzz;",
-        " x12.xy -= i1;",
-        "  i = mod289(i); // Avoid truncation effects in permutation",
-        "  vec3 p = permute( permute( i.y + vec3(0.0, i1.y, 1.0 ))",
-        "		+ i.x + vec3(0.0, i1.x, 1.0 ));",
-        "  vec3 m = max(0.5 - vec3(dot(x0,x0), dot(x12.xy,x12.xy), dot(x12.zw,x12.zw)), 0.0);",
-        "  m = m*m ;",
-        "  m = m*m ;",
-        "  vec3 x = 2.0 * fract(p * C.www) - 1.0;",
-        "  vec3 h = abs(x) - 0.5;",
-        "  vec3 ox = floor(x + 0.5);",
-        "  vec3 a0 = x - ox;",
-        "  m *= 1.79284291400159 - 0.85373472095314 * ( a0*a0 + h*h );",
-        "  vec3 g;",
-        "  g.x  = a0.x  * x0.x  + h.x  * x0.y;",
-        "  g.yz = a0.yz * x12.xz + h.yz * x12.yw;",
-        "  return 130.0 * dot(m, g);",
-        "}",
-        // End Ashima 2D Simplex Noise
-        "void main() {",
-        "vec2 p = vUv;",
-        "float ty = time*speed;",
-        "float yt = p.y - ty;",
-        //smooth distortion
-        "float offset = snoise(vec2(yt*3.0,0.0))*0.2;",
-        // boost distortion
-        "offset = offset*distortion * offset*distortion * offset;",
-        //add fine grain distortion
-        "offset += snoise(vec2(yt*50.0,0.0))*distortion2*0.001;",
-        //combine distortion on X with roll on Y
-        "gl_FragColor = texture2D(tDiffuse,  vec2(fract(p.x + offset),fract(p.y-time*rollSpeed) ));",
-        "}"
-    ].join("\n")
-};
-
-
-/***/ }),
-/* 41 */
-/***/ (function(module, exports, __webpack_require__) {
-
-"use strict";
-
-Object.defineProperty(exports, "__esModule", { value: true });
-/**
- * @author Arthur Masson
- *
- * sharpness - sharpness of the dots (0 - 1)
- * size - size of noise grains (pixels)
- *
- * The MIT License
- *
- * Copyright (c) 2014 Felix Turner
- *
- * Permission is hereby granted, free of charge, to any person obtaining a copy
- * of this software and associated documentation files (the "Software"), to deal
- * in the Software without restriction, including without limitation the rights
- * to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
- * copies of the Software, and to permit persons to whom the Software is
- * furnished to do so, subject to the following conditions:
- *
- * The above copyright notice and this permission notice shall be included in
- * all copies or substantial portions of the Software.
- *
- * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
- * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
- * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
- * AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
- * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
- * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
- * THE SOFTWARE.
- *
- */
-exports.DotMatrix = {
-    uniforms: {
-        "tDiffuse": { type: "t", value: null },
-        "sharpness": { type: "f", value: 0.7 },
-        "gridSize": { type: "f", value: 10.0 },
-        "dotSize": { type: "f", value: 1.0 }
-    },
-    vertexShader: `
-		varying vec2 vUv;
-
-		void main() {
-			vUv = uv;
-			gl_Position = projectionMatrix * modelViewMatrix * vec4( position, 1.0 );
-		}
-		`,
-    fragmentShader: `
-		uniform sampler2D tDiffuse;
-		uniform float dotSize;
-		uniform float gridSize;
-		uniform float sharpness;
-
-		varying vec2 vUv;
-
-		void main() {
-			vec2 p = vUv;
-			vec4 color = texture2D(tDiffuse, floor( p * gridSize ) / gridSize);
-
-			float halfSharpness = sharpness / 2.;
-			
-			vec2 f = 2. * abs(fract( p * gridSize ) - 0.5);
-
-			color *= smoothstep(1.-halfSharpness, 0.+halfSharpness, dotSize*length(f));
-
-			gl_FragColor = color;
- 		}
- 		`,
-};
-
-
-/***/ }),
-/* 42 */
-/***/ (function(module, exports, __webpack_require__) {
-
-"use strict";
-
-Object.defineProperty(exports, "__esModule", { value: true });
-/**
- * @author alteredq / http://alteredqualia.com/
- *
- * Film grain & scanlines shader
- *
- * - ported from HLSL to WebGL / GLSL
- * http://www.truevision3d.com/forums/showcase/staticnoise_colorblackwhite_scanline_shaders-t18698.0.html
- *
- * Screen Space Static Postprocessor
- *
- * Produces an analogue noise overlay similar to a film grain / TV static
- *
- * Original implementation and noise algorithm
- * Pat 'Hawthorne' Shearon
- *
- * Optimized scanlines + noise version with intensity scaling
- * Georg 'Leviathan' Steinrohder
- *
- * This version is provided under a Creative Commons Attribution 3.0 License
- * http://creativecommons.org/licenses/by/3.0/
- */
-exports.FilmShader = {
-    uniforms: {
-        "tDiffuse": { type: "t", value: null },
-        "time": { type: "f", value: 0.0 },
-        "nIntensity": { type: "f", value: 0.5 },
-        "sIntensity": { type: "f", value: 0.05 },
-        "sCount": { type: "f", value: 4096 },
-        "grayscale": { type: "i", value: 0 }
-    },
-    vertexShader: [
-        "varying vec2 vUv;",
-        "void main() {",
-        "vUv = uv;",
-        "gl_Position = projectionMatrix * modelViewMatrix * vec4( position, 1.0 );",
-        "}"
-    ].join("\n"),
-    fragmentShader: [
-        // control parameter
-        "uniform float time;",
-        "uniform bool grayscale;",
-        // noise effect intensity value (0 = no effect, 1 = full effect)
-        "uniform float nIntensity;",
-        // scanlines effect intensity value (0 = no effect, 1 = full effect)
-        "uniform float sIntensity;",
-        // scanlines effect count value (0 = no effect, 4096 = full effect)
-        "uniform float sCount;",
-        "uniform sampler2D tDiffuse;",
-        "varying vec2 vUv;",
-        "void main() {",
-        // sample the source
-        "vec4 cTextureScreen = texture2D( tDiffuse, vUv );",
-        // make some noise
-        "float x = vUv.x * vUv.y * time *  1000.0;",
-        "x = mod( x, 13.0 ) * mod( x, 123.0 );",
-        "float dx = mod( x, 0.01 );",
-        // add noise
-        "vec3 cResult = cTextureScreen.rgb + cTextureScreen.rgb * clamp( 0.1 + dx * 100.0, 0.0, 1.0 );",
-        // get us a sine and cosine
-        "vec2 sc = vec2( sin( vUv.y * sCount ), cos( vUv.y * sCount ) );",
-        // add scanlines
-        "cResult += cTextureScreen.rgb * vec3( sc.x, sc.y, sc.x ) * sIntensity;",
-        // interpolate between source and result by intensity
-        "cResult = cTextureScreen.rgb + clamp( nIntensity, 0.0,1.0 ) * ( cResult - cTextureScreen.rgb );",
-        // convert to grayscale if desired
-        "if( grayscale ) {",
-        "cResult = vec3( cResult.r * 0.3 + cResult.g * 0.59 + cResult.b * 0.11 );",
-        "}",
-        "gl_FragColor =  vec4( cResult, cTextureScreen.a );",
-        "}"
-    ].join("\n")
-};
-
-
-/***/ }),
-/* 43 */
-/***/ (function(module, exports, __webpack_require__) {
-
-"use strict";
-
-Object.defineProperty(exports, "__esModule", { value: true });
-/**
- * @author Felix Turner / www.airtight.cc / @felixturner
- *
- * Static effect. Additively blended digital noise.
- *
- * amount - amount of noise to add (0 - 1)
- * size - size of noise grains (pixels)
- *
- * The MIT License
- *
- * Copyright (c) 2014 Felix Turner
- *
- * Permission is hereby granted, free of charge, to any person obtaining a copy
- * of this software and associated documentation files (the "Software"), to deal
- * in the Software without restriction, including without limitation the rights
- * to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
- * copies of the Software, and to permit persons to whom the Software is
- * furnished to do so, subject to the following conditions:
- *
- * The above copyright notice and this permission notice shall be included in
- * all copies or substantial portions of the Software.
- *
- * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
- * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
- * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
- * AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
- * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
- * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
- * THE SOFTWARE.
- *
- */
-exports.StaticShader = {
-    uniforms: {
-        "tDiffuse": { type: "t", value: null },
-        "time": { type: "f", value: 0.0 },
-        "amount": { type: "f", value: 0.5 },
-        "size": { type: "f", value: 4.0 }
-    },
-    vertexShader: [
-        "varying vec2 vUv;",
-        "void main() {",
-        "vUv = uv;",
-        "gl_Position = projectionMatrix * modelViewMatrix * vec4( position, 1.0 );",
-        "}"
-    ].join("\n"),
-    fragmentShader: [
-        "uniform sampler2D tDiffuse;",
-        "uniform float time;",
-        "uniform float amount;",
-        "uniform float size;",
-        "varying vec2 vUv;",
-        "float rand(vec2 co){",
-        "return fract(sin(dot(co.xy ,vec2(12.9898,78.233))) * 43758.5453);",
-        "}",
-        "void main() {",
-        "vec2 p = vUv;",
-        "vec4 color = texture2D(tDiffuse, p);",
-        "float xs = floor(gl_FragCoord.x / size);",
-        "float ys = floor(gl_FragCoord.y / size);",
-        "vec4 snow = vec4(rand(vec2(xs * time,ys * time))*amount);",
-        //"gl_FragColor = color + amount * ( snow - color );", //interpolate
-        "gl_FragColor = color+ snow;",
-        "}"
-    ].join("\n")
-};
-
-
-/***/ }),
-/* 44 */
-/***/ (function(module, exports, __webpack_require__) {
-
-"use strict";
-
-Object.defineProperty(exports, "__esModule", { value: true });
-class Webcam {
-    constructor(callback, width = null) {
-        this.width = Webcam.WIDTH;
-        this.height = 0;
-        this.streaming = false;
-        this.video = null;
-        this.canvas = null;
-        this.context = null;
-        this.photo = null;
-        if (width) {
-            this.width = Math.max(100, Math.min(width, 2048));
-        }
-        else {
-            this.width = Webcam.WIDTH;
-        }
-        // this.photo = document.getElementById('photo')
-        this.video = document.createElement('video');
-        this.canvas = document.createElement('canvas');
-        this.context = this.canvas.getContext('2d');
-        this.initialize(callback);
-    }
-    resizeVideo(width = null) {
-        if (width != null) {
-            this.width = width;
-        }
-        this.height = this.video.videoHeight / (this.video.videoWidth / this.width);
-        // Firefox currently has a bug where the height can't be read from
-        // the video, so we will make assumptions if this happens.
-        if (isNaN(this.height)) {
-            this.height = this.width / (4 / 3);
-        }
-        this.video.setAttribute('width', this.width.toString());
-        this.video.setAttribute('height', this.height.toString());
-        this.canvas.width = this.width;
-        this.canvas.height = this.height;
-        console.log('Webcam: set size: ' + this.width + ', ' + this.height);
-    }
-    initialize(callbackCanPlay = null, callbackGetMedia = null) {
-        console.log('Webcam: initialize: ' + this.width + ', ' + this.height);
-        let n = navigator;
-        n.getMedia = (navigator.getUserMedia ||
-            n.webkitGetUserMedia ||
-            n.mozGetUserMedia ||
-            n.msGetUserMedia);
-        n.getMedia({ video: true, audio: false }, (stream) => {
-            // if(stream.active) {
-            // 	stream.removeTrack(stream.getVideoTracks()[0])
-            // 	this.video.src = ''
-            // }
-            if (n.mozGetUserMedia) {
-                let v = this.video;
-                v.mozSrcObject = stream;
-            }
-            else {
-                var vendorURL = window.URL || window.webkitURL;
-                this.video.src = vendorURL.createObjectURL(stream);
-            }
-            // stream.getVideoTracks()[0].stop()
-            console.log('Webcam: getMedia: ' + this.video.width + ', ' + this.video.height);
-            this.video.play();
-            if (callbackGetMedia != null) {
-                callbackGetMedia();
-            }
-        }, function (err) {
-            console.log("An error occured! " + err);
-        });
-        this.video.addEventListener('canplay', (ev) => {
-            if (!this.streaming) {
-                this.resizeVideo();
-                this.streaming = true;
-                if (callbackCanPlay != null) {
-                    callbackCanPlay();
-                }
-            }
-        }, false);
-        // this.clearPhoto()
-    }
-    getImage() {
-        if (this.width && this.height) {
-            this.context.drawImage(this.video, 0, 0, this.width, this.height);
-            return this.canvas.toDataURL();
-        }
-        return null;
-    }
-}
-Webcam.WIDTH = 640;
-exports.Webcam = Webcam;
-
-
-/***/ }),
-/* 45 */
-/***/ (function(module, exports, __webpack_require__) {
-
-__webpack_require__(8);
-module.exports = __webpack_require__(6);
-
-
-/***/ }),
-/* 46 */,
-/* 47 */
 /***/ (function(module, exports, __webpack_require__) {
 
 var __WEBPACK_AMD_DEFINE_FACTORY__, __WEBPACK_AMD_DEFINE_ARRAY__, __WEBPACK_AMD_DEFINE_RESULT__;/*!
@@ -62525,10 +60722,10 @@ var __WEBPACK_AMD_DEFINE_FACTORY__, __WEBPACK_AMD_DEFINE_ARRAY__, __WEBPACK_AMD_
 		// AMD. Register as an anonymous module.
 		!(__WEBPACK_AMD_DEFINE_ARRAY__ = [
 			__webpack_require__(1),
+			__webpack_require__(4),
 			__webpack_require__(5),
-			__webpack_require__(28),
-			__webpack_require__(29),
-			__webpack_require__(33),
+			__webpack_require__(6),
+			__webpack_require__(7),
 			__webpack_require__(2),
 			__webpack_require__(3)
 		], __WEBPACK_AMD_DEFINE_FACTORY__ = (factory),
@@ -64063,58 +62260,2454 @@ return $.widget( "ui.sortable", $.ui.mouse, {
 
 
 /***/ }),
-/* 48 */
+/* 37 */
 /***/ (function(module, exports, __webpack_require__) {
 
-var __WEBPACK_AMD_DEFINE_FACTORY__, __WEBPACK_AMD_DEFINE_ARRAY__, __WEBPACK_AMD_DEFINE_RESULT__;/*!
- * jQuery UI Disable Selection 1.12.1
- * http://jqueryui.com
+"use strict";
+
+Object.defineProperty(exports, "__esModule", { value: true });
+const $ = __webpack_require__(1);
+class BPM {
+    constructor(gifJockey) {
+        this.tapButton = null;
+        this.pause = false;
+        this.lastTap = Date.now();
+        this.nTaps = 0;
+        this.MaxTapTime = 3000;
+        this.averageBPM = 120;
+        this.tapIntervalID = null;
+        this.tapTimeoutID = null;
+        this.song = null;
+        this.bpmDetectionFolder = null;
+        this.bpmDetectionButton = null;
+        this.autoBPM = false;
+        this.gifJockey = gifJockey;
+    }
+    isAutoBPM() {
+        return this.song != null && this.autoBPM;
+    }
+    isOnBeat() {
+        // return this.isAutoBPM() && this.song.isOnBeat() && !this.pause
+        return false;
+    }
+    createGUI(gui) {
+        this.folder = gui.addFolder('BPM');
+        this.bpmDetectionButton = this.folder.add(this, 'autoBPM').name('Auto BPM').onChange(() => this.toggleBPMdetection());
+        this.tapButton = this.folder.addButton('Tap (T)', () => this.tap());
+        this.bpmSlider = this.folder.addSlider('BPM', 120, 40, 250, 1).onChange((value) => this.setBPMinterval(value, undefined, false));
+        this.bpmDetectionFolder = this.folder.addFolder('BPM detection settings');
+        let sliders = { sensitivity: null, analyserFFTSize: null, passFreq: null, visualizerFFTSize: null };
+        let onSliderChange = () => {
+            let sens = sliders.sensitivity.getValue();
+            let analyserFFTSize = Math.pow(2, sliders.analyserFFTSize.getValue());
+            let visualizerFFTSize = Math.pow(2, sliders.visualizerFFTSize.getValue());
+            let passFreq = sliders.passFreq.getValue();
+            // this.song = new stasilo.BeatDetector( {	sens: sens,
+            // 					 				visualizerFFTSize: visualizerFFTSize, 
+            // 									analyserFFTSize:   analyserFFTSize,
+            // 									passFreq: passFreq })
+        };
+        sliders.sensitivity = this.bpmDetectionFolder.addSlider('Sensitivity', 14, 1, 16, 1).onChange(onSliderChange);
+        sliders.analyserFFTSize = this.bpmDetectionFolder.addSlider('Analyser FFT Size', 14, 5, 15, 1).onChange(onSliderChange);
+        sliders.passFreq = this.bpmDetectionFolder.addSlider('Bandpass Filter Frequency', 600, 1, 10000, 1).onChange(onSliderChange);
+        sliders.visualizerFFTSize = this.bpmDetectionFolder.addSlider('Visualizer FFT Size', 7, 5, 15, 1).onChange(onSliderChange);
+        this.folder.add(this, 'pause').name('Pause').onChange((value) => { this.gifJockey.shaderManager.pause = value; });
+        onSliderChange();
+        // start
+        this.toggleBPMdetection();
+    }
+    toggleBPMdetection() {
+        // this.autoBPM = !this.autoBPM
+        // this.bpmDetectionButton.setName(this.autoBPM ? 'Manual BPM' : 'Auto BPM')
+        this.tapButton.setVisibility(!this.autoBPM);
+        this.bpmSlider.setVisibility(!this.autoBPM);
+        this.bpmDetectionFolder.setVisibility(this.autoBPM);
+        if (this.autoBPM) {
+            this.stopBPMinterval();
+        }
+        else if (this.tapIntervalID == null) {
+            this.tapIntervalID = setInterval(() => this.onInterval(), this.getInterval());
+        }
+    }
+    stopBPMinterval() {
+        if (this.tapIntervalID != null) {
+            clearInterval(this.tapIntervalID);
+            this.tapIntervalID = null;
+        }
+    }
+    onInterval() {
+        if (this.pause) {
+            return;
+        }
+        this.gifJockey.nextImage();
+    }
+    getInterval(bpm = this.averageBPM) {
+        return 1 / (bpm / 60 / 1000);
+    }
+    setBPMinterval(bpm, newBPM = null, updateBpmSlider = true) {
+        this.averageBPM = bpm;
+        this.stopBPMinterval();
+        let delay = this.getInterval(bpm);
+        this.gifJockey.nextImage();
+        this.tapIntervalID = setInterval(() => this.onInterval(), delay);
+        if (updateBpmSlider) {
+            this.tapButton.setName('Tapping' + (newBPM != null ? ' - Instant BPM: ' + newBPM.toFixed(2) : ''));
+            this.bpmSlider.setValueNoCallback(bpm);
+            $('li[data-name="BPM"]').find('.text').text('Tapping' + (newBPM != null ? ' - Instant BPM: ' + newBPM.toFixed(2) : ''));
+        }
+    }
+    stopTap() {
+        if (this.isAutoBPM()) {
+            return;
+        }
+        this.nTaps = 0;
+        this.tapButton.setName('Tap (T)');
+        $('li[data-name="BPM"]').find('.text').text('BPM ' + this.averageBPM.toFixed(2));
+    }
+    tap() {
+        if (this.isAutoBPM()) {
+            return;
+        }
+        this.nTaps++;
+        let now = Date.now();
+        if (this.tapTimeoutID != null) {
+            clearTimeout(this.tapTimeoutID);
+        }
+        this.tapTimeoutID = setTimeout(() => this.stopTap(), this.MaxTapTime);
+        if (this.nTaps == 1) {
+            this.lastTap = now;
+            this.tapButton.setName('Tapping');
+            $('li[data-name="BPM"]').find('.text').text('Tapping BPM...');
+            return;
+        }
+        let newBPM = 60 / ((now - this.lastTap) / 1000);
+        this.averageBPM = (this.averageBPM * (this.nTaps - 2) + newBPM) / (this.nTaps - 1);
+        console.log(this.averageBPM + ', ' + newBPM);
+        this.setBPMinterval(this.averageBPM, newBPM);
+        this.lastTap = now;
+    }
+}
+exports.BPM = BPM;
+
+
+/***/ }),
+/* 38 */
+/***/ (function(module, exports, __webpack_require__) {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", { value: true });
+const $ = __webpack_require__(1);
+class Controller {
+    constructor(controller) {
+        this.controller = controller;
+    }
+    getDomElement() {
+        return this.controller.domElement;
+    }
+    getParentDomElement() {
+        return this.getDomElement().parentElement.parentElement;
+    }
+    hide() {
+        $(this.getParentDomElement()).hide();
+    }
+    show() {
+        $(this.getParentDomElement()).show();
+    }
+    setVisibility(visible) {
+        if (visible) {
+            this.show();
+        }
+        else {
+            this.hide();
+        }
+    }
+    remove() {
+        this.controller.remove();
+    }
+    contains(element) {
+        return $.contains(this.getParentDomElement(), element);
+    }
+    getProperty() {
+        return this.controller.property;
+    }
+    getName() {
+        return this.controller.property;
+    }
+    getValue() {
+        return this.controller.object[this.controller.property];
+    }
+    onChange(callback) {
+        this.controller.onChange(callback);
+        return this;
+    }
+    onFinishChange(callback) {
+        this.controller.onFinishChange(callback);
+        return this;
+    }
+    setValue(value) {
+        this.controller.setValue(value);
+        return this;
+    }
+    setValueNoCallback(value) {
+        this.controller.object[this.controller.property] = value;
+        this.controller.updateDisplay();
+        return this;
+    }
+    max(value) {
+        this.controller.max(value);
+        return this;
+    }
+    min(value) {
+        this.controller.min(value);
+        return this;
+    }
+    step(value) {
+        this.controller.step(value);
+        return this;
+    }
+    updateDisplay() {
+        this.controller.updateDisplay();
+        return this;
+    }
+    options(options) {
+        return this.controller.options(options);
+    }
+    listen() {
+        this.controller.listen();
+        return this;
+    }
+    setName(name) {
+        $(this.controller.domElement.parentElement).find('span.property-name').html(name);
+        return this;
+    }
+    name(name) {
+        this.controller.name(name);
+        return this;
+    }
+}
+exports.Controller = Controller;
+class GUI {
+    constructor(options = null, folder = null) {
+        this.gui = folder != null ? folder : new dat.GUI(options);
+    }
+    getDomElement() {
+        return this.gui.domElement;
+    }
+    hide() {
+        $(this.getDomElement()).hide();
+    }
+    show() {
+        $(this.getDomElement()).show();
+    }
+    setVisibility(visible) {
+        if (visible) {
+            this.show();
+        }
+        else {
+            this.hide();
+        }
+    }
+    add(object, propertyName, minOrArray = null, max = null) {
+        return new Controller(this.gui.add(object, propertyName, minOrArray, max));
+    }
+    addColor(object, propertyName) {
+        return new Controller(this.gui.addColor(object, propertyName));
+    }
+    addButton(name, callback, object = {}) {
+        let nameNoSpaces = name.replace(/\s+/g, '');
+        object[nameNoSpaces] = callback;
+        let controller = new Controller(this.gui.add(object, nameNoSpaces));
+        if (name != nameNoSpaces) {
+            controller.setName(name);
+        }
+        return controller;
+    }
+    addToggleButton(name, toggledName, object = {}, propertyName = '_toggled', callback = null) {
+        let defaultValue = object[propertyName];
+        let controller = null;
+        let newCallback = () => {
+            object[propertyName] = !object[propertyName];
+            controller.setName(object[propertyName] == defaultValue ? name : toggledName);
+            if (callback != null) {
+                callback.apply(object, [object[propertyName]]);
+            }
+        };
+        controller = this.addButton(name, newCallback, object);
+        return controller;
+    }
+    addFileSelectorButton(name, fileType, callback) {
+        let divJ = $("<input data-name='file-selector' type='file' class='form-control' name='file[]'  accept='" + fileType + "'/>");
+        let button = this.addButton(name, () => divJ.click());
+        $(button.getDomElement()).append(divJ);
+        divJ.hide();
+        divJ.change(callback);
+        return button;
+    }
+    addSlider(name, value, min, max, step = null) {
+        let object = {};
+        let nameNoSpaces = name.replace(/\s+/g, '');
+        object[nameNoSpaces] = value;
+        let slider = this.add(object, nameNoSpaces, min, max);
+        if (name != nameNoSpaces) {
+            slider.setName(name);
+        }
+        if (step != null) {
+            slider.step(step);
+        }
+        return slider;
+    }
+    addSelect(name, choices, defaultChoice) {
+        let object = {};
+        let nameNoSpaces = name.replace(/\s+/g, '');
+        object[nameNoSpaces] = defaultChoice;
+        let controller = this.add(object, nameNoSpaces, choices);
+        if (name != nameNoSpaces) {
+            controller.setName(name);
+        }
+        return controller;
+    }
+    addFolder(name) {
+        return new GUI(null, this.gui.addFolder(name));
+    }
+    getControllers() {
+        return this.gui.__controllers;
+    }
+    open() {
+        this.gui.open();
+        return this;
+    }
+    close() {
+        this.gui.close();
+        return this;
+    }
+    isFocused() {
+        return $('.dg.main').find(document.activeElement).length > 0;
+    }
+}
+exports.GUI = GUI;
+
+
+/***/ }),
+/* 39 */
+/***/ (function(module, exports, __webpack_require__) {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", { value: true });
+const $ = __webpack_require__(1);
+const gifshot = __webpack_require__(12);
+class Gif {
+    constructor(containerJ, id) {
+        this.hasPreview = false;
+        this.nImages = 0;
+        this.id = -1;
+        this.containerJ = containerJ;
+        this.imageIndex = 0;
+        this.id = id;
+    }
+    // setSize(imgJ: any) {
+    // 	this.containerJ.width(imgJ[0].naturalWidth)
+    // 	this.containerJ.height(imgJ[0].naturalHeight)
+    // }
+    getImageContainerJ(name) {
+        return this.containerJ.find('div[data-name="' + name + '"]');
+    }
+    getImageJ(name) {
+        return this.containerJ.find('img[data-name="' + name + '"]');
+    }
+    getFilteredImagesJ() {
+        return this.containerJ.find('img.filtered');
+    }
+    getFirstImageJ() {
+        return this.containerJ.find('img.original').first();
+    }
+    containsImage(name) {
+        return this.getImageContainerJ(name).length > 0;
+    }
+    getNumberOfImages() {
+        return this.nImages;
+    }
+    isEmpty() {
+        return this.nImages == 0;
+    }
+    addCopy(originalImageJ, filteredImageJ, imageID) {
+        let originalJ = originalImageJ.clone();
+        originalJ.attr('data-name', 'img-' + imageID);
+        let filteredJ = filteredImageJ.clone();
+        filteredJ.attr('data-name', 'img-' + imageID);
+        this.addImage(originalJ, filteredJ);
+    }
+    addImage(originalImageJ, filteredImageJ = null) {
+        this.nImages++;
+        this.containerJ.find('.gg-placeholder').remove();
+        let divJ = $('<div class="gg-image-container">');
+        divJ.attr('data-name', originalImageJ.attr('data-name'));
+        divJ.append(originalImageJ.addClass('gg-hidden original'));
+        if (filteredImageJ != null) {
+            divJ.append(filteredImageJ);
+        }
+        this.containerJ.append(divJ);
+    }
+    setFilteredImage(imageName, resultJ) {
+        let originalImageJ = this.getImageJ(imageName);
+        originalImageJ.siblings('.filtered').remove();
+        resultJ.insertBefore(originalImageJ);
+        // resultJ.css({width: '100%'})
+    }
+    replaceImage(oldImageName, newImageJ) {
+        // newImageJ.css({width: '100%'})
+        this.getImageJ(oldImageName).replaceWith(newImageJ);
+    }
+    removeImage(imageName) {
+        this.nImages--;
+        this.getImageContainerJ(imageName).remove();
+    }
+    nextImage() {
+        let imagesJ = this.containerJ.children();
+        this.imageIndex++;
+        if (this.imageIndex >= imagesJ.length) {
+            this.imageIndex = 0;
+        }
+        // avoid to use hide() / show() because it affects the size of dom element in chrome which is a problem with the thumbnail scrollbar
+        // imagesJ.css({opacity: 0})
+        // $(imagesJ[this.imageIndex]).css({opacity: 1})
+        imagesJ.hide();
+        $(imagesJ[this.imageIndex]).show();
+    }
+    sortImages(imageNames) {
+        let imageContainersJ = this.containerJ.children();
+        for (let imageName of imageNames) {
+            let imageContainerJ = this.containerJ.children('div[data-name="' + imageName + '"]');
+            this.containerJ.append(imageContainerJ);
+        }
+    }
+    getImagePairsJ() {
+        let imagePairsJ = [];
+        for (let child of this.containerJ.children()) {
+            imagePairsJ.push($(child).find('img').clone());
+        }
+        return imagePairsJ;
+    }
+    setGif(gif) {
+        this.empty();
+        let imagePairsJ = gif.getImagePairsJ();
+        for (let imagePairJ of imagePairsJ) {
+            this.addImage(imagePairJ.filter('.original'), imagePairJ.filter('.filtered'));
+        }
+    }
+    empty() {
+        this.containerJ.empty();
+        this.nImages = 0;
+    }
+    preview(save = false) {
+        let imagesJ = this.getFilteredImagesJ().toArray();
+        let maxNumberOfImages = 10;
+        while (imagesJ.length > 10) {
+            imagesJ.pop();
+        }
+        if (imagesJ.length == 0) {
+            return;
+        }
+        let width = imagesJ[0].naturalWidth;
+        let height = imagesJ[0].naturalHeight;
+        let interval = Gif.gifManager.gifJockey.bpm.getInterval() / 1000;
+        Gif.gifManager.gifJockey.startLoadingAnimation(() => {
+            gifshot.createGIF({
+                gifWidth: width,
+                gifHeight: height,
+                interval: interval,
+                images: imagesJ,
+                sampleInterval: Gif.gifManager.gifQuality
+            }, (obj) => {
+                if (!obj.error) {
+                    var image = obj.image, animatedImage = document.createElement('img');
+                    animatedImage.src = image;
+                    let aJ = $('<a download="gif.gif" href="' + image + '">');
+                    aJ.append(animatedImage);
+                    $('#gif-result').empty().append(aJ);
+                    this.hasPreview = true;
+                    if (save) {
+                        aJ[0].click();
+                        Gif.gifManager.gifJockey.stopLoadingAnimation();
+                    }
+                }
+            });
+        });
+    }
+}
+exports.Gif = Gif;
+class GifManager {
+    constructor(gifJockey) {
+        this.gifID = 0;
+        this.gifs = new Map();
+        this.currentGif = null;
+        this.gifQuality = 10;
+        this.numberOfImages = 4;
+        this.nSnapshots = 0;
+        this.autoGifInterval = -1;
+        this.getGifContainer = () => {
+            return this.currentGif.containerJ.parentUntil('li.gg-thumbnail');
+        };
+        this.sortGifsStop = () => {
+        };
+        this.gifJockey = gifJockey;
+        Gif.gifManager = this;
+        // this.toggleThumbnails(false)
+    }
+    createGUI(gui) {
+        let folder = gui.addFolder('Export');
+        folder.addSlider('Gif degradation', this.gifQuality, 1, 5000, 1).onChange((value) => { this.gifQuality = value; });
+        folder.addButton('Save gif', () => this.currentGif.preview(true));
+        // folder.addButton('Save video', ()=> this.gifJockey.renderer.recorder.save())
+        // gui.addButton('Save gif', ()=> {
+        // 	if(!this.currentGif.hasPreview) {
+        // 		this.currentGif.preview(true)
+        // 	} else {
+        // 		let linkJ = $('#result').find('a')
+        // 		linkJ[0].click()
+        // 	}
+        // })
+        this.gif = new Gif($('#result'), this.gifID++);
+    }
+    removeImage(imageName) {
+        this.gif.removeImage(imageName);
+        this.currentGif.removeImage(imageName);
+    }
+    addImage(imgJ) {
+        if (this.gifs.size == 0) {
+            this.addGif();
+        }
+        this.gif.addImage(imgJ.clone());
+        this.currentGif.addImage(imgJ.clone());
+    }
+    setFilteredImage(imageName, resultJ) {
+        this.gif.setFilteredImage(imageName, resultJ.clone());
+        this.currentGif.setFilteredImage(imageName, resultJ.clone());
+    }
+    nextImage() {
+        this.gif.nextImage();
+        for (let [gifName, gif] of this.gifs) {
+            gif.nextImage();
+        }
+    }
+    sortImages(imageNames) {
+        this.gif.sortImages(imageNames);
+        this.currentGif.sortImages(imageNames);
+    }
+    saveAndAddGif() {
+        if (this.gifID) {
+            this.removeGif(this.gifID - 1);
+        }
+        this.addGif();
+    }
+    addGif() {
+        this.gifJockey.deselectImages();
+        this.gifJockey.emptyThumbnails();
+        this.gif.empty();
+        let currentGifJ = $('<li class="gg-thumbnail" data-name="gif-' + this.gifID + '">');
+        let closeButtonJ = $('<button type="button" class="gg-small-btn close-btn">');
+        let closeSpanJ = $('<span class="ui-icon ui-icon-closethick">');
+        let playButtonJ = $('<button type="button" class="gg-small-btn play-btn">');
+        let playSpanJ = $('<span class="ui-icon ui-icon-play">');
+        let duplicateButtonJ = $('<button type="button" class="gg-small-btn duplicate-btn">');
+        let duplicateButtonIconJ = $('<span class="ui-icon ui-icon-plusthick">');
+        duplicateButtonJ.append(duplicateButtonIconJ);
+        let divJ = $('<div class="gg-thumbnail-container">');
+        let selectionRectangleJ = $('<div class="gg-selection-rectangle">');
+        closeButtonJ.append(closeSpanJ);
+        playButtonJ.append(playSpanJ);
+        currentGifJ.append(selectionRectangleJ);
+        currentGifJ.append(divJ);
+        currentGifJ.append(closeButtonJ);
+        currentGifJ.append(duplicateButtonJ);
+        currentGifJ.append(playButtonJ);
+        let currentGifID = this.gifID;
+        closeButtonJ.click(() => this.removeGif(currentGifID));
+        duplicateButtonJ.click(() => this.duplicateGif(currentGifID));
+        playButtonJ.mousedown((event) => {
+            this.playGif(currentGifID);
+            event.stopPropagation();
+            return -1;
+        });
+        currentGifJ.mousedown((event) => {
+            this.selectGif(currentGifID);
+        });
+        let width = $('#outputs').width();
+        let ratio = this.gifJockey.webcam.height / this.gifJockey.webcam.width;
+        let height = width * ratio;
+        currentGifJ.css({ width: width, height: height });
+        let outputJ = $('#outputs');
+        outputJ.append(currentGifJ);
+        this.currentGif = new Gif(divJ, this.gifID);
+        this.gifs.set(this.currentGif.id, this.currentGif);
+        this.gifID++;
+        currentGifJ.droppable({
+            classes: {
+                "ui-droppable-hover": "ui-state-hover",
+                "ui-droppable-active": "ui-state-default"
+            },
+            drop: (event, ui) => {
+                let originalJ = ui.helper.find('img.original');
+                let filteredJ = ui.helper.find('img.filtered');
+                let gif = this.gifs.get(currentGifID);
+                // Ignore if the gif already contains the image:
+                if (gif.containsImage(originalJ.attr('data-name'))) {
+                    return;
+                }
+                gif.addCopy(originalJ, filteredJ, this.gifJockey.imageID++);
+            }
+        });
+        // outputsJ.sortable(({ stop: ()=> this.gifManager.sortGifsStop(), connectWith: '#thumbnails', receive: function( event: any, ui: any ) {
+        // 	if(ui.sender.is('#thumbnails')) {
+        // 	}
+        // } }))
+        return currentGifID;
+    }
+    createAutoGif() {
+        if (this.autoGifInterval != null) {
+            clearInterval(this.autoGifInterval);
+            this.autoGifInterval = null;
+        }
+        if (this.currentGif == null || !this.currentGif.isEmpty()) {
+            this.addGif();
+        }
+        this.gifJockey.deselectAndCallback(() => {
+            this.nSnapshots = 0;
+            this.autoGifInterval = setInterval(() => {
+                this.gifJockey.takeSnapshot();
+                this.nSnapshots++;
+                if (this.nSnapshots == this.numberOfImages) {
+                    clearInterval(this.autoGifInterval);
+                    this.autoGifInterval = null;
+                }
+            }, this.gifJockey.bpm.getInterval());
+        });
+    }
+    removeGif(gifID) {
+        $('#outputs').find('[data-name="gif-' + gifID + '"]').remove();
+        $('#thumbnails').empty();
+        this.gifs.delete(gifID);
+        if (this.currentGif != null && this.currentGif.id == gifID) {
+            this.currentGif = null;
+        }
+    }
+    duplicateGif(gifID) {
+        let gif = this.gifs.get(gifID);
+        this.addGif();
+        let imagePairsJ = gif.getImagePairsJ();
+        for (let imagePairJ of imagePairsJ) {
+            let originalImageJ = imagePairJ.filter('.original');
+            let filteredImageJ = imagePairJ.filter('.filtered');
+            this.currentGif.addCopy(originalImageJ, filteredImageJ, this.gifJockey.imageID++);
+        }
+    }
+    toggleThumbnails(show) {
+        let thumbnailsJ = $('#thumbnails-container');
+        let thumbnailsVisible = thumbnailsJ.is(':visible');
+        if (show && !thumbnailsVisible) {
+            thumbnailsJ.show();
+            document.dispatchEvent(new Event('cameraResized'));
+        }
+        else if (!show && thumbnailsVisible) {
+            thumbnailsJ.hide();
+            document.dispatchEvent(new Event('cameraResized'));
+        }
+        // let resultJ = $('#result')
+        // let resultVisible = resultJ.is(':visible')
+        // if(show && !resultVisible) {
+        // 	resultJ.show()
+        // } else if (!show && resultVisible) {
+        // 	resultJ.hide()
+        // }
+    }
+    selectGif(gifID) {
+        let gifsToSelectJ = $('#outputs').children("[data-name='gif-" + gifID + "']");
+        if (gifsToSelectJ.length == 0) {
+            this.toggleThumbnails(false);
+            return;
+        }
+        let gifsAlreadySelected = gifsToSelectJ.hasClass('gg-selected');
+        if (gifsAlreadySelected) {
+            return;
+        }
+        $('#outputs').children().removeClass('gg-selected');
+        gifsToSelectJ.addClass('gg-selected');
+        this.currentGif = this.gifs.get(gifID);
+        this.gif.setGif(this.currentGif);
+        this.gifJockey.setGif(this.currentGif);
+        this.toggleThumbnails(true);
+    }
+    // Select parent gif when select an image 
+    selectImage(imageName) {
+        if (this.currentGif != null && this.currentGif.getImageJ(imageName).length > 0) {
+            return;
+        }
+        else {
+            for (let [gifID, gif] of this.gifs) {
+                if (gif.getImageJ(imageName).length > 0) {
+                    this.selectGif(gifID);
+                    return;
+                }
+            }
+        }
+    }
+    deselectGif() {
+        $('#outputs').children().removeClass('gg-selected');
+        this.toggleThumbnails(false);
+        // this.currentGif = null
+    }
+    playGif(gifID) {
+        $('#outputs').find('.gg-small-btn.play-btn').removeClass('playing');
+        let gif = this.gifs.get(gifID);
+        gif.containerJ.parent().find('.play-btn').addClass('playing');
+        this.gifJockey.playGifViewer(gif);
+    }
+}
+exports.GifManager = GifManager;
+
+
+/***/ }),
+/* 40 */
+/***/ (function(module, exports, __webpack_require__) {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", { value: true });
+const $ = __webpack_require__(1);
+const THREE = __webpack_require__(0);
+class Renderer {
+    constructor(webcam, gui) {
+        this.recording = false;
+        let cameraJ = $('#camera');
+        this.webcam = webcam;
+        let width = webcam.width;
+        let height = webcam.height;
+        this.camera = new THREE.OrthographicCamera(width / -2, width / 2, height / 2, height / -2, 1, 1000);
+        this.scene = new THREE.Scene();
+        this.renderer = new THREE.WebGLRenderer({ antialias: true, preserveDrawingBuffer: true });
+        this.renderer.setSize(width, height);
+        this.recorder = new CanvasRecorder(this.renderer.domElement, 10000000);
+        let size = this.computeRendererSize(webcam, cameraJ);
+        // this.setCanvasSize(size.width, size.height)
+        let container = document.getElementById('camera');
+        container.appendChild(this.renderer.domElement);
+        this.displayVideo();
+        this.camera.position.z = 5;
+        window.addEventListener('resize', () => this.windowResize(), false);
+        document.addEventListener('cameraResized', () => this.windowResize());
+        requestAnimationFrame(() => this.render());
+        this.centerOnRectangle(this.webcam.width, this.webcam.height);
+        setTimeout(() => this.windowResize(), 0);
+    }
+    startStopVideo(takeSnapshotButton) {
+        if (this.recording) {
+            this.recorder.stop();
+            takeSnapshotButton.name('Take video (Spacebar)');
+            this.recorder.save();
+            this.recording = false;
+            // this.recorder.stopRecording((audioURL)=> {
+            // 	// audio.src = audioURL;
+            // 	var recordedBlob = this.recorder.getBlob();
+            // 	this.recorder.getDataURL(function(dataURL) { 
+            // 		let url = dataURL;
+            // 		const a = document.createElement('a');
+            //         a.style.display = 'none';
+            //         a.href = url;
+            //      			const name = 'recording.webm';
+            //         a.download = name;
+            //         document.body.appendChild(a);
+            //         a.click();
+            //         setTimeout(() => {
+            //             document.body.removeChild(a);
+            //             window.URL.revokeObjectURL(url);
+            //         }, 100);
+            // 	});
+            // });
+        }
+        else {
+            this.recorder.start(this.webcam.stream);
+            // this.recorder = RecordRTC(this.webcam.stream, {
+            // 	// type: 'audio'
+            // });
+            // this.recorder.startRecording();
+            this.recording = true;
+            takeSnapshotButton.name('Stop video (Spacebar)');
+        }
+    }
+    resize(width, height) {
+        this.camera.left = width / -2;
+        this.camera.right = width / 2;
+        this.camera.top = height / 2;
+        this.camera.bottom = height / -2;
+        this.camera.updateProjectionMatrix();
+        this.renderer.setSize(width, height);
+        console.log('Renderer: set size: ' + width + ', ' + height);
+        this.displayVideo();
+        this.windowResize();
+    }
+    displayVideo() {
+        if (this.shaderManager != null) {
+            this.shaderManager.pause = false;
+        }
+        this.setContent(this.webcam.video);
+    }
+    displayImage(content) {
+        if (this.shaderManager != null) {
+            this.shaderManager.pause = true;
+        }
+        this.setContent(content);
+    }
+    setContent(content) {
+        console.log('Renderer: set content: ' + content.width + ', ' + content.height);
+        this.texture = new THREE.Texture(content);
+        this.material = new THREE.MeshBasicMaterial({ map: this.texture });
+        this.texture.minFilter = THREE.LinearFilter;
+        this.texture.magFilter = THREE.LinearFilter;
+        let geometry = new THREE.PlaneGeometry(content.width, content.height);
+        if (this.mesh != null) {
+            this.scene.remove(this.mesh);
+        }
+        this.mesh = new THREE.Mesh(geometry, this.material);
+        this.scene.add(this.mesh);
+    }
+    setShaderManager(shaderManager) {
+        this.shaderManager = shaderManager;
+    }
+    getDomElement() {
+        return this.renderer.domElement;
+    }
+    getFilteredImage() {
+        // this.shaderManager.animate()
+        let canvas = this.getDomElement();
+        let result = new Image();
+        result.src = canvas.toDataURL();
+        return { image: result, shaderParameters: this.shaderManager.getShaderParameters() };
+    }
+    computeRendererSize(webcam, cameraJ) {
+        let cameraWidth = cameraJ.width();
+        let cameraHeight = cameraJ.height();
+        let cameraRatio = cameraWidth / cameraHeight;
+        let webcamRatio = webcam.width / webcam.height;
+        let width = null;
+        let height = null;
+        if (cameraRatio < webcamRatio) {
+            width = cameraWidth;
+            height = cameraWidth / webcamRatio;
+        }
+        else {
+            width = cameraHeight * webcamRatio;
+            height = cameraHeight;
+        }
+        return { width: width, height: height };
+    }
+    setCanvasSize(width, height) {
+        $(this.renderer.domElement).css({ width: '' + width + 'px', height: '' + height + 'px' });
+    }
+    centerOnRectangle(width, height) {
+        let margin = 0;
+        let ratio = Math.max((width + margin) / this.renderer.getSize().width, (height + margin) / this.renderer.getSize().height);
+        this.camera.zoom = 1 / ratio;
+        this.camera.updateProjectionMatrix();
+    }
+    windowResize() {
+        let cameraJ = $('#camera');
+        let size = this.computeRendererSize(this.webcam, cameraJ);
+        this.setCanvasSize(size.width, size.height);
+    }
+    render() {
+        requestAnimationFrame(() => this.render());
+        if (this.webcam.streaming) {
+            this.texture.needsUpdate = true;
+        }
+        this.shaderManager.animate();
+        // this.renderer.render( this.scene, this.camera )
+    }
+}
+exports.Renderer = Renderer;
+
+
+/***/ }),
+/* 41 */
+/***/ (function(module, exports, __webpack_require__) {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", { value: true });
+const THREE = __webpack_require__(0);
+// <script src='node_modules/three/examples/js/postprocessing/EffectComposer.js'></script>
+// <script src='node_modules/three/examples/js/postprocessing/RenderPass.js'></script>
+// <script src='node_modules/three/examples/js/postprocessing/ShaderPass.js'></script>
+// <script src='node_modules/three/examples/js/postprocessing/MaskPass.js'></script> 
+// <script src='node_modules/three/examples/js/shaders/CopyShader.js'></script>
+// <script src='node_modules/three/examples/js/shaders/BleachBypassShader.js'></script>
+// <script src='node_modules/three/examples/js/shaders/BrightnessContrastShader.js'></script>
+// <script src='node_modules/three/examples/js/shaders/ColorifyShader.js'></script>
+// <script src='node_modules/three/examples/js/shaders/DotScreenShader.js'></script>
+// <script src='node_modules/three/examples/js/shaders/EdgeShader2.js'></script> 
+// <script src='node_modules/three/examples/js/shaders/KaleidoShader.js'></script>
+// <script src='node_modules/three/examples/js/shaders/MirrorShader.js'></script>
+// <script src='node_modules/three/examples/js/shaders/SepiaShader.js'></script>
+// <script src='node_modules/three/examples/js/shaders/VignetteShader.js'></script>
+// <script src='node_modules/three/examples/js/shaders/FilmShader.js'></script>
+// <script src='node_modules/three/examples/js/shaders/RGBShiftShader.js'></script> 
+__webpack_require__(19);
+__webpack_require__(26);
+__webpack_require__(28);
+__webpack_require__(23);
+__webpack_require__(16);
+__webpack_require__(13);
+__webpack_require__(14);
+__webpack_require__(15);
+__webpack_require__(17);
+__webpack_require__(18);
+__webpack_require__(50);
+__webpack_require__(51);
+__webpack_require__(24);
+__webpack_require__(27);
+__webpack_require__(29);
+__webpack_require__(20);
+__webpack_require__(25);
+__webpack_require__(21);
+const BadTV_1 = __webpack_require__(42);
+const Static_1 = __webpack_require__(45);
+const Film_1 = __webpack_require__(44);
+const DotMatrix_1 = __webpack_require__(43);
+class ShaderManager {
+    constructor(gui, camera, scene, renderer) {
+        this.shaderParameters = {
+            badTV: {
+                name: 'Bad TV',
+                shader: BadTV_1.BadTVShader,
+                on: true,
+                time: true,
+                parameters: {
+                    distortion: {
+                        name: 'Thick distrotion',
+                        value: 3.0,
+                        min: 0.1,
+                        max: 20,
+                        randomMin: 0.1,
+                        randomMax: 3,
+                        step: 0.1
+                    },
+                    distortion2: {
+                        name: 'Fine distrotion',
+                        value: 1.0,
+                        min: 0.1,
+                        max: 20,
+                        randomMin: 0.1,
+                        randomMax: 7,
+                        step: 0.1
+                    },
+                    speed: {
+                        name: 'Distrotion speed',
+                        value: 0.3,
+                        min: 0,
+                        max: 1,
+                        randomMin: 0,
+                        randomMax: 4,
+                        step: 0.01
+                    },
+                    rollSpeed: {
+                        name: 'Roll speed',
+                        value: 0.1,
+                        min: 0,
+                        max: 1,
+                        randomMin: 0,
+                        randomMax: 0.2,
+                        step: 0.01
+                    }
+                }
+            },
+            static: {
+                name: 'Static',
+                shader: Static_1.StaticShader,
+                on: true,
+                time: true,
+                parameters: {
+                    amount: {
+                        name: 'Amount',
+                        value: 0.5,
+                        min: 0,
+                        max: 1,
+                        randomMin: 0,
+                        randomMax: 0.2,
+                        step: 0.01
+                    },
+                    size: {
+                        name: 'Size',
+                        value: 4,
+                        min: 1,
+                        max: 100,
+                        randomMin: 1,
+                        randomMax: 20,
+                        step: 1
+                    }
+                }
+            },
+            rgbShift: {
+                name: 'RGB Shift',
+                shader: THREE.RGBShiftShader,
+                on: true,
+                parameters: {
+                    amount: {
+                        name: 'Amount',
+                        value: 0.005,
+                        min: 0,
+                        max: 0.1,
+                        randomMin: 0,
+                        randomMax: 0.03,
+                        step: 0.01
+                    },
+                    angle: {
+                        name: 'Angle',
+                        value: 180,
+                        min: 0,
+                        max: 360,
+                        step: 1,
+                        getValue: (value) => 2 * Math.PI * value / 360
+                    }
+                }
+            },
+            scanLine: {
+                name: 'Scanlines',
+                shader: Film_1.FilmShader,
+                on: true,
+                time: true,
+                parameters: {
+                    sCount: {
+                        name: 'Count',
+                        value: 800,
+                        min: 50,
+                        max: 10000,
+                        step: 50
+                    },
+                    sIntensity: {
+                        name: 'S intensity',
+                        value: 0.9,
+                        min: 0,
+                        max: 2,
+                        step: 0.1
+                    },
+                    nIntensity: {
+                        name: 'N intensity',
+                        value: 0.4,
+                        min: 0,
+                        max: 2,
+                        step: 0.1
+                    }
+                }
+            },
+            bleach: {
+                name: 'Bleach',
+                shader: THREE.BleachBypassShader,
+                on: false,
+                parameters: {
+                    opacity: {
+                        name: 'Opacity',
+                        value: 1,
+                        min: 0,
+                        max: 10,
+                        randomMin: 0,
+                        randomMax: 1.7,
+                        step: 0.1
+                    }
+                }
+            },
+            brightnessContrast: {
+                name: 'Brightness & Contrast',
+                shader: THREE.BrightnessContrastShader,
+                on: false,
+                parameters: {
+                    brightness: {
+                        name: 'Brightness',
+                        value: 0.25,
+                        min: 0,
+                        max: 1,
+                        randomMin: 0,
+                        randomMax: 0.2,
+                        step: 0.01
+                    },
+                    contrast: {
+                        name: 'Contrast',
+                        value: 0.7,
+                        min: 0,
+                        max: 1,
+                        step: 0.01
+                    }
+                }
+            },
+            colorify: {
+                name: 'Colorify',
+                shader: THREE.ColorifyShader,
+                on: false,
+                parameters: {
+                    color: {
+                        name: 'Color',
+                        type: 'color',
+                        value: '#FFEE44'
+                    }
+                }
+            },
+            dotScreen: {
+                name: 'Dot Screen',
+                shader: THREE.DotScreenShader,
+                on: false,
+                parameters: {
+                    tSize: {
+                        name: 'Size',
+                        value: 256,
+                        min: 2,
+                        max: 1024,
+                        randomMin: 256,
+                        randomMax: 512,
+                        step: 1,
+                        getValue: (value) => new THREE.Vector2(value, value)
+                    },
+                    angle: {
+                        name: 'Angle',
+                        value: 180,
+                        min: 0,
+                        max: 360,
+                        step: 1,
+                        getValue: (value) => 2 * Math.PI * value / 360
+                    },
+                    scale: {
+                        name: 'Scale',
+                        value: 1,
+                        min: 0.1,
+                        max: 10,
+                        randomMin: 1,
+                        randomMax: 1,
+                        step: 0.01
+                    }
+                }
+            },
+            dotMatrix: {
+                name: 'Dot Matrix',
+                shader: DotMatrix_1.DotMatrix,
+                on: false,
+                parameters: {
+                    sharpness: {
+                        name: 'Sharpness',
+                        value: 0.7,
+                        min: 0,
+                        max: 1,
+                        step: 0.01
+                    },
+                    gridSize: {
+                        name: 'Grid Size',
+                        value: 10,
+                        min: 0,
+                        max: 200,
+                        randomMin: 50,
+                        randomMax: 200,
+                        step: 1
+                    },
+                    dotSize: {
+                        name: 'Dot Size',
+                        value: 0.1,
+                        min: 0,
+                        max: 1,
+                        randomMin: 0,
+                        randomMax: 0.5,
+                        step: 0.1
+                    }
+                }
+            },
+            edgeShader: {
+                name: 'Edge',
+                shader: THREE.EdgeShader2,
+                on: false,
+                parameters: {
+                    aspect: {
+                        name: 'Aspect',
+                        value: 512,
+                        min: 2,
+                        max: 1024,
+                        randomMin: 300,
+                        randomMax: 512,
+                        step: 1,
+                        getValue: (value) => new THREE.Vector2(value, value)
+                    }
+                }
+            },
+            // verticalTiltShift: {
+            // 	name: 'Tilt Shift',
+            // 	shader: (<any>THREE).VerticalTiltShiftShader,
+            // 	on: false,
+            // 	parameters: {
+            // 		v: {
+            // 			name: 'Amount',
+            // 			value: 1 / 512,
+            // 			min: 2,
+            // 			max: 1024,
+            // 			step: 1
+            // 		},
+            // 		r: {
+            // 			name: 'position',
+            // 			value: 0.5,
+            // 			min: 0,
+            // 			max: 1,
+            // 			step: 0.01
+            // 		}
+            // 	}
+            // },
+            hueSaturation: {
+                name: 'Hue & Saturation',
+                shader: THREE.HueSaturationShader,
+                on: false,
+                parameters: {
+                    hue: {
+                        name: 'Hue',
+                        value: 0,
+                        min: -1,
+                        max: 1,
+                        step: 0.01
+                    },
+                    saturation: {
+                        name: 'Saturation',
+                        value: 0,
+                        min: -1,
+                        max: 1,
+                        step: 0.01
+                    }
+                }
+            },
+            kaleido: {
+                name: 'Kaleido',
+                shader: THREE.KaleidoShader,
+                on: false,
+                parameters: {
+                    sides: {
+                        name: 'Sides',
+                        value: 6,
+                        min: 1,
+                        max: 12,
+                        step: 1
+                    },
+                    angle: {
+                        name: 'Angle',
+                        value: 180,
+                        min: 0,
+                        max: 360,
+                        step: 1,
+                        getValue: (value) => 2 * Math.PI * value / 360
+                    }
+                }
+            },
+            // rainbow: {
+            // 	name: 'Rainbow',
+            // 	shader: (<any>THREE).RainbowShader,
+            // 	on: false,
+            // 	time: true,
+            // 	parameters: {
+            // 		amount: {
+            // 			name: 'Amount',
+            // 			value: 1,
+            // 			min: 0,
+            // 			max: 1,
+            // 			step: 0.1
+            // 		}
+            // 	}
+            // },
+            mirror: {
+                name: 'Mirror',
+                shader: THREE.MirrorShader,
+                on: false,
+                parameters: {
+                    side: {
+                        name: 'Side',
+                        value: 1,
+                        min: 0,
+                        max: 3,
+                        step: 1
+                    }
+                }
+            },
+            sepiaShader: {
+                name: 'Sepia',
+                shader: THREE.SepiaShader,
+                on: false,
+                parameters: {
+                    amount: {
+                        name: 'Amount',
+                        value: 1,
+                        min: 0,
+                        max: 1,
+                        step: 0.01
+                    }
+                }
+            },
+            vignetteShader: {
+                name: 'Vignette',
+                shader: THREE.VignetteShader,
+                on: false,
+                parameters: {
+                    offset: {
+                        name: 'Offset',
+                        value: 1,
+                        min: 0,
+                        max: 1,
+                        step: 0.01
+                    },
+                    darkness: {
+                        name: 'Darkness',
+                        value: 1,
+                        min: 0,
+                        max: 2,
+                        step: 0.01
+                    }
+                }
+            }
+        };
+        this.shaderChangedTimeout = null;
+        this.pause = false;
+        this.shaders = new Array();
+        this.shaderTime = 0;
+        this.camera = camera;
+        this.scene = scene;
+        this.renderer = renderer;
+        this.renderPass = new THREE.RenderPass(scene, camera);
+        let onParamsChange = () => this.onParamsChange();
+        let onToggleShaders = () => this.onToggleShaders();
+        this.folder = gui.addFolder('Effects');
+        this.folder.open();
+        this.folder.addButton('Randomize	 (R)', () => this.randomizeParams());
+        this.folder.addButton('Deactivate all	 (D)', () => this.deactivateAll());
+        this.folder.addButton('Copy effects 	(Ctrl + C)', () => this.copyEffects());
+        this.folder.addButton('Past effects 	(Ctrl + V)', () => this.pastEffects());
+        for (let shaderName in this.shaderParameters) {
+            let shaderObject = this.shaderParameters[shaderName];
+            let folder = this.folder.addFolder(shaderObject.name);
+            this.shaders.push({ pass: new THREE.ShaderPass(shaderObject.shader), object: shaderObject, folder: folder });
+            folder.add(shaderObject, 'on').name('On').onChange(onToggleShaders).onFinishChange(() => this.updateActiveShaders());
+            for (let propertyName in shaderObject.parameters) {
+                let propertiesObject = shaderObject.parameters[propertyName];
+                if (propertiesObject.type != null && propertiesObject.type == 'color') {
+                    folder.addColor(propertiesObject, 'value').onChange(onParamsChange);
+                }
+                else {
+                    let localStorageName = 'gg-' + shaderObject.name + '-' + propertyName;
+                    let value = localStorage.getItem(localStorageName);
+                    console.log('get ' + localStorageName, value);
+                    if (value) {
+                        propertiesObject.value = parseFloat(value);
+                    }
+                    folder.add(propertiesObject, 'value', propertiesObject.min, propertiesObject.max).step(propertiesObject.step).setName(propertiesObject.name).onChange((value) => {
+                        console.log('set ' + localStorageName, value);
+                        localStorage.setItem(localStorageName, value);
+                        onParamsChange();
+                    });
+                }
+            }
+            folder.open();
+        }
+        this.copyPass = new THREE.ShaderPass(THREE.CopyShader);
+        this.onParamsChange(false);
+        this.onToggleShaders();
+    }
+    updateActiveShaders() {
+        let activeShaderNames = [];
+        for (let shader of this.shaders) {
+            if (shader.object.on) {
+                activeShaderNames.push(shader.object.name);
+            }
+        }
+        console.log(activeShaderNames);
+        localStorage.setItem('gg-active-shaders', JSON.stringify(activeShaderNames));
+    }
+    deactivateAll() {
+        for (let shader of this.shaders) {
+            shader.object.on = false;
+            shader.folder.getControllers()[0].updateDisplay();
+            shader.folder.close();
+        }
+        this.onToggleShaders();
+    }
+    onToggleShaders(dispatchEvent = true) {
+        //Add Shader Passes to Composer
+        //order is important 
+        this.composer = new THREE.EffectComposer(this.renderer);
+        this.composer.addPass(this.renderPass);
+        // let activeShaderNames = []
+        for (let shader of this.shaders) {
+            if (shader.object.on) {
+                // activeShaderNames.push(shader.object.name)
+                this.composer.addPass(shader.pass);
+            }
+        }
+        // localStorage.setItem('gg-active-shaders', JSON.stringify(activeShaderNames))
+        this.composer.addPass(this.copyPass);
+        this.copyPass.renderToScreen = true;
+        if (dispatchEvent) {
+            this.dispatchChange();
+        }
+    }
+    dispatchChange() {
+        if (this.shaderChangedTimeout != null) {
+            clearTimeout(this.shaderChangedTimeout);
+        }
+        this.shaderChangedTimeout = setTimeout(() => document.dispatchEvent(new Event('shaderChanged')), 250);
+    }
+    onParamsChange(dispatchEvent = true) {
+        for (let shader of this.shaders) {
+            for (let propertyName in shader.object.parameters) {
+                let propertiesObject = shader.object.parameters[propertyName];
+                shader.pass.uniforms[propertyName].value = propertiesObject.getValue != null ?
+                    propertiesObject.getValue(propertiesObject.value) :
+                    propertiesObject.type != null && propertiesObject.type == 'color' ?
+                        new THREE.Color(propertiesObject.value) : propertiesObject.value;
+            }
+        }
+        if (dispatchEvent) {
+            this.dispatchChange();
+        }
+    }
+    getRandomOnInterval(min, max) {
+        return min + (max - min) * Math.random();
+    }
+    getRandomColor() {
+        return '#' + Math.random().toString(16).substr(2, 6);
+    }
+    randomizeParams(forceRandomize = true) {
+        let shaderNames = [];
+        this.updateActiveShaders();
+        let activeShaderNamesString = localStorage.getItem('gg-active-shaders');
+        if (activeShaderNamesString && !forceRandomize) {
+            shaderNames = JSON.parse(activeShaderNamesString);
+        }
+        else {
+            let nShadersToPick = 3;
+            for (let i = 0; i < nShadersToPick; i++) {
+                let shaderIndex = Math.floor(Math.random() * this.shaders.length);
+                shaderNames.push(this.shaders[shaderIndex].object.name);
+            }
+        }
+        let i = 0;
+        for (let shader of this.shaders) {
+            shader.object.on = shaderNames.indexOf(shader.object.name) >= 0; // && shader.object.name != 'Kaleido'
+            if (shader.object.on) {
+                shader.folder.open();
+            }
+            else {
+                shader.folder.close();
+            }
+            if (shader.object.on) {
+                for (let propertyName in shader.object.parameters) {
+                    let propertiesObject = shader.object.parameters[propertyName];
+                    // let localStorageName = 'gg-' + shader.object.name + '-' + propertyName
+                    // let value = localStorage.getItem(localStorageName)
+                    // console.log('set random ' + localStorageName, value)
+                    // if(value) {
+                    // 	propertiesObject.value = parseFloat(value)
+                    // } else {
+                    propertiesObject.value = propertiesObject.type == 'color' ?
+                        this.getRandomColor() :
+                        this.getRandomOnInterval(propertiesObject.randomMin != null ? Math.max(propertiesObject.randomMin, propertiesObject.min) : propertiesObject.min, propertiesObject.randomMax != null ? Math.min(propertiesObject.randomMax, propertiesObject.max) : propertiesObject.max);
+                    // }
+                }
+                for (let controller of shader.folder.getControllers()) {
+                    controller.updateDisplay();
+                }
+            }
+            i++;
+        }
+        this.onToggleShaders(false);
+        this.onParamsChange();
+    }
+    getShaderParameters() {
+        let json = {};
+        for (let shader of this.shaders) {
+            let parameters = {};
+            for (let propertyName in shader.object.parameters) {
+                let propertiesObject = shader.object.parameters[propertyName];
+                parameters[propertyName] = propertiesObject.value;
+            }
+            json[shader.object.name] = { parameters: parameters, on: shader.object.on, time: this.shaderTime };
+        }
+        return json;
+    }
+    setShaderParameters(json) {
+        for (let shader of this.shaders) {
+            let parameters = json[shader.object.name].parameters;
+            let on = json[shader.object.name].on;
+            shader.object.on = on;
+            if (on) {
+                shader.folder.open();
+            }
+            else {
+                shader.folder.close();
+            }
+            for (let propertyName in shader.object.parameters) {
+                shader.object.parameters[propertyName].value = parameters[propertyName];
+            }
+            this.shaderTime = json[shader.object.name].time;
+            for (let controller of shader.folder.getControllers()) {
+                controller.updateDisplay();
+            }
+        }
+        this.onToggleShaders(false);
+        this.onParamsChange(false);
+    }
+    copyEffects() {
+        this.clipboard = this.getShaderParameters();
+    }
+    pastEffects() {
+        this.setShaderParameters(this.clipboard);
+        this.dispatchChange();
+    }
+    animate() {
+        if (!this.pause) {
+            this.shaderTime += 0.1;
+        }
+        for (let shader of this.shaders) {
+            if (shader.object.time) {
+                shader.pass.uniforms['time'].value = this.shaderTime;
+            }
+        }
+        this.composer.render(0.1);
+    }
+}
+exports.ShaderManager = ShaderManager;
+
+
+/***/ }),
+/* 42 */
+/***/ (function(module, exports, __webpack_require__) {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", { value: true });
+/**
+ * @author Felix Turner / www.airtight.cc / @felixturner
  *
- * Copyright jQuery Foundation and other contributors
- * Released under the MIT license.
- * http://jquery.org/license
+ * Bad TV Shader
+ * Simulates a bad TV via horizontal distortion and vertical roll
+ * Uses Ashima WebGl Noise: https://github.com/ashima/webgl-noise
+ *
+ * Uniforms:
+ * time: steadily increasing float passed in
+ * distortion: amount of thick distortion
+ * distortion2: amount of fine grain distortion
+ * speed: distortion vertical travel speed
+ * rollSpeed: vertical roll speed
+ *
+ * The MIT License
+ *
+ * Copyright (c) Felix Turner
+ *
+ * Permission is hereby granted, free of charge, to any person obtaining a copy
+ * of this software and associated documentation files (the "Software"), to deal
+ * in the Software without restriction, including without limitation the rights
+ * to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+ * copies of the Software, and to permit persons to whom the Software is
+ * furnished to do so, subject to the following conditions:
+ *
+ * The above copyright notice and this permission notice shall be included in
+ * all copies or substantial portions of the Software.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+ * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+ * AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+ * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+ * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+ * THE SOFTWARE.
+ *
+ */
+exports.BadTVShader = {
+    uniforms: {
+        "tDiffuse": { type: "t", value: null },
+        "time": { type: "f", value: 0.0 },
+        "distortion": { type: "f", value: 3.0 },
+        "distortion2": { type: "f", value: 5.0 },
+        "speed": { type: "f", value: 0.2 },
+        "rollSpeed": { type: "f", value: 0.1 },
+    },
+    vertexShader: [
+        "varying vec2 vUv;",
+        "void main() {",
+        "vUv = uv;",
+        "gl_Position = projectionMatrix * modelViewMatrix * vec4( position, 1.0 );",
+        "}"
+    ].join("\n"),
+    fragmentShader: [
+        "uniform sampler2D tDiffuse;",
+        "uniform float time;",
+        "uniform float distortion;",
+        "uniform float distortion2;",
+        "uniform float speed;",
+        "uniform float rollSpeed;",
+        "varying vec2 vUv;",
+        // Start Ashima 2D Simplex Noise
+        "vec3 mod289(vec3 x) {",
+        "  return x - floor(x * (1.0 / 289.0)) * 289.0;",
+        "}",
+        "vec2 mod289(vec2 x) {",
+        "  return x - floor(x * (1.0 / 289.0)) * 289.0;",
+        "}",
+        "vec3 permute(vec3 x) {",
+        "  return mod289(((x*34.0)+1.0)*x);",
+        "}",
+        "float snoise(vec2 v)",
+        "  {",
+        "  const vec4 C = vec4(0.211324865405187,  // (3.0-sqrt(3.0))/6.0",
+        "                      0.366025403784439,  // 0.5*(sqrt(3.0)-1.0)",
+        "                     -0.577350269189626,  // -1.0 + 2.0 * C.x",
+        "                      0.024390243902439); // 1.0 / 41.0",
+        "  vec2 i  = floor(v + dot(v, C.yy) );",
+        "  vec2 x0 = v -   i + dot(i, C.xx);",
+        "  vec2 i1;",
+        "  i1 = (x0.x > x0.y) ? vec2(1.0, 0.0) : vec2(0.0, 1.0);",
+        "  vec4 x12 = x0.xyxy + C.xxzz;",
+        " x12.xy -= i1;",
+        "  i = mod289(i); // Avoid truncation effects in permutation",
+        "  vec3 p = permute( permute( i.y + vec3(0.0, i1.y, 1.0 ))",
+        "		+ i.x + vec3(0.0, i1.x, 1.0 ));",
+        "  vec3 m = max(0.5 - vec3(dot(x0,x0), dot(x12.xy,x12.xy), dot(x12.zw,x12.zw)), 0.0);",
+        "  m = m*m ;",
+        "  m = m*m ;",
+        "  vec3 x = 2.0 * fract(p * C.www) - 1.0;",
+        "  vec3 h = abs(x) - 0.5;",
+        "  vec3 ox = floor(x + 0.5);",
+        "  vec3 a0 = x - ox;",
+        "  m *= 1.79284291400159 - 0.85373472095314 * ( a0*a0 + h*h );",
+        "  vec3 g;",
+        "  g.x  = a0.x  * x0.x  + h.x  * x0.y;",
+        "  g.yz = a0.yz * x12.xz + h.yz * x12.yw;",
+        "  return 130.0 * dot(m, g);",
+        "}",
+        // End Ashima 2D Simplex Noise
+        "void main() {",
+        "vec2 p = vUv;",
+        "float ty = time*speed;",
+        "float yt = p.y - ty;",
+        //smooth distortion
+        "float offset = snoise(vec2(yt*3.0,0.0))*0.2;",
+        // boost distortion
+        "offset = offset*distortion * offset*distortion * offset;",
+        //add fine grain distortion
+        "offset += snoise(vec2(yt*50.0,0.0))*distortion2*0.001;",
+        //combine distortion on X with roll on Y
+        "gl_FragColor = texture2D(tDiffuse,  vec2(fract(p.x + offset),fract(p.y-time*rollSpeed) ));",
+        "}"
+    ].join("\n")
+};
+
+
+/***/ }),
+/* 43 */
+/***/ (function(module, exports, __webpack_require__) {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", { value: true });
+/**
+ * @author Arthur Masson
+ *
+ * sharpness - sharpness of the dots (0 - 1)
+ * size - size of noise grains (pixels)
+ *
+ * The MIT License
+ *
+ * Copyright (c) 2014 Felix Turner
+ *
+ * Permission is hereby granted, free of charge, to any person obtaining a copy
+ * of this software and associated documentation files (the "Software"), to deal
+ * in the Software without restriction, including without limitation the rights
+ * to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+ * copies of the Software, and to permit persons to whom the Software is
+ * furnished to do so, subject to the following conditions:
+ *
+ * The above copyright notice and this permission notice shall be included in
+ * all copies or substantial portions of the Software.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+ * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+ * AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+ * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+ * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+ * THE SOFTWARE.
+ *
+ */
+exports.DotMatrix = {
+    uniforms: {
+        "tDiffuse": { type: "t", value: null },
+        "sharpness": { type: "f", value: 0.7 },
+        "gridSize": { type: "f", value: 10.0 },
+        "dotSize": { type: "f", value: 1.0 }
+    },
+    vertexShader: `
+		varying vec2 vUv;
+
+		void main() {
+			vUv = uv;
+			gl_Position = projectionMatrix * modelViewMatrix * vec4( position, 1.0 );
+		}
+		`,
+    fragmentShader: `
+		uniform sampler2D tDiffuse;
+		uniform float dotSize;
+		uniform float gridSize;
+		uniform float sharpness;
+
+		varying vec2 vUv;
+
+		void main() {
+			vec2 p = vUv;
+			vec4 color = texture2D(tDiffuse, floor( p * gridSize ) / gridSize);
+
+			float halfSharpness = sharpness / 2.;
+			
+			vec2 f = 2. * abs(fract( p * gridSize ) - 0.5);
+
+			color *= smoothstep(1.-halfSharpness, 0.+halfSharpness, dotSize*length(f));
+
+			gl_FragColor = color;
+ 		}
+ 		`,
+};
+
+
+/***/ }),
+/* 44 */
+/***/ (function(module, exports, __webpack_require__) {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", { value: true });
+/**
+ * @author alteredq / http://alteredqualia.com/
+ *
+ * Film grain & scanlines shader
+ *
+ * - ported from HLSL to WebGL / GLSL
+ * http://www.truevision3d.com/forums/showcase/staticnoise_colorblackwhite_scanline_shaders-t18698.0.html
+ *
+ * Screen Space Static Postprocessor
+ *
+ * Produces an analogue noise overlay similar to a film grain / TV static
+ *
+ * Original implementation and noise algorithm
+ * Pat 'Hawthorne' Shearon
+ *
+ * Optimized scanlines + noise version with intensity scaling
+ * Georg 'Leviathan' Steinrohder
+ *
+ * This version is provided under a Creative Commons Attribution 3.0 License
+ * http://creativecommons.org/licenses/by/3.0/
+ */
+exports.FilmShader = {
+    uniforms: {
+        "tDiffuse": { type: "t", value: null },
+        "time": { type: "f", value: 0.0 },
+        "nIntensity": { type: "f", value: 0.5 },
+        "sIntensity": { type: "f", value: 0.05 },
+        "sCount": { type: "f", value: 4096 },
+        "grayscale": { type: "i", value: 0 }
+    },
+    vertexShader: [
+        "varying vec2 vUv;",
+        "void main() {",
+        "vUv = uv;",
+        "gl_Position = projectionMatrix * modelViewMatrix * vec4( position, 1.0 );",
+        "}"
+    ].join("\n"),
+    fragmentShader: [
+        // control parameter
+        "uniform float time;",
+        "uniform bool grayscale;",
+        // noise effect intensity value (0 = no effect, 1 = full effect)
+        "uniform float nIntensity;",
+        // scanlines effect intensity value (0 = no effect, 1 = full effect)
+        "uniform float sIntensity;",
+        // scanlines effect count value (0 = no effect, 4096 = full effect)
+        "uniform float sCount;",
+        "uniform sampler2D tDiffuse;",
+        "varying vec2 vUv;",
+        "void main() {",
+        // sample the source
+        "vec4 cTextureScreen = texture2D( tDiffuse, vUv );",
+        // make some noise
+        "float x = vUv.x * vUv.y * time *  1000.0;",
+        "x = mod( x, 13.0 ) * mod( x, 123.0 );",
+        "float dx = mod( x, 0.01 );",
+        // add noise
+        "vec3 cResult = cTextureScreen.rgb + cTextureScreen.rgb * clamp( 0.1 + dx * 100.0, 0.0, 1.0 );",
+        // get us a sine and cosine
+        "vec2 sc = vec2( sin( vUv.y * sCount ), cos( vUv.y * sCount ) );",
+        // add scanlines
+        "cResult += cTextureScreen.rgb * vec3( sc.x, sc.y, sc.x ) * sIntensity;",
+        // interpolate between source and result by intensity
+        "cResult = cTextureScreen.rgb + clamp( nIntensity, 0.0,1.0 ) * ( cResult - cTextureScreen.rgb );",
+        // convert to grayscale if desired
+        "if( grayscale ) {",
+        "cResult = vec3( cResult.r * 0.3 + cResult.g * 0.59 + cResult.b * 0.11 );",
+        "}",
+        "gl_FragColor =  vec4( cResult, cTextureScreen.a );",
+        "}"
+    ].join("\n")
+};
+
+
+/***/ }),
+/* 45 */
+/***/ (function(module, exports, __webpack_require__) {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", { value: true });
+/**
+ * @author Felix Turner / www.airtight.cc / @felixturner
+ *
+ * Static effect. Additively blended digital noise.
+ *
+ * amount - amount of noise to add (0 - 1)
+ * size - size of noise grains (pixels)
+ *
+ * The MIT License
+ *
+ * Copyright (c) 2014 Felix Turner
+ *
+ * Permission is hereby granted, free of charge, to any person obtaining a copy
+ * of this software and associated documentation files (the "Software"), to deal
+ * in the Software without restriction, including without limitation the rights
+ * to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+ * copies of the Software, and to permit persons to whom the Software is
+ * furnished to do so, subject to the following conditions:
+ *
+ * The above copyright notice and this permission notice shall be included in
+ * all copies or substantial portions of the Software.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+ * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+ * AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+ * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+ * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+ * THE SOFTWARE.
+ *
+ */
+exports.StaticShader = {
+    uniforms: {
+        "tDiffuse": { type: "t", value: null },
+        "time": { type: "f", value: 0.0 },
+        "amount": { type: "f", value: 0.5 },
+        "size": { type: "f", value: 4.0 }
+    },
+    vertexShader: [
+        "varying vec2 vUv;",
+        "void main() {",
+        "vUv = uv;",
+        "gl_Position = projectionMatrix * modelViewMatrix * vec4( position, 1.0 );",
+        "}"
+    ].join("\n"),
+    fragmentShader: [
+        "uniform sampler2D tDiffuse;",
+        "uniform float time;",
+        "uniform float amount;",
+        "uniform float size;",
+        "varying vec2 vUv;",
+        "float rand(vec2 co){",
+        "return fract(sin(dot(co.xy ,vec2(12.9898,78.233))) * 43758.5453);",
+        "}",
+        "void main() {",
+        "vec2 p = vUv;",
+        "vec4 color = texture2D(tDiffuse, p);",
+        "float xs = floor(gl_FragCoord.x / size);",
+        "float ys = floor(gl_FragCoord.y / size);",
+        "vec4 snow = vec4(rand(vec2(xs * time,ys * time))*amount);",
+        //"gl_FragColor = color + amount * ( snow - color );", //interpolate
+        "gl_FragColor = color+ snow;",
+        "}"
+    ].join("\n")
+};
+
+
+/***/ }),
+/* 46 */
+/***/ (function(module, exports, __webpack_require__) {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", { value: true });
+class Webcam {
+    constructor(callback, width = null) {
+        this.width = Webcam.WIDTH;
+        this.height = 0;
+        this.streaming = false;
+        this.video = null;
+        this.canvas = null;
+        this.context = null;
+        this.photo = null;
+        if (width) {
+            this.width = Math.max(100, Math.min(width, 2048));
+        }
+        else {
+            this.width = Webcam.WIDTH;
+        }
+        // this.photo = document.getElementById('photo')
+        this.video = document.createElement('video');
+        this.canvas = document.createElement('canvas');
+        this.context = this.canvas.getContext('2d');
+        this.initialize(callback);
+    }
+    resizeVideo(width = null) {
+        if (width != null) {
+            this.width = width;
+        }
+        this.height = this.video.videoHeight / (this.video.videoWidth / this.width);
+        // Firefox currently has a bug where the height can't be read from
+        // the video, so we will make assumptions if this happens.
+        if (isNaN(this.height)) {
+            this.height = this.width / (4 / 3);
+        }
+        this.video.setAttribute('width', this.width.toString());
+        this.video.setAttribute('height', this.height.toString());
+        this.canvas.width = this.width;
+        this.canvas.height = this.height;
+        console.log('Webcam: set size: ' + this.width + ', ' + this.height);
+    }
+    errorMessage(msg, error = null) {
+        let errorElement = document.querySelector('#errorMessage');
+        errorElement.innerHTML += '<p>' + msg + '</p>';
+        if (typeof error !== 'undefined') {
+            console.error(error);
+        }
+        console.log(msg);
+        console.error(error);
+    }
+    initialize(callbackCanPlay = null, callbackGetMedia = null) {
+        console.log('Webcam: initialize: ' + this.width + ', ' + this.height);
+        let constraints = { audio: true, video: true };
+        navigator.mediaDevices.getUserMedia(constraints).then((stream) => {
+            var videoTracks = stream.getVideoTracks();
+            console.log('Got stream with constraints:', constraints);
+            console.log('Using video device: ' + videoTracks[0].label);
+            stream.onremovetrack = function () {
+                console.log('Stream ended');
+            };
+            this.stream = stream;
+            // window.stream = stream; // make variable available to browser console
+            this.video.srcObject = stream;
+            this.video.play();
+            this.video.muted = true;
+            if (callbackGetMedia != null) {
+                callbackGetMedia();
+            }
+        })
+            .catch((error) => {
+            if (error.name === 'ConstraintNotSatisfiedError') {
+                this.errorMessage('The resolution ' + this.width + 'x' +
+                    this.height + ' px is not supported by your device.');
+            }
+            else if (error.name === 'PermissionDeniedError') {
+                this.errorMessage('Permissions have not been granted to use your camera and ' +
+                    'microphone, you need to allow the page access to your devices in ' +
+                    'order for the demo to work.');
+            }
+            this.errorMessage('getUserMedia error: ' + error.name, error);
+        });
+        // let n:any = navigator
+        // n.getMedia = ( navigator.getUserMedia ||
+        // 	n.webkitGetUserMedia ||
+        // 	n.mozGetUserMedia ||
+        // 	n.msGetUserMedia)
+        // n.getMedia( { video: true, audio: false }, (stream: any) => {
+        // 	// if(stream.active) {
+        // 	// 	stream.removeTrack(stream.getVideoTracks()[0])
+        // 	// 	this.video.src = ''
+        // 	// }
+        // 	if (n.mozGetUserMedia) {
+        // 		let v: any = this.video
+        // 		v.mozSrcObject = stream
+        // 	} else {
+        // 		var vendorURL = window.URL || (<any>window).webkitURL
+        // 		this.video.src = vendorURL.createObjectURL(stream)
+        // 	}
+        // 	// stream.getVideoTracks()[0].stop()
+        // 	console.log('Webcam: getMedia: ' + this.video.width + ', ' + this.video.height)
+        // 	this.video.play()
+        // 	if(callbackGetMedia != null) {
+        // 		callbackGetMedia()
+        // 	}
+        // },
+        // function(err: string) {
+        // 	console.log("An error occured! " + err)
+        // }
+        // );
+        this.video.addEventListener('canplay', (ev) => {
+            if (!this.streaming) {
+                this.resizeVideo();
+                this.streaming = true;
+                if (callbackCanPlay != null) {
+                    callbackCanPlay();
+                }
+            }
+        }, false);
+        // this.clearPhoto()
+    }
+    getImage() {
+        if (this.width && this.height) {
+            this.context.drawImage(this.video, 0, 0, this.width, this.height);
+            return this.canvas.toDataURL();
+        }
+        return null;
+    }
+}
+Webcam.WIDTH = 1280;
+exports.Webcam = Webcam;
+
+
+/***/ }),
+/* 47 */
+/***/ (function(module, exports, __webpack_require__) {
+
+__webpack_require__(10);
+module.exports = __webpack_require__(8);
+
+
+/***/ }),
+/* 48 */,
+/* 49 */
+/***/ (function(module, exports, __webpack_require__) {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", { value: true });
+const $ = __webpack_require__(1);
+class ArrowMenu {
+    // activate effect + visualize
+    // take effect into accound
+    // implement functions
+    // improve code
+    constructor(shaderManager, gifJockey) {
+        this.currentPath = [];
+        this.currentIndex = null;
+        this.menu = {
+            "BPM": () => this.bpm(),
+            "Effects": {
+                "Back": {}
+            },
+            "Randomize effects": () => this.randomizeEffects(true),
+            "Randomize parameters": () => this.randomizeEffects(false),
+            "Take photo": () => this.takePhoto(),
+            "New GIF": () => this.newGIF(),
+            "Save GIF": () => this.saveGIF(),
+        };
+        this.gifJockey = gifJockey;
+        this.buildEffects(shaderManager);
+        this.currentPath = [];
+        this.buildMenu();
+        document.addEventListener('keydown', (event) => this.onKeyDown(event));
+    }
+    getCurrentItem() {
+        let currentItem = this.menu;
+        for (let property of this.currentPath) {
+            currentItem = currentItem[property];
+        }
+        return currentItem;
+    }
+    getCurrentItemProperties() {
+        let currentItem = this.getCurrentItem();
+        let properties = [];
+        for (let property in currentItem) {
+            properties.push(property);
+        }
+        return { currentItem, properties };
+    }
+    onKeyDown(event) {
+        if ($('#loading').hasClass('loading')) {
+            return;
+        }
+        let { currentItem, properties } = this.getCurrentItemProperties();
+        if (event.code == 'Escape') {
+            this.goBack();
+            return;
+        }
+        if (event.code == 'ContextMenu') {
+            this.takePhoto();
+            return;
+        }
+        if (event.code == 'ArrowUp') {
+            this.currentIndex = this.currentIndex == null ? properties.length - 1 : this.currentIndex - 1;
+            if (this.currentIndex < 0) {
+                this.currentIndex = 0;
+            }
+            let currentName = properties[this.currentIndex];
+            $('#arrow-menu').find('.selected').removeClass('selected');
+            $('#arrow-menu').find('[data-name="' + currentName + '"]').addClass('selected');
+        }
+        else if (event.code == 'ArrowDown') {
+            this.currentIndex = this.currentIndex == null ? 0 : this.currentIndex + 1;
+            if (this.currentIndex > properties.length - 1) {
+                this.currentIndex = properties.length - 1;
+            }
+            let currentName = properties[this.currentIndex];
+            $('#arrow-menu').find('.selected').removeClass('selected');
+            $('#arrow-menu').find('[data-name="' + currentName + '"]').addClass('selected');
+        }
+        if (this.currentIndex != null) {
+            if (event.code == 'Enter') {
+                let currentName = properties[this.currentIndex];
+                this.onItemClick(null, currentItem, properties[this.currentIndex], $('#arrow-menu').find('[data-name="' + currentName + '"]'));
+            }
+            let currentFunction = currentItem[properties[this.currentIndex]];
+            if (event.code == 'ArrowLeft') {
+                let currentName = properties[this.currentIndex];
+                if (currentName == 'Back') {
+                    this.onItemClick(null, currentItem, properties[this.currentIndex], $('#arrow-menu').find('[data-name="' + currentName + '"]'));
+                }
+                if (typeof currentFunction === 'function') {
+                    let currentName = properties[this.currentIndex];
+                    currentFunction(null, -1, $('#arrow-menu').find('[data-name="' + currentName + '"]'));
+                }
+            }
+            else if (event.code == 'ArrowRight') {
+                if (typeof currentFunction === 'function') {
+                    let currentName = properties[this.currentIndex];
+                    currentFunction(null, 1, $('#arrow-menu').find('[data-name="' + currentName + '"]'));
+                }
+            }
+        }
+    }
+    buildEffects(shaderManager) {
+        this.shaderManager = shaderManager;
+        let effects = this.menu['Effects'];
+        for (let effectName in shaderManager.shaderParameters) {
+            let effect = shaderManager.shaderParameters[effectName];
+            let effectObject = { 'Back': {} };
+            effectObject['Enable'] = () => {
+                let currentItem = this.menu;
+                for (let property of this.currentPath) {
+                    currentItem = currentItem[property];
+                }
+                let properties = [];
+                for (let property in currentItem) {
+                    properties.push(property);
+                }
+                let currentName = properties[this.currentIndex];
+                effect.on = !effect.on;
+                if (effect.on) {
+                    $('#arrow-menu').find('[data-name="' + currentName + '"]').addClass('enabled').find('span.text').text('Disable');
+                }
+                else {
+                    $('#arrow-menu').find('[data-name="' + currentName + '"]').removeClass('enabled').find('span.text').text('Enable');
+                }
+                shaderManager.updateActiveShaders();
+                shaderManager.onToggleShaders(true);
+            };
+            for (let parameter in effect.parameters) {
+                effectObject[parameter] = (percent, delta, divJ) => {
+                    if (effect.parameters[parameter].type == 'color') {
+                        let barJ = divJ.find('.bar:first');
+                        let c = this.shaderManager.getRandomColor();
+                        effect.parameters[parameter].value = c;
+                        barJ.css({ 'background-color': c });
+                        shaderManager.onParamsChange(true);
+                        return;
+                    }
+                    let d = effect.parameters[parameter].max - effect.parameters[parameter].min;
+                    const nSteps = 20;
+                    if (delta != null) {
+                        effect.parameters[parameter].value += delta * (d / nSteps);
+                    }
+                    else if (percent) {
+                        effect.parameters[parameter].value = effect.parameters[parameter].min + d * percent;
+                    }
+                    if (effect.parameters[parameter].value < effect.parameters[parameter].min) {
+                        effect.parameters[parameter].value = effect.parameters[parameter].min;
+                    }
+                    if (effect.parameters[parameter].value > effect.parameters[parameter].max) {
+                        effect.parameters[parameter].value = effect.parameters[parameter].max;
+                    }
+                    let p = 100 * (effect.parameters[parameter].value - effect.parameters[parameter].min) / d;
+                    let barJ = divJ.find('.bar:first');
+                    barJ.css({ 'width': '' + p + '%' });
+                    divJ.find('.value:first').text('' + effect.parameters[parameter].value.toFixed(2));
+                    shaderManager.onParamsChange(true);
+                };
+            }
+            effectObject['Take photo'] = () => this.takePhoto();
+            effectObject['Validate'] = {};
+            effects[effectName] = effectObject;
+        }
+        effects['Validate'] = {};
+    }
+    bpm() {
+        this.gifJockey.bpm.tap();
+    }
+    randomizeEffects(force = false) {
+        this.shaderManager.randomizeParams(force);
+    }
+    takePhoto() {
+        this.gifJockey.deselectAndTakeSnapshot();
+        this.gifJockey.gifManager.playGif(this.gifJockey.gifManager.gifID - 1);
+    }
+    newGIF() {
+        this.gifJockey.gifManager.saveAndAddGif();
+    }
+    saveGIF() {
+        this.gifJockey.gifManager.currentGif.preview(true);
+    }
+    buildMenu() {
+        let currentItem = this.menu;
+        for (let property of this.currentPath) {
+            currentItem = currentItem[property];
+        }
+        let currentList = $('#arrow-menu');
+        currentList.empty();
+        let isEffect = this.currentPath[this.currentPath.length - 1] == "Effects";
+        let isParameter = this.currentPath[this.currentPath.length - 2] == "Effects";
+        for (let property in currentItem) {
+            let liJ = $('<li>').attr('data-name', property);
+            let barJ = $('<div class="bar">');
+            let textJ = $('<span class="text">').text(property);
+            liJ.append(barJ);
+            liJ.append(textJ);
+            if (isEffect) {
+                let effect = this.shaderManager.shaderParameters[property];
+                if (effect != null && effect.on) {
+                    liJ.addClass('enabled');
+                }
+            }
+            if (isParameter) {
+                let effectName = this.currentPath[this.currentPath.length - 1];
+                let propertyIsEnable = property == 'Enable';
+                let effect = this.shaderManager.shaderParameters[effectName];
+                if (effect != null) {
+                    if (propertyIsEnable) {
+                        if (effect.on) {
+                            liJ.addClass('enabled');
+                            textJ.text('Disable');
+                        }
+                        else {
+                            liJ.removeClass('enabled');
+                        }
+                    }
+                    else if (effect.parameters[property] != null) {
+                        if (effect.parameters[property].type == 'color') {
+                            liJ.addClass('enabled');
+                            barJ.css({ 'background-color': effect.parameters[property].value });
+                        }
+                        else {
+                            let d = effect.parameters[property].max - effect.parameters[property].min;
+                            let p = 100 * (effect.parameters[property].value - effect.parameters[property].min) / d;
+                            barJ.css({ 'width': '' + p + '%' });
+                            let valueJ = $('<span class="value">').text('' + effect.parameters[property].value.toFixed(2));
+                            liJ.append(valueJ);
+                        }
+                    }
+                }
+            }
+            liJ.click((event) => this.onItemClick(event, currentItem, property, liJ));
+            currentList.append(liJ);
+        }
+    }
+    goBack() {
+        if (this.currentPath.length > 0) {
+            this.currentPath.pop();
+        }
+        $('#arrow-menu').find('.selected').removeClass('selected');
+        this.currentIndex = null;
+        this.buildMenu();
+    }
+    onItemClick(event, parent, itemName, liJ) {
+        if (typeof (parent[itemName]) === 'function') {
+            let x = event != null ? (event.clientX - $(event.target.parentElement).position().left) / $(event.target.parentElement).width() : 0.5;
+            return parent[itemName](x, null, liJ);
+        }
+        if (itemName == 'Back' || itemName == 'Validate') {
+            this.currentPath.pop();
+        }
+        else {
+            this.currentPath.push(itemName);
+        }
+        $('#arrow-menu').find('.selected').removeClass('selected');
+        this.currentIndex = null;
+        this.buildMenu();
+    }
+}
+exports.ArrowMenu = ArrowMenu;
+exports.arrowMenu = null;
+exports.initializeArrowMenu = (shaderManager, gifJokey) => {
+    exports.arrowMenu = new ArrowMenu(shaderManager, gifJokey);
+    return exports.arrowMenu;
+};
+
+
+/***/ }),
+/* 50 */
+/***/ (function(module, exports, __webpack_require__) {
+
+/*** IMPORTS FROM imports-loader ***/
+var THREE = __webpack_require__(0);
+
+/**
+ * @author felixturner / http://airtight.cc/
+ *
+ * Kaleidoscope Shader
+ * Radial reflection around center point
+ * Ported from: http://pixelshaders.com/editor/
+ * by Toby Schachman / http://tobyschachman.com/
+ *
+ * sides: number of reflections
+ * angle: initial angle in radians
  */
 
-//>>label: disableSelection
-//>>group: Core
-//>>description: Disable selection of text content within the set of matched elements.
-//>>docs: http://api.jqueryui.com/disableSelection/
+THREE.KaleidoShader = {
 
-// This file is deprecated
-( function( factory ) {
-	if ( true ) {
+	uniforms: {
 
-		// AMD. Register as an anonymous module.
-		!(__WEBPACK_AMD_DEFINE_ARRAY__ = [ __webpack_require__(1), __webpack_require__(2) ], __WEBPACK_AMD_DEFINE_FACTORY__ = (factory),
-				__WEBPACK_AMD_DEFINE_RESULT__ = (typeof __WEBPACK_AMD_DEFINE_FACTORY__ === 'function' ?
-				(__WEBPACK_AMD_DEFINE_FACTORY__.apply(exports, __WEBPACK_AMD_DEFINE_ARRAY__)) : __WEBPACK_AMD_DEFINE_FACTORY__),
-				__WEBPACK_AMD_DEFINE_RESULT__ !== undefined && (module.exports = __WEBPACK_AMD_DEFINE_RESULT__));
-	} else {
+		"tDiffuse": { value: null },
+		"sides":    { value: 6.0 },
+		"angle":    { value: 0.0 }
 
-		// Browser globals
-		factory( jQuery );
-	}
-} ( function( $ ) {
+	},
 
-return $.fn.extend( {
-	disableSelection: ( function() {
-		var eventType = "onselectstart" in document.createElement( "div" ) ?
-			"selectstart" :
-			"mousedown";
+	vertexShader: [
 
-		return function() {
-			return this.on( eventType + ".ui-disableSelection", function( event ) {
-				event.preventDefault();
-			} );
-		};
-	} )(),
+		"varying vec2 vUv;",
 
-	enableSelection: function() {
-		return this.off( ".ui-disableSelection" );
-	}
-} );
+		"void main() {",
 
-} ) );
+			"vUv = uv;",
+			"gl_Position = projectionMatrix * modelViewMatrix * vec4( position, 1.0 );",
+
+		"}"
+
+	].join( "\n" ),
+
+	fragmentShader: [
+
+		"uniform sampler2D tDiffuse;",
+		"uniform float sides;",
+		"uniform float angle;",
+		
+		"varying vec2 vUv;",
+
+		"void main() {",
+
+			"vec2 p = vUv - 0.5;",
+			"float r = length(p);",
+			"float a = atan(p.y, p.x) + angle;",
+			"float tau = 2. * 3.1416 ;",
+			"a = mod(a, tau/sides);",
+			"a = abs(a - tau/sides/2.) ;",
+			"p = r * vec2(cos(a), sin(a));",
+			"vec4 color = texture2D(tDiffuse, p + 0.25);",
+			"gl_FragColor = color;",
+
+		"}"
+
+	].join( "\n" )
+
+};
+
+
+/*** EXPORTS FROM exports-loader ***/
+module.exports = THREE.KaleidoShader;
+
+
+/***/ }),
+/* 51 */
+/***/ (function(module, exports, __webpack_require__) {
+
+/*** IMPORTS FROM imports-loader ***/
+var THREE = __webpack_require__(0);
+
+/**
+ * @author felixturner / http://airtight.cc/
+ *
+ * Kaleidoscope Shader
+ * Radial reflection around center point
+ * Ported from: http://pixelshaders.com/editor/
+ * by Toby Schachman / http://tobyschachman.com/
+ *
+ * sides: number of reflections
+ * angle: initial angle in radians
+ */
+
+THREE.KaleidoShader = {
+
+	uniforms: {
+
+		"tDiffuse": { value: null },
+		"sides":    { value: 6.0 },
+		"angle":    { value: 0.0 }
+
+	},
+
+	vertexShader: [
+
+		"varying vec2 vUv;",
+
+		"void main() {",
+
+			"vUv = uv;",
+			"gl_Position = projectionMatrix * modelViewMatrix * vec4( position, 1.0 );",
+
+		"}"
+
+	].join( "\n" ),
+
+	fragmentShader: [
+		`precision highp float;
+
+		//uniform mat4 mvp;
+		uniform float time;
+		uniform float amount;
+		
+		varying float factor;
+		
+		//! VERTEX
+		attribute vec2 vUv;
+		
+		void main(void)
+		{
+			factor = -vUv.y * 0.5 + 0.5;
+			gl_Position = vec4(vUv * vec2(1.0, sin(vUv.x * 0.8) * 0.2 + 0.2), 0.0, 1.0);
+			//gl_Position = vec4(vUv * vec2(1.0, sin(time) * 0.1 + sin(vUv.x * 2.0) * 0.2 + 0.2), 0.0, 1.0);
+			gl_Position.y += sin(time + vUv.x) * 0.4;
+		}
+		
+		//! FRAGMENT
+		vec3 rainbow(float x)
+		{
+			/*
+				Target colors
+				=============
+				
+				L  x   color
+				0  0.0 vec4(1.0, 0.0, 0.0, 1.0);
+				1  0.2 vec4(1.0, 0.5, 0.0, 1.0);
+				2  0.4 vec4(1.0, 1.0, 0.0, 1.0);
+				3  0.6 vec4(0.0, 0.5, 0.0, 1.0);
+				4  0.8 vec4(0.0, 0.0, 1.0, 1.0);
+				5  1.0 vec4(0.5, 0.0, 0.5, 1.0);
+			*/
+			
+			float level = floor(x * 6.0);
+			float r = float(level <= 2.0) + float(level > 4.0) * 0.5;
+			float g = max(1.0 - abs(level - 2.0) * 0.5, 0.0);
+			float b = (1.0 - (level - 4.0) * 0.5) * float(level >= 4.0);
+			return vec3(r, g, b);
+		}
+		
+		void main()
+		{
+			gl_FragColor = vec4(rainbow(factor*amount), 1.0);
+		}`
+	].join( "\n" )
+
+};
+
+
+/*** EXPORTS FROM exports-loader ***/
+module.exports = THREE.Rainbow;
 
 
 /***/ })

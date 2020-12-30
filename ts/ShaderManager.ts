@@ -27,7 +27,8 @@ import "imports-loader?THREE=THREE!exports-loader?THREE.BrightnessContrastShader
 import "imports-loader?THREE=THREE!exports-loader?THREE.ColorifyShader!../node_modules/three/examples/js/shaders/ColorifyShader"
 import "imports-loader?THREE=THREE!exports-loader?THREE.DotScreenShader!../node_modules/three/examples/js/shaders/DotScreenShader"
 import "imports-loader?THREE=THREE!exports-loader?THREE.EdgeShader2!../node_modules/three/examples/js/shaders/EdgeShader2"
-import "imports-loader?THREE=THREE!exports-loader?THREE.KaleidoShader!../node_modules/three/examples/js/shaders/KaleidoShader"
+import "imports-loader?THREE=THREE!exports-loader?THREE.KaleidoShader!../node_modules/three/examples/js/shaders/KaleidoShader2"
+import "imports-loader?THREE=THREE!exports-loader?THREE.Rainbow!../node_modules/three/examples/js/shaders/Rainbow"
 import "imports-loader?THREE=THREE!exports-loader?THREE.MirrorShader!../node_modules/three/examples/js/shaders/MirrorShader"
 import "imports-loader?THREE=THREE!exports-loader?THREE.SepiaShader!../node_modules/three/examples/js/shaders/SepiaShader"
 import "imports-loader?THREE=THREE!exports-loader?THREE.VignetteShader!../node_modules/three/examples/js/shaders/VignetteShader"
@@ -151,7 +152,7 @@ export class ShaderManager {
 					value: 800,
 					min: 50,
 					max: 10000,
-					step: 1
+					step: 50
 				},
 				sIntensity: {
 					name: 'S intensity',
@@ -367,6 +368,21 @@ export class ShaderManager {
 				}
 			}
 		},
+		// rainbow: {
+		// 	name: 'Rainbow',
+		// 	shader: (<any>THREE).RainbowShader,
+		// 	on: false,
+		// 	time: true,
+		// 	parameters: {
+		// 		amount: {
+		// 			name: 'Amount',
+		// 			value: 1,
+		// 			min: 0,
+		// 			max: 1,
+		// 			step: 0.1
+		// 		}
+		// 	}
+		// },
 		mirror: {
 			name: 'Mirror',
 			shader: (<any>THREE).MirrorShader,
@@ -458,13 +474,23 @@ export class ShaderManager {
 			let folder = this.folder.addFolder(shaderObject.name)
 			this.shaders.push({pass: new THREE.ShaderPass(shaderObject.shader), object: shaderObject, folder: folder})
 			
-			folder.add(shaderObject, 'on').name('On').onChange(onToggleShaders)
+			folder.add(shaderObject, 'on').name('On').onChange(onToggleShaders).onFinishChange(()=> this.updateActiveShaders())
 			for(let propertyName in shaderObject.parameters) {
 				let propertiesObject = shaderObject.parameters[propertyName]
 				if(propertiesObject.type != null && propertiesObject.type == 'color') {
 					folder.addColor(propertiesObject, 'value').onChange(onParamsChange)
 				} else {
-					folder.add(propertiesObject, 'value', propertiesObject.min, propertiesObject.max).step(propertiesObject.step).setName(propertiesObject.name).onChange(onParamsChange)
+					let localStorageName = 'gg-' + shaderObject.name + '-' + propertyName
+					let value = localStorage.getItem(localStorageName)
+					console.log('get ' + localStorageName, value)
+					if(value) {
+						propertiesObject.value = parseFloat(value)
+					}
+					folder.add(propertiesObject, 'value', propertiesObject.min, propertiesObject.max).step(propertiesObject.step).setName(propertiesObject.name).onChange((value)=> {
+						console.log('set ' + localStorageName, value)
+						localStorage.setItem(localStorageName, value)
+						onParamsChange()
+					})
 				}
 			}
 			folder.open()
@@ -474,6 +500,17 @@ export class ShaderManager {
 
 		this.onParamsChange(false)
 		this.onToggleShaders()
+	}
+
+	updateActiveShaders() {
+		let activeShaderNames = []
+		for(let shader of this.shaders) {
+			if(shader.object.on) {
+				activeShaderNames.push(shader.object.name)
+			}
+		}
+		console.log(activeShaderNames)
+		localStorage.setItem('gg-active-shaders', JSON.stringify(activeShaderNames))
 	}
 
 	deactivateAll() {
@@ -493,11 +530,14 @@ export class ShaderManager {
 		this.composer = new THREE.EffectComposer(this.renderer)
 		this.composer.addPass( this.renderPass )
 		
+		// let activeShaderNames = []
 		for(let shader of this.shaders) {
 			if(shader.object.on) {
+				// activeShaderNames.push(shader.object.name)
 				this.composer.addPass(shader.pass)
 			}
 		}
+		// localStorage.setItem('gg-active-shaders', JSON.stringify(activeShaderNames))
 
 		this.composer.addPass( this.copyPass )
 		this.copyPass.renderToScreen = true
@@ -539,31 +579,47 @@ export class ShaderManager {
 		return '#'+Math.random().toString(16).substr(2,6)
 	}
 
-	randomizeParams() {
-		let shaderIndices = []
-		let nShadersToPick = 3
-		for(let i=0 ; i<nShadersToPick ; i++) {
-			let shaderIndex = Math.floor(Math.random()*this.shaders.length)
-			shaderIndices.push(shaderIndex)
+	randomizeParams(forceRandomize=true) {
+		let shaderNames = []
+		this.updateActiveShaders()
+		let activeShaderNamesString = localStorage.getItem('gg-active-shaders')
+		if(activeShaderNamesString && !forceRandomize) {
+			shaderNames = JSON.parse(activeShaderNamesString)
+		} else {
+			let nShadersToPick = 3
+			for(let i=0 ; i<nShadersToPick ; i++) {
+				let shaderIndex = Math.floor(Math.random()*this.shaders.length)
+				shaderNames.push(this.shaders[shaderIndex].object.name)
+			}
 		}
 
 		let i = 0
 		for(let shader of this.shaders) {
-			shader.object.on = shaderIndices.indexOf(i) >= 0 && shader.object.name != 'Kaleido'
+			shader.object.on = shaderNames.indexOf(shader.object.name) >= 0 // && shader.object.name != 'Kaleido'
 			if(shader.object.on) {
 				shader.folder.open()
 			} else {
 				shader.folder.close()
 			}
-			for(let propertyName in shader.object.parameters) {
-				let propertiesObject = shader.object.parameters[propertyName]
-				propertiesObject.value = propertiesObject.type == 'color' ? 
-					this.getRandomColor() :  
-					this.getRandomOnInterval(propertiesObject.randomMin != null ? Math.max(propertiesObject.randomMin, propertiesObject.min) : propertiesObject.min, 
-											 propertiesObject.randomMax != null ? Math.min(propertiesObject.randomMax, propertiesObject.max) : propertiesObject.max)
-			}
-			for(let controller of shader.folder.getControllers()) {
-				controller.updateDisplay()
+			if(shader.object.on) {
+				for(let propertyName in shader.object.parameters) {
+					let propertiesObject = shader.object.parameters[propertyName]
+
+					// let localStorageName = 'gg-' + shader.object.name + '-' + propertyName
+					// let value = localStorage.getItem(localStorageName)
+					// console.log('set random ' + localStorageName, value)
+					// if(value) {
+					// 	propertiesObject.value = parseFloat(value)
+					// } else {
+					propertiesObject.value = propertiesObject.type == 'color' ? 
+						this.getRandomColor() :  
+						this.getRandomOnInterval(propertiesObject.randomMin != null ? Math.max(propertiesObject.randomMin, propertiesObject.min) : propertiesObject.min, 
+												propertiesObject.randomMax != null ? Math.min(propertiesObject.randomMax, propertiesObject.max) : propertiesObject.max)
+					// }
+				}
+				for(let controller of shader.folder.getControllers()) {
+					controller.updateDisplay()
+				}
 			}
 			i++
 		}

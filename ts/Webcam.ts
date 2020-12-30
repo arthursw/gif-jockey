@@ -1,5 +1,5 @@
 export class Webcam {
-	static WIDTH = 640
+	static WIDTH = 1280
 	width = Webcam.WIDTH
 	height = 0
 	streaming = false
@@ -7,6 +7,7 @@ export class Webcam {
 	canvas: HTMLCanvasElement = null
 	context: CanvasRenderingContext2D = null
 	photo: HTMLElement = null
+	stream: MediaStream
 
 	constructor(callback: ()=>void, width: number = null) {
 		if(width) {
@@ -43,38 +44,80 @@ export class Webcam {
 		console.log('Webcam: set size: ' + this.width + ', ' + this.height)
 	}
 
+	errorMessage(msg: string, error: any = null) {
+		let errorElement = document.querySelector('#errorMessage');
+		errorElement.innerHTML += '<p>' + msg + '</p>';
+		if (typeof error !== 'undefined') {
+			console.error(error);
+		}
+		console.log(msg);
+		console.error(error);
+	}
+
 	initialize(callbackCanPlay: ()=>void=null, callbackGetMedia: ()=> void =null) {
 		console.log('Webcam: initialize: ' + this.width + ', ' + this.height)
 
-		let n:any = navigator
-		n.getMedia = ( navigator.getUserMedia ||
-			n.webkitGetUserMedia ||
-			n.mozGetUserMedia ||
-			n.msGetUserMedia)
+		let constraints = { audio: true, video: true };
 
-		n.getMedia( { video: true, audio: false }, (stream: any) => {
-			// if(stream.active) {
-			// 	stream.removeTrack(stream.getVideoTracks()[0])
-			// 	this.video.src = ''
-			// }
-			if (n.mozGetUserMedia) {
-				let v: any = this.video
-				v.mozSrcObject = stream
-			} else {
-				var vendorURL = window.URL || (<any>window).webkitURL
-				this.video.src = vendorURL.createObjectURL(stream)
-			}
-			// stream.getVideoTracks()[0].stop()
-			console.log('Webcam: getMedia: ' + this.video.width + ', ' + this.video.height)
+		navigator.mediaDevices.getUserMedia(constraints).then((stream)=> {
+			var videoTracks = stream.getVideoTracks();
+			console.log('Got stream with constraints:', constraints);
+			console.log('Using video device: ' + videoTracks[0].label);
+			stream.onremovetrack = function() {
+				console.log('Stream ended');
+			};
+			this.stream = stream;
+			// window.stream = stream; // make variable available to browser console
+			this.video.srcObject = stream;
 			this.video.play()
+			this.video.muted = true;
+
 			if(callbackGetMedia != null) {
 				callbackGetMedia()
 			}
-		},
-		function(err: string) {
-			console.log("An error occured! " + err)
-		}
-		);
+		})
+		.catch((error)=> {
+			if (error.name === 'ConstraintNotSatisfiedError') {
+				this.errorMessage('The resolution ' + this.width + 'x' + 
+					this.height + ' px is not supported by your device.');
+			} else if (error.name === 'PermissionDeniedError') {
+				this.errorMessage('Permissions have not been granted to use your camera and ' +
+			  		'microphone, you need to allow the page access to your devices in ' +
+			  		'order for the demo to work.');
+			}
+			this.errorMessage('getUserMedia error: ' + error.name, error);
+		});
+
+
+		// let n:any = navigator
+		// n.getMedia = ( navigator.getUserMedia ||
+		// 	n.webkitGetUserMedia ||
+		// 	n.mozGetUserMedia ||
+		// 	n.msGetUserMedia)
+
+		// n.getMedia( { video: true, audio: false }, (stream: any) => {
+		// 	// if(stream.active) {
+		// 	// 	stream.removeTrack(stream.getVideoTracks()[0])
+		// 	// 	this.video.src = ''
+		// 	// }
+		// 	if (n.mozGetUserMedia) {
+		// 		let v: any = this.video
+		// 		v.mozSrcObject = stream
+		// 	} else {
+		// 		var vendorURL = window.URL || (<any>window).webkitURL
+		// 		this.video.src = vendorURL.createObjectURL(stream)
+		// 	}
+		// 	// stream.getVideoTracks()[0].stop()
+		// 	console.log('Webcam: getMedia: ' + this.video.width + ', ' + this.video.height)
+		// 	this.video.play()
+		// 	if(callbackGetMedia != null) {
+		// 		callbackGetMedia()
+		// 	}
+		// },
+		// function(err: string) {
+		// 	console.log("An error occured! " + err)
+		// }
+		// );
 
 		this.video.addEventListener('canplay', (ev)=> {
 			if (!this.streaming) {

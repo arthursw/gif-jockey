@@ -12,6 +12,7 @@ import { Renderer } from "./Renderer"
 import { ShaderManager } from "./ShaderManager"
 import { Gif, GifManager } from "./Gif"
 import { BPM } from "./BPM"
+import { ArrowMenu, initializeArrowMenu } from "./ArrowMenu"
 // import { FilterManager } from "./Filters"
 
 let ctrlKey = 17
@@ -33,15 +34,31 @@ class GifJokey {
 	webcam: Webcam = null
 	renderer: Renderer = null
 	shaderManager: ShaderManager = null
+	mode = 'gif'
+	takeSnapshotButton: any = null
+	keyboardModeButton: any = null
+	videoModeButton: any = null
 
 	guiWasFocusedWhenPressedEnter = false
 	showGifThumbnails = false
 	showGIF: boolean = true
 	ctrlDown = false
+	arrowMenu: ArrowMenu
 
 	constructor() {
 		console.log("Gif Grave")
 		
+		// $("#speach").on('change keyup paste', ()=> {
+		// 	let speach = $("#speach").val()
+		// 	console.log(speach)
+		// 	localStorage.setItem('gg-speach', speach)
+		// })
+
+		// let speach = localStorage.getItem('gg-speach')
+		// if(speach) {
+		// 	$("#speach").val(speach)
+		// }
+
 		$("#camera").click(()=>this.deselectImages())
 		$("#gif-thumbnails").mousedown((event:JQueryMouseEventObject)=> {
 			if(!$.contains($('#outputs')[0], event.target) && !$.contains($('#thumbnails')[0], event.target)) {
@@ -113,7 +130,35 @@ class GifJokey {
 	    this.initializeClipboard()
 	}
 
+	loadingTimeoutID: number = null
 	
+	startLoadingAnimation(callback: ()=> any = null) {
+		$('#loading').removeClass('hidden')
+		clearTimeout(this.loadingTimeoutID)
+		this.loadingTimeoutID = setTimeout(()=> {
+			$('#loading').addClass('loading')
+			if(callback != null) {
+				setTimeout(()=>{
+					// TODO: catch error if any to remove loading animation (comment next line and uncomment following lines)
+					callback()
+					// try {
+					// 	callback()
+					// } catch(e) {
+					// 	this.stopLoadingAnimation()
+					// 	console.error(e.message)
+					// 	throw e
+					// }
+				}, 400)
+			}
+		}, 100)
+	}
+
+	stopLoadingAnimation() {
+		$('#loading').removeClass('loading')
+		clearTimeout(this.loadingTimeoutID)
+		this.loadingTimeoutID = setTimeout(()=>$('#loading').addClass('hidden'), 1000)
+	}
+
 	initializeClipboard() {
 
 		$(document).keydown((e)=> {
@@ -132,10 +177,15 @@ class GifJokey {
 	}
 
 	onKeyDown(event: KeyboardEvent) {
+		if(String.fromCharCode(event.keyCode) == 'K') {
+			this.disableKeyboardMode()
+		}
 		if(event.keyCode == 32) {			// space bar
-			this.deselectAndTakeSnapshot()
-			event.preventDefault()
-		} else if(event.keyCode == 13) {	// enter
+			if(! ($(event.target).is('input') || $(event.target).is('textarea'))) {
+				this.deselectAndTakeSnapshot()
+				event.preventDefault()
+			}
+		} else if(String.fromCharCode(event.keyCode) == 'T') {
 			// Ignore if one of the dat.gui item is focused
 			if(!this.gui.isFocused()) {
 				this.bpm.tap()
@@ -155,6 +205,7 @@ class GifJokey {
 	webcamLoaded() {
 		this.renderer = new Renderer(this.webcam, this.gui)
 		this.shaderManager = new ShaderManager(this.gui, this.renderer.camera, this.renderer.scene, this.renderer.renderer)
+		this.arrowMenu = initializeArrowMenu(this.shaderManager, this)
 		this.renderer.setShaderManager(this.shaderManager)
 		document.addEventListener('shaderChanged', ()=> {
 			if(this.isImageSelected()) {
@@ -169,6 +220,28 @@ class GifJokey {
 		this.animate()
 	}
 
+	toggleVideoMode() {
+		if(this.mode == 'gif') {
+			this.mode = 'video'
+			this.videoModeButton.name('Gif mode')
+			this.takeSnapshotButton.name('Take video (Spacebar)')
+		} else {
+			this.mode = 'gif'
+			this.videoModeButton.name('Video mode')
+			this.takeSnapshotButton.name('Take snapshot (Spacebar)')
+		}
+	}
+
+	enableKeyboardMode() {
+		$('#gui .dg.main').hide()
+		$('#gif-thumbnails').hide()
+	}
+
+	disableKeyboardMode() {
+		$('#gui .dg.main').show()
+		$('#gif-thumbnails').show()
+	}
+
 	createGUI() {
 
 		this.gui = new GUI({ autoPlace: false, width: '100%' })
@@ -177,7 +250,10 @@ class GifJokey {
 
 		this.folder = this.gui.addFolder('General')
 
-		this.folder.addButton('Take snapshot (Spacebar)', ()=> this.deselectAndTakeSnapshot())
+		this.takeSnapshotButton = this.folder.addButton('Take snapshot (Spacebar)', ()=> this.deselectAndTakeSnapshot())
+		this.keyboardModeButton = this.folder.addButton('Keyboard mode', ()=> this.enableKeyboardMode())
+		this.videoModeButton = this.folder.addButton('Video mode', ()=> this.toggleVideoMode())
+
 		// this.folder.addFileSelectorButton('Upload image', 'image/*', (event:any)=> this.uploadImage(event))
 		this.folder.addButton('Create viewer', ()=> this.createViewer())
 
@@ -357,7 +433,13 @@ class GifJokey {
 	}
 
 	deselectAndTakeSnapshot() {
-		this.deselectAndCallback(()=> this.takeSnapshot())
+		this.deselectAndCallback(()=> {
+			if(this.mode == 'gif') {
+				this.takeSnapshot()
+			} else {
+				this.renderer.startStopVideo(this.takeSnapshotButton)
+			}
+		})
 	}
 
 	deselectAndCallback(callback: ()=> void, delay: number=250) {

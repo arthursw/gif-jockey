@@ -103,6 +103,7 @@ class Filter {
 	}
 
 	apply(args:any[]=null) {
+
 		let canvas = Filter.filterManager.canvas
 		let imageJ = Filter.filterManager.currentImageJ
 		if(imageJ == null) {
@@ -157,7 +158,11 @@ class Filter {
 
 		for(let [sliderName, slider] of this.sliders) {
 			let value = args != null ? argNameToValue.get(sliderName) : slider.value
-			this.sliderControllers.set(sliderName, Filter.filterManager.gui.addSlider(slider.name, value, slider.min, slider.max, slider.step).onChange(()=>this.apply()))
+			this.sliderControllers.set(sliderName, Filter.filterManager.gui.addSlider(slider.name, value, slider.min, slider.max, slider.step).onChange((value)=> {
+				this.apply()
+			}))
+			
+			this.sliderControllers.get(sliderName).onFinishChange((v:any)=> console.log(v))
 		}
 
 		for(let [nubName, nub] of this.nubs) {

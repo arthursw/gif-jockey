@@ -10,6 +10,9 @@ declare type GifJockey = {
 	viewer: Window
 	bpm: BPM
 	webcam: Webcam
+
+	startLoadingAnimation: (callback: ()=> any)=> void
+	stopLoadingAnimation: ()=> void
 	emptyThumbnails: ()=> void
 	setGif: (gif: Gif)=> void
 	playGifViewer: (gif: Gif)=> void
@@ -153,32 +156,39 @@ export class Gif {
 
 	preview(save = false) {
 		let imagesJ = this.getFilteredImagesJ().toArray()
+		let maxNumberOfImages = 10
+		while(imagesJ.length > 10) {
+			imagesJ.pop()
+		}
 		if(imagesJ.length == 0) {
 			return
 		}
 		let width = imagesJ[0].naturalWidth
 		let height = imagesJ[0].naturalHeight
 		let interval = Gif.gifManager.gifJockey.bpm.getInterval() / 1000
-		gifshot.createGIF({
-		    gifWidth: width,
-		    gifHeight: height,
-    		interval: interval,
-			images: imagesJ,
-			sampleInterval: Gif.gifManager.gifQuality
-			}, (obj:{image: string, error: any})=> {
-				if (!obj.error) {
-					var image = obj.image, animatedImage = document.createElement('img')
-					animatedImage.src = image
-					let aJ = $('<a download="gif.gif" href="' + image + '">')
-					aJ.append(animatedImage)
-					$('#gif-result').empty().append(aJ)
-					this.hasPreview = true
-					if(save) {
-						aJ[0].click()
+		Gif.gifManager.gifJockey.startLoadingAnimation(()=> {
+			gifshot.createGIF({
+				gifWidth: width,
+				gifHeight: height,
+				interval: interval,
+				images: imagesJ,
+				sampleInterval: Gif.gifManager.gifQuality
+				}, (obj:{image: string, error: any})=> {
+					if (!obj.error) {
+						var image = obj.image, animatedImage = document.createElement('img')
+						animatedImage.src = image
+						let aJ = $('<a download="gif.gif" href="' + image + '">')
+						aJ.append(animatedImage)
+						$('#gif-result').empty().append(aJ)
+						this.hasPreview = true
+						if(save) {
+							aJ[0].click()
+							Gif.gifManager.gifJockey.stopLoadingAnimation()
+						}
 					}
 				}
-			}
-		);
+			)
+		})
 	}
 }
 
@@ -200,9 +210,11 @@ export class GifManager {
 	}
 
 	createGUI(gui: GUI) {
-		let folder = gui.addFolder('Export GIF')
+		let folder = gui.addFolder('Export')
 		folder.addSlider('Gif degradation', this.gifQuality, 1, 5000, 1).onChange((value: number)=>{ this.gifQuality = value })
 		folder.addButton('Save gif', ()=> this.currentGif.preview(true))
+		// folder.addButton('Save video', ()=> this.gifJockey.renderer.recorder.save())
+
 		// gui.addButton('Save gif', ()=> {
 		// 	if(!this.currentGif.hasPreview) {
 		// 		this.currentGif.preview(true)
@@ -247,6 +259,13 @@ export class GifManager {
 
 	getGifContainer = ()=> {
 		return this.currentGif.containerJ.parentUntil('li.gg-thumbnail')
+	}
+
+	saveAndAddGif() {
+		if(this.gifID) {
+			this.removeGif(this.gifID-1)
+		}
+		this.addGif()
 	}
 
 	addGif() {
@@ -322,6 +341,7 @@ export class GifManager {
 				
 		// 	}
 		// } }))
+		return currentGifID
 	}
 
 	createAutoGif() {
